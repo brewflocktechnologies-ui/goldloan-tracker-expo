@@ -1,18 +1,26 @@
-import React, { useState } from 'react';
-import { 
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  Modal, TextInput, Alert, SafeAreaView, Platform, RefreshControl 
-} from 'react-native';
-import { Colors, ThemeColors } from '../../constants/theme';
-import { useTheme } from '../../context/ThemeContext';
-import { useAppStore } from '../../services/store';
-import { Loan, Payment } from '../../types';
-import { DataTable, Column } from '../../components/DataTable';
-import { MobileCard } from '../../components/MobileCard';
-import { Badge } from '../../components/Badge';
 import { Ionicons } from '@expo/vector-icons';
-import { useToast } from '../../context/ToastContext';
+import { useState } from 'react';
+import {
+  Alert,
+  Modal,
+  Platform, RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { Badge } from '../../components/Badge';
+import { Column, DataTable } from '../../components/DataTable';
+import { MobileCard } from '../../components/MobileCard';
+import { ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
+import { useAppStore } from '../../services/store';
+import { Loan } from '../../types';
 
 export default function LoansScreen() {
   const { colors, isDark } = useTheme();
@@ -25,6 +33,8 @@ export default function LoansScreen() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [payModalVisible, setPayModalVisible] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = async () => {
@@ -87,8 +97,13 @@ export default function LoansScreen() {
   }
   const totalCharges = interest + procFee;
 
-  // Ornaments available for loan
-  const availableOrns = store.ornaments.filter(o => o.Status === 'Available' || o.Status === 'Released');
+  // Ornaments available for this loan contract
+  const availableOrns = store.ornaments.filter(o => {
+    if (form.UserId && o.UserId && o.UserId !== form.UserId) return false;
+    if (isEditing && editingLoan?.ornamentIds?.includes(o.OrnamentId)) return true;
+    if (selectedOrnIds.includes(o.OrnamentId)) return true;
+    return o.Status === 'Available' || o.Status === 'Released';
+  });
   const selectedOrnsList = store.ornaments.filter(o => selectedOrnIds.includes(o.OrnamentId));
   const totalGrossWeight = selectedOrnsList.reduce((s, o) => s + (Number(o.GrossWeight) || 0), 0);
   const totalNetWeight = selectedOrnsList.reduce((s, o) => s + (Number(o.NetWeight) || Number(o.MetalWeight) || 0), 0);
@@ -97,8 +112,15 @@ export default function LoansScreen() {
   const userBanks = store.bankAccounts.filter(b => b.UserId === form.UserId && b.Status === 'Active');
   const selectedBank = userBanks.find(b => b.BankAccountId === form.BankAccountId) || userBanks[0];
   const maxLimit = selectedBank ? Number(selectedBank.MaxLoanAmount || 0) : 0;
-  const utilLimit = selectedBank ? Number(selectedBank.UtilizedLoanAmount || 0) : 0;
-  const availLimit = Math.max(0, maxLimit - utilLimit);
+  // Exclude current loan when editing so existing headroom is properly calculated
+  const activeLoansForBank = store.loans.filter(l => 
+    l.LoanStatus === 'Active' && 
+    l.UserId === form.UserId && 
+    l.BankAccountId === (form.BankAccountId || selectedBank?.BankAccountId) &&
+    (!isEditing || l.LoanId !== editingLoan?.LoanId)
+  );
+  const utilLimit = activeLoansForBank.reduce((sum, l) => sum + (Number(l.LoanAmount) || 0), 0);
+  const availLimit = maxLimit > 0 ? Math.max(0, maxLimit - utilLimit) : 0;
 
   const toggleOrnSelection = (id: string) => {
     setSelectedOrnIds(prev => 
@@ -107,6 +129,8 @@ export default function LoansScreen() {
   };
 
   const openAddModal = () => {
+    setIsEditing(false);
+    setEditingLoan(null);
     setSelectedLoan(null);
     const initialUser = store.users[0]?.UserId || '';
     const initialBank = store.bankAccounts.find(b => b.UserId === initialUser)?.BankAccountId || '';
@@ -131,7 +155,46 @@ export default function LoansScreen() {
       NetWeight: '',
       Remarks: '',
     });
-    setSelectedOrnIds(availableOrns.slice(0, 1).map(o => o.OrnamentId));
+    const candidateInitial = store.ornaments.filter(o => (o.Status === 'Available' || o.Status === 'Released') && (!initialUser || o.UserId === initialUser));
+    setSelectedOrnIds(candidateInitial.slice(0, 1).map(o => o.OrnamentId));
+    setModalVisible(true);
+  };
+
+  const openEditModal = (l: Loan) => {
+    setIsEditing(true);
+    setEditingLoan(l);
+    setSelectedLoan(l);
+
+    // Get current pledged ornaments for this loan
+    let currentPledgedIds = l.ornamentIds ? [...l.ornamentIds] : [];
+    if (currentPledgedIds.length === 0) {
+      const userPledged = store.ornaments
+        .filter(o => o.UserId === l.UserId && (o.ReleasedLoanId === l.LoanId || o.Status === 'Pledged'))
+        .map(o => o.OrnamentId);
+      if (userPledged.length > 0) {
+        currentPledgedIds = userPledged;
+      }
+    }
+
+    setForm({
+      LoanNumber: l.LoanNumber || '',
+      UserId: l.UserId || '',
+      BankAccountId: l.BankAccountId || '',
+      LoanDate: l.LoanDate || new Date().toISOString().split('T')[0],
+      DueDate: l.DueDate || '',
+      LoanPeriod: l.LoanPeriod || '12 Months',
+      LoanAmount: String(l.LoanAmount || ''),
+      InterestRate: String(l.InterestRate ?? '9.5'),
+      InterestType: (l.InterestType as any) || 'Simple',
+      ProcessingFee: String(l.ProcessingFee ?? '0'),
+      DocumentCharge: String(l.DocumentCharge ?? '0'),
+      InsuranceCharge: String(l.InsuranceCharge ?? '0'),
+      GrossWeight: l.GrossWeight ? String(l.GrossWeight) : '',
+      NetWeight: l.NetWeight ? String(l.NetWeight) : '',
+      Remarks: l.Remarks || '',
+    });
+
+    setSelectedOrnIds(currentPledgedIds);
     setModalVisible(true);
   };
 
@@ -181,24 +244,45 @@ export default function LoansScreen() {
     const finalGross = parseFloat(form.GrossWeight) > 0 ? parseFloat(form.GrossWeight) : totalGrossWeight;
     const finalNet = parseFloat(form.NetWeight) > 0 ? parseFloat(form.NetWeight) : totalNetWeight;
 
-    store.addLoan({
-      ...form,
-      LoanAmount: amount,
-      InterestRate: rate,
-      BankName: selectedBank?.BankName || 'Bank',
-      GrossWeight: finalGross,
-      NetWeight: finalNet,
-      ProcessingFee: procFee,
-      DocumentCharge: docCharge,
-      InsuranceCharge: insCharge,
-      TotalCharges: totalCharges,
-      NetDisbursementAmount: netDisbursement,
-      ornamentIds: selectedOrnIds,
-    });
+    if (isEditing && editingLoan) {
+      store.updateLoan(editingLoan.LoanId, {
+        ...form,
+        LoanAmount: amount,
+        InterestRate: rate,
+        BankName: selectedBank?.BankName || editingLoan.BankName || 'Bank',
+        GrossWeight: finalGross,
+        NetWeight: finalNet,
+        ProcessingFee: procFee,
+        DocumentCharge: docCharge,
+        InsuranceCharge: insCharge,
+        TotalCharges: totalCharges,
+        NetDisbursementAmount: netDisbursement,
+        ornamentIds: selectedOrnIds,
+      });
 
-    Alert.alert('Success', 'Loan contract created and ornaments pledged!');
-    toast.success(`Loan ${form.LoanNumber} created successfully!`);
-    setModalVisible(false);
+      Alert.alert('Success', 'Loan contract updated successfully!');
+      toast.success(`Loan ${form.LoanNumber} updated successfully!`);
+      setModalVisible(false);
+    } else {
+      store.addLoan({
+        ...form,
+        LoanAmount: amount,
+        InterestRate: rate,
+        BankName: selectedBank?.BankName || 'Bank',
+        GrossWeight: finalGross,
+        NetWeight: finalNet,
+        ProcessingFee: procFee,
+        DocumentCharge: docCharge,
+        InsuranceCharge: insCharge,
+        TotalCharges: totalCharges,
+        NetDisbursementAmount: netDisbursement,
+        ornamentIds: selectedOrnIds,
+      });
+
+      Alert.alert('Success', 'Loan contract created and ornaments pledged!');
+      toast.success(`Loan ${form.LoanNumber} created successfully!`);
+      setModalVisible(false);
+    }
   };
 
   const handleSavePayment = () => {
@@ -313,13 +397,18 @@ export default function LoansScreen() {
     {
       key: 'Actions',
       title: 'Actions',
-      width: 95,
+      width: 125,
       align: 'center',
       render: (l) => (
         <View style={styles.actionRow}>
           <TouchableOpacity onPress={() => openDetailModal(l)} style={styles.actionBtn} accessibilityLabel="View Details">
             <Ionicons name="eye-outline" size={16} color="#0284c7" />
           </TouchableOpacity>
+          {isSuperAdmin && l.LoanStatus === 'Active' ? (
+            <TouchableOpacity onPress={() => openEditModal(l)} style={styles.actionBtn} accessibilityLabel="Edit Loan">
+              <Ionicons name="pencil-outline" size={16} color="#d97706" />
+            </TouchableOpacity>
+          ) : null}
           {isSuperAdmin && l.LoanStatus === 'Active' ? (
             <TouchableOpacity onPress={() => openPayModal(l)} style={styles.actionBtn} accessibilityLabel="Record Repayment">
               <Ionicons name="card-outline" size={16} color={colors.primaryDark} />
@@ -461,14 +550,24 @@ export default function LoansScreen() {
                 onViewPress={() => openDetailModal(l)}
                 primaryAction={
                   isSuperAdmin && l.LoanStatus === 'Active' ? (
-                    <TouchableOpacity
-                      style={styles.payQuickBtn}
-                      onPress={() => openPayModal(l)}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="card-outline" size={13} color="#ffffff" />
-                      <Text style={styles.payQuickBtnText}>Pay</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <TouchableOpacity
+                        style={styles.editQuickBtn}
+                        onPress={() => openEditModal(l)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="pencil-outline" size={13} color={isDark ? '#fbbf24' : '#b45309'} />
+                        <Text style={styles.editQuickBtnText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.payQuickBtn}
+                        onPress={() => openPayModal(l)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="card-outline" size={13} color="#ffffff" />
+                        <Text style={styles.payQuickBtnText}>Pay</Text>
+                      </TouchableOpacity>
+                    </View>
                   ) : undefined
                 }
               />
@@ -477,12 +576,12 @@ export default function LoansScreen() {
         />
       </ScrollView>
 
-      {/* ADD LOAN MODAL */}
+      {/* ADD / EDIT LOAN MODAL */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Originate New Loan</Text>
+              <Text style={styles.modalTitle}>{isEditing ? `Edit Loan (${editingLoan?.LoanNumber})` : 'Originate New Loan'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
@@ -491,8 +590,15 @@ export default function LoansScreen() {
             <ScrollView style={styles.modalBody}>
               {/* Step 1: Select User */}
               <View style={styles.field}>
-                <Text style={styles.label}>1. Select Borrower *</Text>
-                {store.users.length === 0 ? (
+                <Text style={styles.label}>1. {isEditing ? 'Borrower (Locked)' : 'Select Borrower *'}</Text>
+                {isEditing ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1e293b' : '#f8fafc', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
+                    <Ionicons name="person-circle-outline" size={20} color={colors.primaryDark} style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                      {getUserName(form.UserId)}
+                    </Text>
+                  </View>
+                ) : store.users.length === 0 ? (
                   <View style={{ backgroundColor: colors.warningBg, padding: 10, borderRadius: 8, marginTop: 4 }}>
                     <Text style={{ fontSize: 13, color: colors.warning, fontWeight: '500' }}>
                       ⚠️ No borrowers registered yet. Please add a customer in the Users tab first.
@@ -557,6 +663,7 @@ export default function LoansScreen() {
                 ) : (
                   availableOrns.map(o => {
                     const checked = selectedOrnIds.includes(o.OrnamentId);
+                    const isCurrentlyPledgedToThis = isEditing && editingLoan?.ornamentIds?.includes(o.OrnamentId);
                     return (
                       <TouchableOpacity
                         key={o.OrnamentId}
@@ -569,7 +676,14 @@ export default function LoansScreen() {
                           color={checked ? colors.primaryDark : colors.textMuted} 
                         />
                         <View style={{ flex: 1, marginLeft: 8 }}>
-                          <Text style={styles.ornSelectTitle}>{o.OrnamentName}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={styles.ornSelectTitle}>{o.OrnamentName}</Text>
+                            {isCurrentlyPledgedToThis ? (
+                              <View style={{ backgroundColor: isDark ? '#143823' : '#dcfce7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: colors.success }}>Pledged</Text>
+                              </View>
+                            ) : null}
+                          </View>
                           <Text style={styles.ornSelectSub}>
                             {o.Purity} • Net: {Number(o.NetWeight || o.MetalWeight || 0).toFixed(2)}g • Val: ₹{(o.MarketValue || 0).toLocaleString()}
                           </Text>
@@ -738,7 +852,7 @@ export default function LoansScreen() {
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveBtn} onPress={handleSaveLoan}>
-                <Text style={styles.saveBtnText}>Disburse & Pledge</Text>
+                <Text style={styles.saveBtnText}>{isEditing ? 'Save Changes' : 'Disburse & Pledge'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -921,9 +1035,22 @@ export default function LoansScreen() {
             ) : null}
 
             <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.saveBtn} onPress={() => setDetailModalVisible(false)}>
-                <Text style={styles.saveBtnText}>Close</Text>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setDetailModalVisible(false)}>
+                <Text style={styles.cancelBtnText}>Close</Text>
               </TouchableOpacity>
+              {isSuperAdmin && selectedLoan?.LoanStatus === 'Active' ? (
+                <TouchableOpacity 
+                  style={[styles.saveBtn, { backgroundColor: '#d97706', flexDirection: 'row', alignItems: 'center', gap: 6 }]} 
+                  onPress={() => {
+                    const l = selectedLoan;
+                    setDetailModalVisible(false);
+                    openEditModal(l);
+                  }}
+                >
+                  <Ionicons name="pencil-outline" size={15} color="#ffffff" />
+                  <Text style={styles.saveBtnText}>Edit Loan</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
         </View>
@@ -1246,6 +1373,22 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   payQuickBtnText: {
     color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  editQuickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? '#3d2508' : '#fef3c7',
+    borderWidth: 1,
+    borderColor: isDark ? '#b45309' : '#fde68a',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  editQuickBtnText: {
+    color: isDark ? '#fbbf24' : '#b45309',
     fontSize: 12,
     fontWeight: '700',
   },

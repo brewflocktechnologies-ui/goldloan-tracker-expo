@@ -642,11 +642,47 @@ export function useAppStore() {
   };
 
   const updateLoan = (loanId: string, updated: Partial<Loan>) => {
+    const prevLoan = loansState.find(l => l.LoanId === loanId);
     loansState = loansState.map(l => l.LoanId === loanId ? { ...l, ...updated, UpdatedDate: new Date().toISOString() } : l);
+
+    // Reconcile ornament statuses if ornamentIds were updated
+    if (updated.ornamentIds) {
+      const prevOrnIds = prevLoan?.ornamentIds || [];
+      const newOrnIds = updated.ornamentIds || [];
+      const removed = prevOrnIds.filter(id => !newOrnIds.includes(id));
+      const added = newOrnIds.filter(id => !prevOrnIds.includes(id));
+
+      if (removed.length > 0 || added.length > 0) {
+        ornamentsState = ornamentsState.map(o => {
+          if (removed.includes(o.OrnamentId)) {
+            return { ...o, Status: 'Available', ReleasedLoanId: '', ReleaseDate: '' };
+          }
+          if (added.includes(o.OrnamentId)) {
+            return { ...o, Status: 'Pledged' };
+          }
+          return o;
+        });
+        cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
+      }
+    }
+
+    // Reconcile bank account utilization
+    bankAccountsState = bankAccountsState.map(b => {
+      const utilized = calculateUserBankUtilization(b.UserId, b.BankAccountId);
+      return { ...b, UtilizedLoanAmount: utilized, AvailableLoanAmount: Math.max(0, b.MaxLoanAmount - utilized) };
+    });
+
     cache.set('loans_all', loansState, CacheTTL.LISTS);
+    cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
     notify();
 
-    api.updateLoan(loanId, updated).catch(err => console.warn('[Store] updateLoan error:', err));
+    api.updateLoan(loanId, updated).then(res => {
+      if (res.success && res.data) {
+        loansState = loansState.map(l => l.LoanId === loanId ? { ...l, ...res.data } : l);
+        cache.set('loans_all', loansState, CacheTTL.LISTS);
+        notify();
+      }
+    }).catch(err => console.warn('[Store] updateLoan error:', err));
   };
 
   const closeAndReleaseLoan = (loanId: string, remarks: string) => {

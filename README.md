@@ -5,198 +5,188 @@
 <h1 align="center">🪙 Goldora</h1>
 
 <p align="center">
-  <strong>Next-Generation Serverless Gold Loan Origination & Vault Valuation Management System</strong>
+  <strong>Serverless Gold Loan Origination & Vault Management for Android, iOS and Web</strong>
 </p>
 
 <p align="center">
-  <a href="https://expo.dev"><img src="https://img.shields.io/badge/Expo-SDK_52-black?style=for-the-badge&logo=expo&logoColor=white" alt="Expo" /></a>
-  <a href="https://reactnative.dev"><img src="https://img.shields.io/badge/React_Native-0.76-20232a?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React Native" /></a>
-  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.3-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://expo.dev"><img src="https://img.shields.io/badge/Expo-SDK_57-black?style=for-the-badge&logo=expo&logoColor=white" alt="Expo" /></a>
+  <a href="https://reactnative.dev"><img src="https://img.shields.io/badge/React_Native-0.86-20232a?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React Native" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-6-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
   <a href="https://workspace.google.com/"><img src="https://img.shields.io/badge/Backend-Google_Sheets_%2B_Drive-34A853?style=for-the-badge&logo=googlesheets&logoColor=white" alt="Google Sheets" /></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License: MIT" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License: MIT" /></a>
 </p>
 
 <p align="center">
   <a href="#-features">Features</a> •
-  <a href="#-architecture--highlights">Architecture</a> •
-  <a href="#-quick-start-running-on-mobile--web">Quick Start</a> •
-  <a href="#-connecting-your-google-sheet--drive-backend">Backend Setup</a>
+  <a href="#-how-it-works">How it works</a> •
+  <a href="#-setup">Setup</a> •
+  <a href="#-project-structure">Structure</a> •
+  <a href="#-security-notes">Security</a> •
+  <a href="#-documentation">Docs</a>
 </p>
 
 ---
 
-## 🌟 About Goldora
+## 🌟 About
 
-> **Goldora** is an enterprise-grade, zero-cloud-cost financial mobile & web system built for pawn brokers, jewelers, and non-banking financial companies (NBFCs). It eliminates costly relational database servers by running entirely on **Google Workspace infrastructure (Google Sheets + Google Apps Script + Google Drive)** as a secure, reactive serverless database.
+**Goldora** is a gold-loan management app for pawn brokers and small lenders. There is no database server to run. A **Google Apps Script** web app (`backend/Code.gs`) acts as the API, **Google Sheets** stores the data, and **Google Drive** stores photos.
 
-### 💡 Why Goldora?
-- **Zero Infrastructure Cost**: Free database hosting on Google Sheets with automatic backups and multi-user concurrency.
-- **Real-Time Bullion Valuation**: Automated live web scrapers track 24K, 22K, and 18K gold market rates with dynamic loan-to-value (LTV) margin limits.
-- **Triple-Tier Micro-Cache**: Sub-millisecond instant screen renders with RAM caching, persistent local offline SQLite/AsyncStorage, and Google Server Cache.
-- **Role-Based Access Control**: Granular SuperAdmin mutations and read-only Staff directory access with secure SHA-256 password hashing.
-- **Cross-Platform**: Run seamlessly on iOS, Android, and Desktop Web with responsive fluid layouts.
+You sign in with an admin account stored in the sheet, then manage customers, their bank accounts, gold ornaments, loans, repayments and loan closure.
 
 ---
 
 ## 📱 Features
 
-- **📊 Dashboard:**
-  - **Live Gold Rates**: Real-time 24K, 22K, and 18K gold prices per gram for Bangalore scraped and cached.
-  - **KPI Metrics**: Active Loan Portfolio, Pledged Gold Grams, Available Bank Limits, and Total Vault Value.
-  - **Recent Repayments**: Quick transaction timeline.
-- **👥 Customers:**
-  - Customer directory with search by name, code, mobile, or city.
-  - Profile view with linked bank accounts, active loans, and pledged ornaments.
-  - Register new borrowers with KYC info (Aadhaar, PAN).
-- **💎 Gold Vault (Ornaments):**
-  - Gross, Stone, and Net Gold Weight tracking.
-  - Auto-calculating valuation based on purity (24K, 22K, 18K) and live gold rates.
-  - Real-time appreciation gains tracking (`Market Value` vs. `Buying Cost`).
-  - Hallmark number tracking and vault locker remarks.
-- **💰 Loans (Origination & Servicing):**
-  - Loan origination wizard: Select Borrower ➔ Choose Bank Account ➔ Select Available Ornaments to Pledge.
-  - Available credit limit validation per bank account.
-  - Automatic deduction of processing fees (0.5%), documentation charges, and insurance.
-  - Record payments / EMI repayments (Interest, Principal, Part Payment) with UPI/NetBanking reference.
-- **🔒 Loan Closure & Ornament Release:**
-  - Settle loans, record closure remarks, and automatically return pledged ornaments to available status.
-- **⚡ Multi-Tier Caching:**
-  - Level 1: In-memory cache for instant 0 ms tab switching.
-  - Level 2: `AsyncStorage` persistent disk cache for full offline availability.
-  - Level 3: Google Apps Script `CacheService` server caching for fast API responses (< 150ms).
-- **🛠️ Built-in Demo Mode:**
-  - The app launches in **Demo / Mock Mode** out-of-the-box so you can explore and test all screens immediately before connecting Google Sheets!
+- **🔐 Sign-in and roles**
+  - Username and password login against the `Admins` sheet, with an 8-hour session token.
+  - **SuperAdmin** can create, edit and delete. **User** is read-only, except for changing their own password.
+  - SuperAdmins manage login accounts in the **Admins** tab. Every user can change their own password from the profile menu.
+  - Passwords are stored as SHA-256 hashes, and login is limited to 5 attempts per 15 minutes per username.
+- **📊 Dashboard**
+  - Live Bangalore **24K / 22K / 18K** gold rates, scraped from goodreturns.in and refreshed on demand.
+  - KPIs: active loan amount, pledged grams, bank limits available, vault buying value, and recent repayments.
+- **👥 Customers**
+  - Directory with search by name, ID, customer code, mobile, email or Aadhaar.
+  - KYC fields (Aadhaar, PAN), customer photo, and a profile page with linked banks, loans and ornaments.
+- **🏦 Bank Accounts**
+  - Accounts per customer with a **maximum loan limit** and live utilisation, so a loan cannot exceed the available limit.
+  - Passbook photo upload.
+- **💎 Gold Vault (Ornaments)**
+  - Gross, stone and metal/net weight, purity, hallmark number, and multiple photos.
+  - Buying cost vs market value, with appreciation shown.
+  - Status flow: `Available` → `Pledged` → `Released`.
+- **💰 Loans**
+  - Create a loan by choosing the borrower, the bank account and the ornaments to pledge.
+  - Simple or compound interest, processing fee (0.5% in the New Loan wizard), document charge and insurance.
+  - Edit an active loan, including swapping pledged ornaments.
+  - Record repayments as **Interest**, **Principal** or **Part Payment**, with method and reference.
+- **🔒 Loan Closure**
+  - Close a loan with remarks. Its pledged ornaments are released back to the vault.
+- **🎨 App experience**
+  - Light, dark or system theme, a responsive sidebar layout, toast notifications, and skeleton loaders.
+  - Works on Android, iOS and the web.
 
 ---
 
-## 🚀 Quick Start (Running on Mobile / Web)
+## 🧭 How it works
 
-### 1. Start the Expo Development Server
-```powershell
-npx expo start
-```
-
-### 2. View on Your Phone (Zero Deployment Needed!)
-1. Install **Expo Go** from [Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent) or [App Store](https://apps.apple.com/app/expo-go/id982107779).
-2. Open Expo Go and enter your local network address:
-   ```text
-   exp://192.168.1.4:8081
-   ```
-   *(Or scan the QR code displayed in your terminal).*
-3. **If testing on 4G/5G mobile data:**
-   ```powershell
-   npx expo start --tunnel
-   ```
-
-### 3. View on Web Browser
-Open your browser at:
 ```text
-http://localhost:8081
+Screens ──► useAppStore (in-memory) ──► AsyncStorage cache ──► ApiService ──► Apps Script ──► Sheets / Drive
 ```
 
----
+- **Store:** screens read from an in-memory store. Changes appear in the UI immediately, then the request is sent to the backend in the background.
+- **Caching:** two layers on the phone: memory, then `AsyncStorage` (about 30 minutes for lists, 60 minutes for gold rates). The backend also caches the scraped gold rates for 30 minutes.
+- **Offline:** cached data is shown if the network fails. Writes need a connection.
+- **Sync:** one `getInitialSyncData` call loads users, banks, ornaments, loans, payments and gold rates. It runs after login and on pull-to-refresh.
 
-## ☁️ Connecting Your Google Sheet & Drive Backend
-
-The complete backend code is located in [`backend/Code.gs`](./backend/Code.gs).
-
-### Step 1: Create Google Sheet & Script
-1. Go to [Google Sheets](https://sheets.new) and create a new blank spreadsheet (e.g. named `Gold Loan Database`).
-2. In the top menu, click **Extensions ➔ Apps Script**.
-3. Replace any starter code in the script editor with the contents of [`backend/Code.gs`](./backend/Code.gs).
-
-### Step 2: Initialize Database Tables
-1. At the top of the Apps Script editor, select the function **`setupSheets`** from the function dropdown.
-2. Click **Run**.
-3. Grant the required permissions when prompted.
-4. Check your Google Sheet: All required tabs (`Admins`, `Users`, `BankAccounts`, `Ornaments`, `Loans`, `LoanOrnaments`, `Payments`, `Releases`) will be created automatically with styled headers!
-
-### Step 3: Deploy as Web App
-1. In Apps Script, click the blue **Deploy** button (top-right) ➔ **New deployment**.
-2. Click the gear icon ⚙️ next to *Select type* and choose **Web app**.
-3. Fill in:
-   - **Description**: `Gold Loan API v1`
-   - **Execute as**: `Me (your email)`
-   - **Who has access**: **`Anyone`** *(Required for mobile app fetch without Google login)*
-4. Click **Deploy** and copy the **Web app URL** (ends in `/exec`).
+See [docs/CRUD_Flow.md](./docs/CRUD_Flow.md) for the full protocol.
 
 ---
 
-## ⚙️ Configuring Your Backend URL
+## 🚀 Setup
 
-You can connect your deployed Google Apps Script URL in any of these **three ways**:
+Set up the backend first. The app cannot log in without it.
 
-### Method 1: Inside the Mobile App (Easiest!)
-1. Open the app on your phone or browser.
-2. Tap the **Settings** tab.
-3. Paste your Web App URL in the input field and tap **Test Ping**.
-4. Tap **Save URL** — the app will automatically switch from Demo Mode to **Live Sheets**!
+### 1. Install
 
-### Method 2: In `.env` File
-Create a `.env` file in the root folder (copy from `.env.example`):
+```bash
+git clone <repo-url>
+cd Goldloan-mobile-main
+npm install
+```
+
+### 2. Create the backend
+
+1. Create a blank Google Sheet at [sheets.new](https://sheets.new).
+2. Open **Extensions → Apps Script** and replace the starter code with [`backend/Code.gs`](./backend/Code.gs).
+3. Choose the `setupSheets` function and click **Run**. Approve the permissions when asked. This creates the tabs `Admins`, `Users`, `BankAccounts`, `Ornaments`, `Loans`, `LoanOrnaments`, `Payments` and `Releases`, and adds one starting login: **`admin` / `password123`**.
+4. **Deploy → New deployment → Web app.** Set *Execute as* to **Me** and *Who has access* to **Anyone**. Copy the URL that ends in `/exec`.
+
+> **Change the `admin` password straight after your first login** (profile menu → change password).
+>
+> **Upgrading an existing sheet that has plaintext passwords?** Run `migrateAdminPasswordsToHashed` once from the Apps Script editor, or nobody can sign in. After any later change to `Code.gs`, create a **new deployment version** so the app uses the new code.
+
+### 3. Point the app at the backend
+
+Create a `.env` file in the project root:
+
 ```env
-EXPO_PUBLIC_GAS_API_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+EXPO_PUBLIC_GAS_API_URL=https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec
 ```
 
-### Method 3: In `src/config/api.ts`
-Edit [`src/config/api.ts`](./src/config/api.ts) directly:
-```typescript
-export const DEFAULT_GAS_WEB_APP_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+Restart the dev server after editing `.env`. Optional branding, rate and loan defaults are listed in [`src/config/env.ts`](./src/config/env.ts).
+
+### 4. Run
+
+```bash
+npm start            # Expo dev server + QR code (Expo Go)
+npm run android      # Android
+npm run ios          # iOS (macOS)
+npm run web          # Browser
 ```
+
+Testing on a phone over mobile data: `npx expo start --tunnel`.
+
+### 5. Build and deploy
+
+```bash
+npm run android:build   # EAS preview build (internal APK)
+npm run web:deploy      # EAS web deploy (after: npx expo export --platform web)
+```
+
+Before publishing, change the app identifiers (`com.kishanth01.myapp`) in [`app.json`](./app.json).
 
 ---
 
-## 📁 Project Structure
+## 📁 Project structure
 
 ```text
-c:\KISHAN\SOURCECODE\expo\
-├── backend/
-│   └── Code.gs                 # Ready-to-deploy Google Apps Script (REST API & Caching)
-├── src/
-│   ├── app/
-│   │   ├── (tabs)/
-│   │   │   ├── _layout.tsx     # Bottom tabs navigation
-│   │   │   ├── index.tsx       # Dashboard with live gold rates & KPIs
-│   │   │   ├── customers.tsx   # Customer directory & search
-│   │   │   ├── ornaments.tsx   # Gold vault inventory & valuation
-│   │   │   ├── loans.tsx       # Active and closed loan book
-│   │   │   └── settings.tsx    # API config, connection tester, cache controls
-│   │   ├── customers/
-│   │   │   ├── new.tsx         # Add customer modal form
-│   │   │   └── [id].tsx        # Customer profile, bank accounts, and linked loans
-│   │   ├── ornaments/
-│   │   │   └── new.tsx         # Add gold ornament modal with live rates
-│   │   ├── loans/
-│   │   │   ├── new.tsx         # Originate loan wizard (customer + bank + ornaments)
-│   │   │   ├── [id].tsx        # Loan details & record repayment modal
-│   │   │   └── closure.tsx     # Settle loan & release ornaments
-│   │   ├── _layout.tsx         # Root stack layout
-│   │   └── index.tsx           # Entry redirect
-│   ├── components/
-│   │   ├── Badge.tsx           # Status badges (Pledged, Available, Released, Active)
-│   │   ├── GoldRateTicker.tsx  # Live 24K, 22K, 18K Bangalore rates banner
-│   │   ├── Header.tsx          # App header with sync indicator & demo/live tag
-│   │   └── StatCard.tsx        # KPI metrics card
-│   ├── config/
-│   │   └── api.ts              # API URL, Spreadsheet ID, and mock mode manager
-│   ├── constants/
-│   │   └── theme.ts            # Gold brand colors and styling constants
-│   ├── services/
-│   │   ├── api.ts              # REST client for GAS with cache integration
-│   │   ├── cache.ts            # Memory + AsyncStorage caching layer
-│   │   └── mockData.ts         # Sample data for offline demo mode
-│   └── types/
-│       └── index.ts            # TypeScript interfaces
-├── .env.example                # Environment variables template
-├── app.json                    # Expo project configuration
-└── package.json
+Goldloan-mobile-main/
+├── backend/Code.gs        # Google Apps Script: API, auth, Sheets CRUD, Drive, gold-rate scraper
+├── docs/                  # CRUD_Flow.md, PROJECT_STRUCTURE.md
+├── assets/                # Logo, icons, splash
+├── scratch/               # Old analysis scripts, not used by the app
+└── src/
+    ├── app/               # Expo Router screens
+    │   ├── _layout.tsx    #   providers, login redirect, stack
+    │   ├── login.tsx
+    │   ├── (tabs)/        #   index (dashboard), users, bank-accounts, ornaments,
+    │   │                  #   loans, closure, admin-users, _layout (sidebar shell)
+    │   ├── customers/     #   new.tsx, [id].tsx
+    │   ├── ornaments/     #   new.tsx
+    │   └── loans/         #   new.tsx, [id].tsx, closure.tsx
+    ├── components/        # DataTable, MobileCard, StatCard, GoldRateTicker, modals, image pickers
+    ├── config/            # env.ts (EXPO_PUBLIC_* values), api.ts (backend URL)
+    ├── constants/         # theme.ts (light and dark palettes)
+    ├── context/           # Auth, Theme, Toast, Sidebar providers
+    ├── services/          # api.ts (HTTP), cache.ts, store.ts (app state)
+    └── types/             # Shared TypeScript types
 ```
+
+A file-by-file breakdown and the boot sequence are in [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md).
 
 ---
 
-## 💡 Caching Behavior
+## 🔐 Security notes
 
-- **Instant Cold Starts**: Cached data from `AsyncStorage` loads in 0 ms so screens never show blank white pages.
-- **Stale-While-Revalidate**: Cached data is displayed immediately while a fresh copy is pulled from Google Sheets in the background.
-- **Automatic Cache Invalidation**: When you originate a new loan, add a customer, add an ornament, or record a repayment, the corresponding cache keys are cleared immediately so updated totals appear across all screens.
-- **Manual Clear**: You can reset your local cache anytime from the **Settings** tab.
+This app holds customer identity and financial data. Before using it with real records:
+
+- **Change the seeded `admin` / `password123` login.**
+- **Uploaded photos are shared "domain with link".** That works for Google Workspace accounts. On a personal `@gmail.com` account the photos may not display in the app. Check this with a test upload before relying on it.
+- The backend requires a session token for everything except login, ping and gold rates. Roles are enforced on the server, not just in the app.
+- Passwords are hashed with unsalted SHA-256. That is better than plain text, but consider a stronger scheme for production.
+- Customer data, including Aadhaar and PAN, is cached unencrypted on the device by `AsyncStorage`.
+- The `/exec` URL is publicly reachable. Keep it private.
+
+---
+
+## 📚 Documentation
+
+- [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md): layout, initialisation steps, boot sequence, routes, data model.
+- [docs/CRUD_Flow.md](./docs/CRUD_Flow.md): request protocol, caching, optimistic updates and CRUD traces.
+
+---
+
+## 📄 License
+
+MIT. See [LICENSE](./LICENSE).
