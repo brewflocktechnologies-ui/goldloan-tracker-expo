@@ -1,12 +1,16 @@
 {
   "expo": {
     "name": "Goldora",
-    "slug": "GoldLoan",
+    "slug": "goldloan-tracker-expo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/Logo.png",
     "ios": {
-      "icon": "./assets/Logo.png"
+      "icon": "./assets/Logo.png",
+      "bundleIdentifier": "com.kishanth01.myapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.kishanth01.myapp"
@@ -29,8 +33,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "10f24d72-c7bc-4521-9448-9cac10084969"
+        "projectId": "e55463a0-515b-4eec-bf4a-3cbaf909f485"
       }
-    }
+    },
+    "owner": "brewflocktechnologiess-team"
   }
 }
