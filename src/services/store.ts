@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { User, BankAccount, Ornament, Loan, Payment, GoldRateData, DashboardData, InitialSyncData } from '../types';
+import { useEffect, useState } from 'react';
+import { BankAccount, DashboardData, GoldRateData, InitialSyncData, Loan, Ornament, Payment, User } from '../types';
 import { api } from './api';
 import { cache, CacheTTL } from './cache';
 
@@ -109,9 +109,37 @@ export async function hydrateFromCache() {
 
     isCacheHydrated = true;
     if (updated) notify();
+
+    // Trigger non-blocking real-time gold rates refresh on boot
+    refreshGoldRates(false).catch(e => console.warn('[Store] Boot gold rates fetch:', e));
   } catch (e) {
     console.warn('[Store] hydrateFromCache warning:', e);
   }
+}
+
+let isFetchingGoldRates = false;
+
+/**
+ * Directly refresh Bangalore live gold rates from Google Apps Script web scraper
+ */
+export async function refreshGoldRates(force: boolean = false): Promise<GoldRateData> {
+  if (isFetchingGoldRates) return goldRatesState;
+  isFetchingGoldRates = true;
+  notify();
+  try {
+    const res = await api.getGoldRates(force);
+    if (res && res.data) {
+      goldRatesState = res.data;
+      notify();
+      return res.data;
+    }
+  } catch (err) {
+    console.warn('[Store] refreshGoldRates error:', err);
+  } finally {
+    isFetchingGoldRates = false;
+    notify();
+  }
+  return goldRatesState;
 }
 
 export async function syncFromBackend(force: boolean = false) {
@@ -696,6 +724,8 @@ export function useAppStore() {
     loans: loansState,
     payments: paymentsState,
     goldRates: goldRatesState,
+    isFetchingGoldRates,
+    refreshGoldRates,
     dashboardData: getDashboardData(),
     isSyncing,
     lastSyncedAt,

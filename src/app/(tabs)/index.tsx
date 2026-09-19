@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
-import { 
-  View, Text, StyleSheet, ScrollView, RefreshControl, 
-  TouchableOpacity, useWindowDimensions, ActivityIndicator 
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity, useWindowDimensions,
+  View
 } from 'react-native';
 import { Skeleton } from '../../components/Skeleton';
-import { useRouter } from 'expo-router';
-import { Colors, ThemeColors } from '../../constants/theme';
-import { useTheme } from '../../context/ThemeContext';
-import { useAppStore } from '../../services/store';
 import { Env } from '../../config/env';
-import { Ionicons } from '@expo/vector-icons';
+import { Colors, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
+import { useAppStore } from '../../services/store';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -177,9 +182,26 @@ export default function DashboardScreen() {
               </Text>
             </View>
             <View style={styles.cardHeaderRight}>
-              <View style={styles.cityPill}>
-                <Text style={styles.cityPillText}>Live 24K/22K/18K</Text>
-              </View>
+              <TouchableOpacity
+                onPress={async () => {
+                  toast.info('Fetching live Bangalore gold rates...');
+                  await store.refreshGoldRates(true);
+                  toast.success('Gold rates updated.');
+                }}
+                disabled={store.isFetchingGoldRates}
+                style={[styles.cityPill, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                activeOpacity={0.7}
+              >
+                {store.isFetchingGoldRates ? (
+                  <ActivityIndicator size="small" color={colors.primaryDark} style={{ transform: [{ scale: 0.65 }] }} />
+                ) : (
+                  <Ionicons name="refresh" size={11} color={colors.primaryDark} />
+                )}
+                <Text style={styles.cityPillText}>
+                  {store.isFetchingGoldRates ? 'Updating...' : 'Live Rates'}
+                </Text>
+              </TouchableOpacity>
               <Text style={styles.dateLabel} numberOfLines={1}>
                 {rates?.displayDate || 'Updated Today'}
               </Text>
@@ -211,6 +233,18 @@ export default function DashboardScreen() {
                     ₹{live22kRate.toLocaleString()}
                   </Text>
                   <Text style={styles.rateUnitHero}>per 1g</Text>
+                  {rates?.gold22k?.change ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 8, backgroundColor: isDark ? '#143823' : '#dcfce7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                      <Ionicons 
+                        name={rates.gold22k.direction === 'up' ? 'arrow-up' : rates.gold22k.direction === 'down' ? 'arrow-down' : 'remove'} 
+                        size={11} 
+                        color={rates.gold22k.direction === 'up' ? colors.success : colors.danger} 
+                      />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: rates.gold22k.direction === 'up' ? colors.success : colors.danger }}>
+                        {rates.gold22k.change >= 0 ? `+₹${rates.gold22k.change}` : `-₹${Math.abs(rates.gold22k.change)}`}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
 
@@ -224,7 +258,14 @@ export default function DashboardScreen() {
                       <Text style={[styles.miniBadgeText, { color: '#854d0e' }]}>99.9%</Text>
                     </View>
                   </View>
-                  <Text style={styles.rateAmount} numberOfLines={1}>₹{live24kRate.toLocaleString()}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                    <Text style={styles.rateAmount} numberOfLines={1}>₹{live24kRate.toLocaleString()}</Text>
+                    {rates?.gold24k?.change ? (
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: rates.gold24k.direction === 'up' ? colors.success : colors.danger }}>
+                        {rates.gold24k.change >= 0 ? `+₹${rates.gold24k.change}` : `-₹${Math.abs(rates.gold24k.change)}`}
+                      </Text>
+                    ) : null}
+                  </View>
                   <Text style={styles.rateUnit}>per 1g</Text>
                   <View style={styles.sovereignBox}>
                     <Text style={styles.sovereignText} numberOfLines={1}>8g: ₹{(live24kRate * 8).toLocaleString()}</Text>
@@ -239,7 +280,14 @@ export default function DashboardScreen() {
                       <Text style={[styles.miniBadgeText, { color: '#9a3412' }]}>75.0%</Text>
                     </View>
                   </View>
-                  <Text style={styles.rateAmount} numberOfLines={1}>₹{live18kRate.toLocaleString()}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                    <Text style={styles.rateAmount} numberOfLines={1}>₹{live18kRate.toLocaleString()}</Text>
+                    {rates?.gold18k?.change ? (
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: rates.gold18k.direction === 'up' ? colors.success : colors.danger }}>
+                        {rates.gold18k.change >= 0 ? `+₹${rates.gold18k.change}` : `-₹${Math.abs(rates.gold18k.change)}`}
+                      </Text>
+                    ) : null}
+                  </View>
                   <Text style={styles.rateUnit}>per 1g</Text>
                   <View style={styles.sovereignBox}>
                     <Text style={styles.sovereignText} numberOfLines={1}>8g: ₹{(live18kRate * 8).toLocaleString()}</Text>
@@ -258,7 +306,14 @@ export default function DashboardScreen() {
                     <Text style={[styles.miniBadgeText, { color: '#854d0e' }]}>99.9%</Text>
                   </View>
                 </View>
-                <Text style={styles.rateAmount} numberOfLines={1}>₹{live24kRate.toLocaleString()}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                  <Text style={styles.rateAmount} numberOfLines={1}>₹{live24kRate.toLocaleString()}</Text>
+                  {rates?.gold24k?.change ? (
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: rates.gold24k.direction === 'up' ? colors.success : colors.danger }}>
+                      {rates.gold24k.change >= 0 ? `+₹${rates.gold24k.change}` : `-₹${Math.abs(rates.gold24k.change)}`}
+                    </Text>
+                  ) : null}
+                </View>
                 <Text style={styles.rateUnit}>per 1g</Text>
                 <View style={styles.sovereignBox}>
                   <Text style={styles.sovereignText} numberOfLines={1}>8g: ₹{(live24kRate * 8).toLocaleString()}</Text>
@@ -275,9 +330,23 @@ export default function DashboardScreen() {
                     <Text style={[styles.miniBadgeText, { color: '#ffffff' }]}>Primary</Text>
                   </View>
                 </View>
-                <Text style={[styles.rateAmount, styles.rateAmountFeatured]} numberOfLines={1}>
-                  ₹{live22kRate.toLocaleString()}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                  <Text style={[styles.rateAmount, styles.rateAmountFeatured]} numberOfLines={1}>
+                    ₹{live22kRate.toLocaleString()}
+                  </Text>
+                  {rates?.gold22k?.change ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: isDark ? '#143823' : '#dcfce7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                      <Ionicons 
+                        name={rates.gold22k.direction === 'up' ? 'arrow-up' : rates.gold22k.direction === 'down' ? 'arrow-down' : 'remove'} 
+                        size={11} 
+                        color={rates.gold22k.direction === 'up' ? colors.success : colors.danger} 
+                      />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: rates.gold22k.direction === 'up' ? colors.success : colors.danger }}>
+                        {rates.gold22k.change >= 0 ? `+₹${rates.gold22k.change}` : `-₹${Math.abs(rates.gold22k.change)}`}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
                 <Text style={styles.rateUnit}>per 1g</Text>
                 <View style={[styles.sovereignBox, { backgroundColor: '#fef3c7' }]}>
                   <Text style={[styles.sovereignText, { color: '#92400e', fontWeight: '700' }]} numberOfLines={1}>
@@ -294,7 +363,14 @@ export default function DashboardScreen() {
                     <Text style={[styles.miniBadgeText, { color: '#9a3412' }]}>75.0%</Text>
                   </View>
                 </View>
-                <Text style={styles.rateAmount} numberOfLines={1}>₹{live18kRate.toLocaleString()}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                  <Text style={styles.rateAmount} numberOfLines={1}>₹{live18kRate.toLocaleString()}</Text>
+                  {rates?.gold18k?.change ? (
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: rates.gold18k.direction === 'up' ? colors.success : colors.danger }}>
+                      {rates.gold18k.change >= 0 ? `+₹${rates.gold18k.change}` : `-₹${Math.abs(rates.gold18k.change)}`}
+                    </Text>
+                  ) : null}
+                </View>
                 <Text style={styles.rateUnit}>per 1g</Text>
                 <View style={styles.sovereignBox}>
                   <Text style={styles.sovereignText} numberOfLines={1}>8g: ₹{(live18kRate * 8).toLocaleString()}</Text>

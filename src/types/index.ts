@@ -133,25 +133,23 @@ export interface DashboardData {
   recentTransactions: Payment[];
 }
 
+export interface GoldRateItem {
+  rate1g: number;
+  numericPrice?: number;
+  price?: string;
+  change: number;
+  changeStr?: string;
+  direction: "up" | "down" | "flat";
+  formattedBadge?: string;
+}
+
 export interface GoldRateData {
   location: string;
   updatedAt: string;
   displayDate: string;
-  gold24k: {
-    rate1g: number;
-    change: number;
-    direction: "up" | "down" | "flat";
-  };
-  gold22k: {
-    rate1g: number;
-    change: number;
-    direction: "up" | "down" | "flat";
-  };
-  gold18k: {
-    rate1g: number;
-    change: number;
-    direction: "up" | "down" | "flat";
-  };
+  gold24k: GoldRateItem;
+  gold22k: GoldRateItem;
+  gold18k: GoldRateItem;
 }
 
 export interface ApiResponse<T = any> {
