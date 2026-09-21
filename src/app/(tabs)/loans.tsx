@@ -1,16 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
-  Alert,
-  Modal,
-  Platform, RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Modal,
+    Platform, RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { Badge } from '../../components/Badge';
 import { Column, DataTable } from '../../components/DataTable';
@@ -1070,7 +1070,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   content: {
     padding: 12,
-    paddingBottom: 80,
+    paddingBottom: 20,
   },
   idText: {
     fontSize: 11,

@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Modal,
   Platform, RefreshControl,
   SafeAreaView,
@@ -219,6 +220,36 @@ export default function OrnamentsScreen() {
     else if (wizardStep === 2) setWizardStep(1);
     else setViewMode(selectedOrn ? 'details' : 'list');
   };
+
+  // Intercept phone back gesture / Android hardware back button
+  useEffect(() => {
+    const onBackPress = () => {
+      if (pickerModal.visible) {
+        setPickerModal(prev => ({ ...prev, visible: false }));
+        return true;
+      }
+      if (detailMenuVisible) {
+        setDetailMenuVisible(false);
+        return true;
+      }
+      if (deleteModalVisible) {
+        setDeleteModalVisible(false);
+        return true;
+      }
+      if (viewMode === 'add' || viewMode === 'edit') {
+        handleBackStep();
+        return true;
+      }
+      if (viewMode === 'details') {
+        setViewMode('list');
+        return true;
+      }
+      return false; // In list view: let system go back naturally
+    };
+
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSubscription.remove();
+  }, [viewMode, wizardStep, pickerModal.visible, detailMenuVisible, deleteModalVisible, selectedOrn]);
 
   const handlePickFormImage = async () => {
     try {

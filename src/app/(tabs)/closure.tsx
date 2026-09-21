@@ -1,18 +1,26 @@
-import React, { useState } from 'react';
-import { 
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  Modal, TextInput, Alert, SafeAreaView, Platform, RefreshControl 
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import {
+    Alert,
+    Modal,
+    Platform, RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
+import { Badge } from '../../components/Badge';
+import { Column, DataTable } from '../../components/DataTable';
+import { MobileCard } from '../../components/MobileCard';
 import { Colors, ThemeColors } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import { useAppStore } from '../../services/store';
 import { Loan } from '../../types';
-import { DataTable, Column } from '../../components/DataTable';
-import { MobileCard } from '../../components/MobileCard';
-import { Badge } from '../../components/Badge';
-import { Ionicons } from '@expo/vector-icons';
-import { useToast } from '../../context/ToastContext';
-import { useAuth } from '../../context/AuthContext';
 
 export default function ClosureScreen() {
   const { colors, isDark } = useTheme();
@@ -493,7 +501,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   content: {
     padding: 12,
-    paddingBottom: 80,
+    paddingBottom: 20,
   },
   infoBanner: {
     flexDirection: 'row',
