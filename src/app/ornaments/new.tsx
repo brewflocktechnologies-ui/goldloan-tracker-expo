@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Modal,
   Platform,
   StatusBar as RNStatusBar,
@@ -81,11 +82,30 @@ export default function NewOrnamentScreen() {
     options: [],
   });
 
+  const [customerModalVisible, setCustomerModalVisible] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+
+  const selectedUser = useMemo(() => {
+    return users.find(u => u.UserId === form.UserId);
+  }, [users, form.UserId]);
+
+  const filteredCustomers = useMemo(() => {
+    const q = customerSearchQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(u => {
+      const name = (u.FullName || '').toLowerCase();
+      const id = (u.UserId || '').toLowerCase();
+      const phone = (u.MobileNumber || '').toLowerCase();
+      const city = (u.City || '').toLowerCase();
+      return name.includes(q) || id.includes(q) || phone.includes(q) || city.includes(q);
+    });
+  }, [users, customerSearchQuery]);
+
   // Initialize form with existing ornament or defaults
   useEffect(() => {
     if (existingOrn) {
       setForm({
-        UserId: existingOrn.UserId || (users[0]?.UserId || ''),
+        UserId: existingOrn.UserId || '',
         OrnamentName: existingOrn.OrnamentName || '',
         OrnamentType: existingOrn.OrnamentType || 'Traditional',
         OrnamentCategory: existingOrn.OrnamentCategory || 'Necklace',
@@ -103,10 +123,36 @@ export default function NewOrnamentScreen() {
       if (existingOrn.OrnamentImages) {
         setImages(existingOrn.OrnamentImages.split(' | ').filter(Boolean));
       }
-    } else if (!form.UserId && users[0]) {
-      setForm(p => ({ ...p, UserId: users[0].UserId }));
     }
-  }, [existingOrn, users]);
+  }, [existingOrn]);
+
+  // BackHandler for Android hardware back button / phone gesture
+  useEffect(() => {
+    const backAction = () => {
+      if (customerModalVisible) {
+        setCustomerModalVisible(false);
+        setCustomerSearchQuery('');
+        return true;
+      }
+      if (pickerModal.visible) {
+        setPickerModal(p => ({ ...p, visible: false }));
+        return true;
+      }
+      if (currentStep === 3) {
+        setCurrentStep(2);
+        return true;
+      }
+      if (currentStep === 2) {
+        setCurrentStep(1);
+        return true;
+      }
+      router.back();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [customerModalVisible, pickerModal.visible, currentStep, router]);
 
   // Calculations
   const gross = parseFloat(form.GrossWeight) || 0;
@@ -178,7 +224,7 @@ export default function NewOrnamentScreen() {
       const purityNormalized = form.Purity.includes('24') ? '24K' : (form.Purity.includes('18') ? '18K' : '22K');
 
       const payload: Partial<Ornament> = {
-        UserId: form.UserId || users[0]?.UserId || 'U001',
+        UserId: form.UserId || '',
         OrnamentName: form.OrnamentName.trim(),
         OrnamentType: form.OrnamentCategory || form.OrnamentType,
         OrnamentCategory: form.OrnamentType,
@@ -304,24 +350,6 @@ export default function NewOrnamentScreen() {
         ══════════════════════════════════════════ */}
         {currentStep === 1 && (
           <View>
-            {/* Customer Chip Row */}
-            <View style={styles.fieldSection}>
-              <Text style={styles.fieldLabel}>Belongs to Customer *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.customerScroll}>
-                {users.map(u => (
-                  <TouchableOpacity
-                    key={u.UserId}
-                    style={[styles.customerChip, form.UserId === u.UserId && styles.customerChipActive]}
-                    onPress={() => setForm(p => ({ ...p, UserId: u.UserId }))}
-                  >
-                    <Text style={[styles.customerChipText, form.UserId === u.UserId && styles.customerChipTextActive]}>
-                      {u.FullName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-
             {/* Card: Basic Information */}
             <View style={styles.card}>
               <View style={styles.cardHeader}>
@@ -332,6 +360,41 @@ export default function NewOrnamentScreen() {
                   <Text style={styles.cardTitle}>Basic Information</Text>
                   <Text style={styles.cardSubtitle}>Enter basic details about the ornament</Text>
                 </View>
+              </View>
+
+              {/* Customer Dropdown (Optional) */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.inputLabel}>
+                  Customer <Text style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', fontWeight: '400' }}>(Optional)</Text>
+                </Text>
+                <TouchableOpacity 
+                  style={styles.dropdownInput}
+                  onPress={() => setCustomerModalVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, paddingRight: 4 }}>
+                    <Ionicons name="person-outline" size={16} color={selectedUser ? '#0284c7' : '#94a3b8'} />
+                    <Text 
+                      style={[
+                        styles.dropdownValue, 
+                        !selectedUser && { color: isDark ? '#94a3b8' : '#64748b', fontWeight: '400' }
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {selectedUser ? `${selectedUser.FullName} (${selectedUser.UserId})` : 'Select Customer (Optional)'}
+                    </Text>
+                  </View>
+                  {selectedUser ? (
+                    <TouchableOpacity 
+                      onPress={() => setForm(p => ({ ...p, UserId: '' }))}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                    </TouchableOpacity>
+                  ) : (
+                    <Ionicons name="chevron-down" size={16} color="#64748b" />
+                  )}
+                </TouchableOpacity>
               </View>
 
               {/* Ornament Name */}
@@ -767,6 +830,93 @@ export default function NewOrnamentScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* ─── CUSTOMER SEARCH PICKER MODAL ─── */}
+      <Modal visible={customerModalVisible} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => { setCustomerModalVisible(false); setCustomerSearchQuery(''); }}
+        >
+          <View style={[styles.pickerBox, { maxHeight: '80%' }]}>
+            <View style={styles.pickerHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="people-outline" size={20} color="#0284c7" />
+                <Text style={styles.pickerTitle}>Select Customer</Text>
+              </View>
+              <TouchableOpacity onPress={() => { setCustomerModalVisible(false); setCustomerSearchQuery(''); }}>
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Bar */}
+            <View style={styles.customerSearchBox}>
+              <Ionicons name="search" size={16} color="#94a3b8" style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.customerSearchInput}
+                placeholder="Search by name, phone or ID..."
+                placeholderTextColor={colors.placeholder}
+                value={customerSearchQuery}
+                onChangeText={setCustomerSearchQuery}
+              />
+              {customerSearchQuery ? (
+                <TouchableOpacity onPress={() => setCustomerSearchQuery('')}>
+                  <Ionicons name="close-circle" size={16} color="#94a3b8" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Option to clear / No Customer */}
+            <TouchableOpacity
+              style={[styles.customerPickerItem, !form.UserId && styles.customerSelectedRow]}
+              onPress={() => {
+                setForm(p => ({ ...p, UserId: '' }));
+                setCustomerModalVisible(false);
+                setCustomerSearchQuery('');
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="remove-circle-outline" size={18} color="#64748b" />
+                <Text style={[styles.pickerItemText, { color: '#64748b', fontStyle: 'italic' }]}>None (No Customer)</Text>
+              </View>
+              {!form.UserId && <Ionicons name="checkmark" size={18} color="#0284c7" />}
+            </TouchableOpacity>
+
+            {/* Customer List */}
+            <ScrollView style={{ maxHeight: 260 }} keyboardShouldPersistTaps="handled">
+              {filteredCustomers.length === 0 ? (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 13 }}>No customers found</Text>
+                </View>
+              ) : (
+                filteredCustomers.map(u => (
+                  <TouchableOpacity
+                    key={u.UserId}
+                    style={[styles.customerPickerItem, form.UserId === u.UserId && styles.customerSelectedRow]}
+                    onPress={() => {
+                      setForm(p => ({ ...p, UserId: u.UserId }));
+                      setCustomerModalVisible(false);
+                      setCustomerSearchQuery('');
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.customerPickerName}>{u.FullName}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                        <Text style={styles.customerPickerMeta}>ID: {u.UserId}</Text>
+                        {u.MobileNumber ? <Text style={styles.customerPickerMeta}>• {u.MobileNumber}</Text> : null}
+                        {u.City ? <Text style={styles.customerPickerMeta}>• {u.City}</Text> : null}
+                      </View>
+                    </View>
+                    {form.UserId === u.UserId && (
+                      <Ionicons name="checkmark" size={18} color="#0284c7" />
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -877,40 +1027,45 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     alignSelf: 'center',
   },
 
-  // Customer Select
-  fieldSection: {
-    marginBottom: 14,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: isDark ? '#94a3b8' : '#475569',
-    marginBottom: 6,
-  },
-  customerScroll: {
+  // Customer Search & Dropdown
+  customerSearchBox: {
     flexDirection: 'row',
-  },
-  customerChip: {
-    paddingHorizontal: 14,
+    alignItems: 'center',
+    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+    borderRadius: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: isDark ? '#1e293b' : '#ffffff',
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: isDark ? '#334155' : '#e2e8f0',
-    marginRight: 8,
   },
-  customerChipActive: {
-    backgroundColor: '#0284c7',
-    borderColor: '#0284c7',
+  customerSearchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: isDark ? '#f8fafc' : '#0f172a',
+    paddingVertical: 2,
   },
-  customerChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: isDark ? '#94a3b8' : '#475569',
+  customerPickerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? '#1e293b' : '#f1f5f9',
   },
-  customerChipTextActive: {
-    color: '#ffffff',
+  customerPickerName: {
+    fontSize: 13,
     fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0d172a',
+  },
+  customerPickerMeta: {
+    fontSize: 11,
+    color: isDark ? '#94a3b8' : '#64748b',
+  },
+  customerSelectedRow: {
+    backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
   },
 
   // Card Structure
