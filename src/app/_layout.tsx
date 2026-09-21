@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
-import { Stack, useRouter, usePathname } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ApiConfig } from '../config/api';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
-import { AuthProvider, useAuth } from '../context/AuthContext';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -58,6 +58,10 @@ function RootLayoutInner() {
         <Stack.Screen 
           name="ornaments/new" 
           options={{ presentation: 'modal', headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="ornaments/[id]" 
+          options={{ headerShown: false }} 
         />
         <Stack.Screen 
           name="loans/new" 

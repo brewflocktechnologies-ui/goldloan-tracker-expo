@@ -72,6 +72,9 @@ export interface Ornament {
   Status: "Available" | "Pledged" | "Released" | "Deleted";
   ReleaseDate?: string;
   ReleasedLoanId?: string;
+  AssayCenter?: string;
+  YearOfMarking?: string;
+  LoanNumber?: string;
 }
 
 export interface Loan {
