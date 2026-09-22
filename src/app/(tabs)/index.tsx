@@ -55,7 +55,7 @@ export default function DashboardScreen() {
     ? Math.min(100, Math.round((dash.totalLoanAmount / dash.totalEligibleLoanAmount) * 100)) 
     : 0;
 
-  const handleActionPress = (route: string) => {
+  const handleActionPress = (route: string | { pathname: string; params?: Record<string, string> }) => {
     if (isReadOnly) {
       toast.warning('Read-Only Mode: SuperAdmin privileges required to create or modify records.');
       return;
@@ -582,7 +582,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity 
             style={[isDesktop ? styles.actionCardDesktop : styles.actionCardMobile, isReadOnly && styles.actionCardDisabled]} 
-            onPress={() => handleActionPress('/ornaments/new')} 
+            onPress={() => handleActionPress({ pathname: '/(tabs)/ornaments', params: { action: 'add' } })}
             activeOpacity={0.7}
           >
             <View style={[styles.actionIconBox, { backgroundColor: '#fef3c7' }]}>

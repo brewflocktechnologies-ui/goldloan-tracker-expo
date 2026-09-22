@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,6 +19,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { CustomerPickerModal } from '../../components/ornaments/CustomerPickerModal';
+import { OptionPickerModal } from '../../components/ornaments/OptionPickerModal';
+import { OrnamentStatusBadge } from '../../components/ornaments/OrnamentStatusBadge';
 import { ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,9 +29,11 @@ import { useToast } from '../../context/ToastContext';
 import { getDriveImageUrl } from '../../services/api';
 import { useAppStore } from '../../services/store';
 import { Ornament } from '../../types';
+import { calculateOrnamentValuation } from '../../utils/ornamentCalculations';
 
 export default function OrnamentsScreen() {
   const router = useRouter();
+  const { action } = useLocalSearchParams<{ action?: string }>();
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors, isDark);
   const store = useAppStore();
@@ -88,18 +93,6 @@ export default function OrnamentsScreen() {
   const selectedUser = useMemo(() => {
     return users.find(u => u.UserId === form.UserId);
   }, [users, form.UserId]);
-
-  const filteredCustomers = useMemo(() => {
-    const q = customerSearchQuery.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter(u => {
-      const name = (u.FullName || '').toLowerCase();
-      const id = (u.UserId || '').toLowerCase();
-      const phone = (u.MobileNumber || '').toLowerCase();
-      const city = (u.City || '').toLowerCase();
-      return name.includes(q) || id.includes(q) || phone.includes(q) || city.includes(q);
-    });
-  }, [users, customerSearchQuery]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -180,6 +173,15 @@ export default function OrnamentsScreen() {
     setViewMode('add');
   };
 
+  // Entered via a deep link/quick-action (e.g. Home dashboard "Add Ornament") requesting the add wizard directly.
+  useEffect(() => {
+    if (action === 'add') {
+      handleAddPress();
+      router.setParams({ action: undefined } as any);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action]);
+
   // Open Edit
   const handleEditPress = (orn: Ornament) => {
     setSelectedOrn(orn);
@@ -208,14 +210,10 @@ export default function OrnamentsScreen() {
   // Wizard Calculations
   const gross = parseFloat(form.GrossWeight) || 0;
   const stone = parseFloat(form.StoneWeight) || 0;
-  const net = Math.max(0, gross - stone);
   const buyRate = parseFloat(form.BuyingPricePerGram) || 5800;
   const liveRate22k = store.goldRates?.gold22k?.rate1g || 7500;
-  const totalBuyingValue = Math.round(net * buyRate);
-  const currentGoldValueLive = Math.round(net * liveRate22k);
-  const marketValue = Math.round(net * (liveRate22k > 0 ? liveRate22k * 1.0677 : 205000));
-  const appreciation = marketValue - totalBuyingValue;
-  const appreciationPct = totalBuyingValue > 0 ? (appreciation / totalBuyingValue) * 100 : 29.31;
+  const { net, totalBuyingValue, currentGoldValueLive, marketValue, appreciation, appreciationPct } =
+    calculateOrnamentValuation(gross, stone, buyRate, liveRate22k);
 
   const [refreshingRates, setRefreshingRates] = useState(false);
   const handleRefreshRates = async () => {
@@ -377,8 +375,6 @@ export default function OrnamentsScreen() {
       ? selectedOrn.OrnamentImages.split(' | ').filter(Boolean).map(img => ({ uri: getDriveImageUrl(img) || img }))
       : [];
     const currentPhoto = detailImages[activePhotoIdx] || detailImages[0];
-    const isAvailable = selectedOrn.Status === 'Available';
-    const isPledged = selectedOrn.Status === 'Pledged';
 
     const netWt = Number(selectedOrn.NetWeight || selectedOrn.MetalWeight || 0).toFixed(3);
     const grossWt = Number(selectedOrn.GrossWeight || 0).toFixed(3);
@@ -513,21 +509,7 @@ export default function OrnamentsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={[
-              styles.statusPill,
-              isAvailable ? styles.statusPillGreen : (isPledged ? styles.statusPillOrange : styles.statusPillBlue)
-            ]}>
-              <View style={[
-                styles.statusDot,
-                isAvailable ? styles.statusDotGreen : (isPledged ? styles.statusDotOrange : styles.statusDotBlue)
-              ]} />
-              <Text style={[
-                styles.statusPillText,
-                isAvailable ? styles.statusTextGreen : (isPledged ? styles.statusTextOrange : styles.statusTextBlue)
-              ]}>
-                {selectedOrn.Status}
-              </Text>
-            </View>
+            <OrnamentStatusBadge status={selectedOrn.Status} isDark={isDark} variant="pill" />
           </View>
 
           {/* Card 1: Weight Details */}
@@ -1253,124 +1235,33 @@ export default function OrnamentsScreen() {
           )}
         </ScrollView>
 
-        {/* Option Picker Modal */}
-        <Modal visible={pickerModal.visible} transparent animationType="fade">
-          <TouchableOpacity 
-            style={styles.modalOverlay} 
-            activeOpacity={1} 
-            onPress={() => setPickerModal(p => ({ ...p, visible: false }))}
-          >
-            <View style={styles.pickerBox}>
-              <View style={styles.pickerHeader}>
-                <Text style={styles.pickerTitle}>{pickerModal.title}</Text>
-                <TouchableOpacity onPress={() => setPickerModal(p => ({ ...p, visible: false }))}>
-                  <Ionicons name="close" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              <ScrollView style={{ maxHeight: 280 }}>
-                {pickerModal.options.map(opt => (
-                  <TouchableOpacity
-                    key={opt}
-                    style={styles.pickerItem}
-                    onPress={() => selectOption(opt)}
-                  >
-                    <Text style={styles.pickerItemText}>{opt}</Text>
-                    {form[pickerModal.field] === opt && (
-                      <Ionicons name="checkmark" size={18} color="#0284c7" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </TouchableOpacity>
-        </Modal>
+        <OptionPickerModal
+          visible={pickerModal.visible}
+          title={pickerModal.title}
+          options={pickerModal.options}
+          selectedValue={form[pickerModal.field]}
+          onSelect={selectOption}
+          onClose={() => setPickerModal(p => ({ ...p, visible: false }))}
+          isDark={isDark}
+          secondaryTextColor={colors.textSecondary}
+        />
 
-        {/* Customer Search Picker Modal */}
-        <Modal visible={customerModalVisible} transparent animationType="fade">
-          <TouchableOpacity 
-            style={styles.modalOverlay} 
-            activeOpacity={1} 
-            onPress={() => { setCustomerModalVisible(false); setCustomerSearchQuery(''); }}
-          >
-            <View style={[styles.pickerBox, { maxHeight: '80%' }]}>
-              <View style={styles.pickerHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="people-outline" size={20} color="#0284c7" />
-                  <Text style={styles.pickerTitle}>Select Customer</Text>
-                </View>
-                <TouchableOpacity onPress={() => { setCustomerModalVisible(false); setCustomerSearchQuery(''); }}>
-                  <Ionicons name="close" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Search Bar */}
-              <View style={styles.customerSearchBox}>
-                <Ionicons name="search" size={16} color="#94a3b8" style={{ marginRight: 8 }} />
-                <TextInput
-                  style={styles.customerSearchInput}
-                  placeholder="Search by name, phone or ID..."
-                  placeholderTextColor={colors.placeholder}
-                  value={customerSearchQuery}
-                  onChangeText={setCustomerSearchQuery}
-                />
-                {customerSearchQuery ? (
-                  <TouchableOpacity onPress={() => setCustomerSearchQuery('')}>
-                    <Ionicons name="close-circle" size={16} color="#94a3b8" />
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-
-              {/* Option to clear / No Customer */}
-              <TouchableOpacity
-                style={[styles.customerPickerItem, !form.UserId && styles.customerSelectedRow]}
-                onPress={() => {
-                  setForm(p => ({ ...p, UserId: '' }));
-                  setCustomerModalVisible(false);
-                  setCustomerSearchQuery('');
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="remove-circle-outline" size={18} color="#64748b" />
-                  <Text style={[styles.pickerItemText, { color: '#64748b', fontStyle: 'italic' }]}>None (No Customer)</Text>
-                </View>
-                {!form.UserId && <Ionicons name="checkmark" size={18} color="#0284c7" />}
-              </TouchableOpacity>
-
-              {/* Customer List */}
-              <ScrollView style={{ maxHeight: 260 }} keyboardShouldPersistTaps="handled">
-                {filteredCustomers.length === 0 ? (
-                  <View style={{ padding: 20, alignItems: 'center' }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 13 }}>No customers found</Text>
-                  </View>
-                ) : (
-                  filteredCustomers.map(u => (
-                    <TouchableOpacity
-                      key={u.UserId}
-                      style={[styles.customerPickerItem, form.UserId === u.UserId && styles.customerSelectedRow]}
-                      onPress={() => {
-                        setForm(p => ({ ...p, UserId: u.UserId }));
-                        setCustomerModalVisible(false);
-                        setCustomerSearchQuery('');
-                      }}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.customerPickerName}>{u.FullName}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                          <Text style={styles.customerPickerMeta}>ID: {u.UserId}</Text>
-                          {u.MobileNumber ? <Text style={styles.customerPickerMeta}>• {u.MobileNumber}</Text> : null}
-                          {u.City ? <Text style={styles.customerPickerMeta}>• {u.City}</Text> : null}
-                        </View>
-                      </View>
-                      {form.UserId === u.UserId && (
-                        <Ionicons name="checkmark" size={18} color="#0284c7" />
-                      )}
-                    </TouchableOpacity>
-                  ))
-                )}
-              </ScrollView>
-            </View>
-          </TouchableOpacity>
-        </Modal>
+        <CustomerPickerModal
+          visible={customerModalVisible}
+          users={users}
+          searchQuery={customerSearchQuery}
+          onSearchChange={setCustomerSearchQuery}
+          selectedUserId={form.UserId}
+          onSelect={(userId) => {
+            setForm(p => ({ ...p, UserId: userId }));
+            setCustomerModalVisible(false);
+            setCustomerSearchQuery('');
+          }}
+          onClose={() => { setCustomerModalVisible(false); setCustomerSearchQuery(''); }}
+          isDark={isDark}
+          secondaryTextColor={colors.textSecondary}
+          placeholderColor={colors.placeholder}
+        />
       </View>
     );
   }
@@ -1469,7 +1360,6 @@ export default function OrnamentsScreen() {
           {filteredOrnaments.map((orn) => {
             const firstImg = orn.OrnamentImages ? orn.OrnamentImages.split(' | ').filter(Boolean)[0] : '';
             const directUrl = firstImg ? getDriveImageUrl(firstImg) : '';
-            const isAvailable = orn.Status === 'Available';
             const isPledged = orn.Status === 'Pledged';
             const loanNum = getLoanNumber(orn);
             const weight = Number(orn.NetWeight || orn.MetalWeight || orn.GrossWeight || 0);
@@ -1507,21 +1397,7 @@ export default function OrnamentsScreen() {
                 <View style={styles.cardCenterCol}>
                   <View style={styles.cardHeaderRow}>
                     <Text style={styles.listCardTitle} numberOfLines={1}>{orn.OrnamentName}</Text>
-                    <View style={[
-                      styles.statusBadge,
-                      isAvailable ? styles.statusBadgeGreen : (isPledged ? styles.statusBadgeOrange : styles.statusBadgeBlue)
-                    ]}>
-                      <View style={[
-                        styles.statusDot,
-                        isAvailable ? styles.statusDotGreen : (isPledged ? styles.statusDotOrange : styles.statusDotBlue)
-                      ]} />
-                      <Text style={[
-                        styles.statusBadgeText,
-                        isAvailable ? styles.statusTextGreen : (isPledged ? styles.statusTextOrange : styles.statusTextBlue)
-                      ]}>
-                        {orn.Status}
-                      </Text>
-                    </View>
+                    <OrnamentStatusBadge status={orn.Status} isDark={isDark} variant="badge" />
                   </View>
 
                   <Text style={styles.cardIdText}>{orn.OrnamentId}</Text>
@@ -1844,50 +1720,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     flex: 1,
     marginRight: 6,
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statusBadgeGreen: {
-    backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : '#ecfdf5',
-  },
-  statusDotGreen: {
-    backgroundColor: '#16a34a',
-  },
-  statusTextGreen: {
-    color: isDark ? '#4ade80' : '#15803d',
-  },
-  statusBadgeOrange: {
-    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb',
-  },
-  statusDotOrange: {
-    backgroundColor: '#d97706',
-  },
-  statusTextOrange: {
-    color: isDark ? '#fbbf24' : '#b45309',
-  },
-  statusBadgeBlue: {
-    backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#f0f9ff',
-  },
-  statusDotBlue: {
-    backgroundColor: '#0284c7',
-  },
-  statusTextBlue: {
-    color: isDark ? '#38bdf8' : '#0284c7',
-  },
 
   cardIdText: {
     fontSize: 11,
@@ -2169,32 +2001,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     fontWeight: '600',
     color: isDark ? '#94a3b8' : '#64748b',
   },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  statusPillText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  statusPillGreen: {
-    backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : '#dcfce7',
-    borderColor: isDark ? '#22c55e' : '#bbf7d0',
-  },
-  statusPillOrange: {
-    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7',
-    borderColor: isDark ? '#f59e0b' : '#fde68a',
-  },
-  statusPillBlue: {
-    backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
-    borderColor: isDark ? '#0284c7' : '#bae6fd',
-  },
-
   // Card Structure
   card: {
     backgroundColor: isDark ? '#0f172a' : '#ffffff',
@@ -2266,47 +2072,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   verifiedText: { fontSize: 13, fontWeight: '700', color: '#16a34a' },
   appreciationPctText: { fontSize: 12, fontWeight: '700', color: '#16a34a', marginTop: 1 },
-
-  // Customer Search & Dropdown
-  customerSearchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: isDark ? '#334155' : '#e2e8f0',
-  },
-  customerSearchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: isDark ? '#f8fafc' : '#0f172a',
-    paddingVertical: 2,
-  },
-  customerPickerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: isDark ? '#1e293b' : '#f1f5f9',
-  },
-  customerPickerName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: isDark ? '#f8fafc' : '#0d172a',
-  },
-  customerPickerMeta: {
-    fontSize: 11,
-    color: isDark ? '#94a3b8' : '#64748b',
-  },
-  customerSelectedRow: {
-    backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
-  },
 
   fieldGroup: { marginBottom: 12 },
   inputLabel: { fontSize: 12, fontWeight: '600', color: isDark ? '#cbd5e1' : '#334155', marginBottom: 6 },
@@ -2564,40 +2329,4 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   menuItemText: { fontSize: 13, fontWeight: '600', color: isDark ? '#f8fafc' : '#0f172a' },
   menuDivider: { height: 1, backgroundColor: isDark ? '#334155' : '#f1f5f9' },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  pickerBox: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: isDark ? '#0f172a' : '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: isDark ? '#334155' : '#e2e8f0',
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: isDark ? '#1e293b' : '#f1f5f9',
-  },
-  pickerTitle: { fontSize: 15, fontWeight: '800', color: isDark ? '#f8fafc' : '#0d172a' },
-  pickerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: isDark ? '#1e293b' : '#f8fafc',
-  },
-  pickerItemText: { fontSize: 13, fontWeight: '600', color: isDark ? '#f8fafc' : '#0f172a' },
 });

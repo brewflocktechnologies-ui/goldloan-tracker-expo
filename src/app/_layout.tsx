@@ -75,16 +75,8 @@ function RootLayoutInner() {
           name="customers/[id]" 
           options={{ headerShown: false }} 
         />
-        <Stack.Screen 
-          name="ornaments/new" 
-          options={{ presentation: 'modal', headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="ornaments/[id]" 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="loans/new" 
+        <Stack.Screen
+          name="loans/new"
           options={{ presentation: 'modal', headerShown: false }} 
         />
         <Stack.Screen 

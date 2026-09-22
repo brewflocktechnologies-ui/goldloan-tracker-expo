@@ -281,7 +281,6 @@ Login (`AuthContext.login`) calls `api.login`, stores `{ username, role, token }
 | `/(tabs)/admin-users` | `(tabs)/admin-users.tsx` | Login accounts |
 | `/customers/new` | `customers/new.tsx` | Modal |
 | `/customers/[id]` | `customers/[id].tsx` | Detail |
-| `/ornaments/new` | `ornaments/new.tsx` | Modal |
 | `/loans/new` | `loans/new.tsx` | Modal (wizard) |
 | `/loans/[id]` | `loans/[id].tsx` | Detail + payments |
 | `/loans/closure` | `loans/closure.tsx` | Modal |
