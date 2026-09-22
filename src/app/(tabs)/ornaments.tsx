@@ -407,7 +407,7 @@ export default function OrnamentsScreen() {
     return (
       <View style={styles.subScreenContainer}>
         {/* Header */}
-        <View style={styles.detailHeader}>
+        <View style={[styles.detailHeader, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 14 : 10) }]}>
           <TouchableOpacity 
             onPress={() => setViewMode('list')} 
             style={styles.headerBackBtn}
@@ -424,7 +424,11 @@ export default function OrnamentsScreen() {
             style={styles.headerMenuBtn}
             accessibilityLabel="Menu options"
           >
-            <Ionicons name="ellipsis-vertical" size={20} color={colors.textPrimary} />
+            <View style={styles.menuDotsContainer}>
+              <View style={styles.menuDotCircle} />
+              <View style={styles.menuDotCircle} />
+              <View style={styles.menuDotCircle} />
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -528,8 +532,8 @@ export default function OrnamentsScreen() {
             </View>
             <View style={styles.weightGrid}>
               <View style={styles.weightCol}>
-                <Text style={styles.weightLabel}>Net weight</Text>
-                <Text style={styles.weightValue}>{parseFloat(netWt) > 0 ? `${netWt} g` : '-'}</Text>
+                <Text style={[styles.weightLabel, styles.netWeightLabel]}>Net weight</Text>
+                <Text style={[styles.weightValue, styles.netWeightValue]}>{parseFloat(netWt) > 0 ? `${netWt} g` : '-'}</Text>
               </View>
               <View style={styles.weightCol}>
                 <Text style={styles.weightLabel}>Gross Weight</Text>
@@ -739,7 +743,7 @@ export default function OrnamentsScreen() {
     return (
       <View style={styles.subScreenContainer}>
         {/* Header */}
-        <View style={styles.detailHeader}>
+        <View style={[styles.detailHeader, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 14 : 10) }]}>
           <TouchableOpacity onPress={handleBackStep} style={styles.headerBackBtn}>
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -1326,11 +1330,8 @@ export default function OrnamentsScreen() {
   // ══════════════════════════════════════════════════════════
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284c7']} />}
-      >
+      {/* Top Header Section (Light Blue) */}
+      <View style={styles.listTopSection}>
         {/* Header Row */}
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
@@ -1406,8 +1407,14 @@ export default function OrnamentsScreen() {
             </Text>
           </TouchableOpacity>
         </ScrollView>
+      </View>
 
-        {/* Ornaments Card List */}
+      {/* Ornaments Cards List (White below) */}
+      <ScrollView 
+        style={styles.cardsScrollContainer} 
+        contentContainerStyle={styles.cardsScrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284c7']} />}
+      >
         <View style={styles.cardsList}>
           {filteredOrnaments.map((orn) => {
             const firstImg = orn.OrnamentImages ? orn.OrnamentImages.split(' | ').filter(Boolean)[0] : '';
@@ -1521,17 +1528,18 @@ export default function OrnamentsScreen() {
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: isDark ? '#090d16' : '#eaf4fd',
+    backgroundColor: isDark ? '#090d16' : '#d8edfa',
   },
   subScreenContainer: {
     flex: 1,
-    backgroundColor: isDark ? '#090d16' : '#f0f5fa',
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
   },
   container: {
     flex: 1,
   },
   scrollContainer: {
     flex: 1,
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
   },
   content: {
     paddingHorizontal: 16,
@@ -1540,6 +1548,28 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     maxWidth: 680,
     width: '100%',
     alignSelf: 'center',
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
+  },
+  listTopSection: {
+    backgroundColor: isDark ? '#0f172a' : '#d8edfa',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? '#1e293b' : '#bfe0f2',
+  },
+  cardsScrollContainer: {
+    flex: 1,
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
+  },
+  cardsScrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 100,
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
   },
 
   // Headers
@@ -1586,9 +1616,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 14 : 10,
     paddingBottom: 12,
-    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    backgroundColor: isDark ? '#0f172a' : '#d8edfa',
     borderBottomWidth: 1,
-    borderBottomColor: isDark ? '#1e293b' : '#e2e8f0',
+    borderBottomColor: isDark ? '#1e293b' : '#bfe0f2',
   },
   headerBackBtn: {
     padding: 6,
@@ -1610,6 +1640,23 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   headerMenuBtn: {
     padding: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuDotsContainer: {
+    width: 20,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3.5,
+  },
+  menuDotCircle: {
+    width: 6.5,
+    height: 6.5,
+    borderRadius: 3.5,
+    borderWidth: 1.8,
+    borderColor: isDark ? '#f8fafc' : '#0d172a',
+    backgroundColor: 'transparent',
   },
 
   // Search Container
@@ -2153,7 +2200,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   weightCol: { flex: 1, alignItems: 'flex-start' },
   weightLabel: { fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 },
+  netWeightLabel: { color: isDark ? '#f8fafc' : '#000000', fontWeight: '700' },
   weightValue: { fontSize: 13, fontWeight: '800', color: isDark ? '#f8fafc' : '#0d172a' },
+  netWeightValue: { color: isDark ? '#f8fafc' : '#000000' },
 
   tableRows: { gap: 10 },
   tableRow: {

@@ -4,16 +4,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    Platform,
-    StatusBar as RNStatusBar,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  Platform,
+  StatusBar as RNStatusBar,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -119,14 +118,14 @@ export default function OrnamentDetailScreen() {
 
   if (!ornament) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
         <View style={styles.centerBox}>
           <Text style={styles.notFoundText}>Ornament not found</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -151,7 +150,8 @@ export default function OrnamentDetailScreen() {
   const isPledged = status === 'Pledged';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      <RNStatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? "#0f172a" : "#d8edfa"} />
       {/* ─── TOP HEADER ─── */}
       <View style={[styles.header, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? RNStatusBar.currentHeight || 28 : 12) }]}>
         <TouchableOpacity 
@@ -170,7 +170,11 @@ export default function OrnamentDetailScreen() {
           style={styles.headerMenuBtn}
           accessibilityLabel="Menu options"
         >
-          <Ionicons name="ellipsis-vertical" size={20} color={colors.textPrimary} />
+          <View style={styles.menuDotsContainer}>
+            <View style={styles.menuDotCircle} />
+            <View style={styles.menuDotCircle} />
+            <View style={styles.menuDotCircle} />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -298,8 +302,8 @@ export default function OrnamentDetailScreen() {
 
           <View style={styles.weightGrid}>
             <View style={styles.weightCol}>
-              <Text style={styles.weightLabel}>Net weight</Text>
-              <Text style={styles.weightValue}>{netWt} g</Text>
+              <Text style={[styles.weightLabel, styles.netWeightLabel]}>Net weight</Text>
+              <Text style={[styles.weightValue, styles.netWeightValue]}>{netWt} g</Text>
             </View>
             <View style={styles.weightCol}>
               <Text style={styles.weightLabel}>Gross Weight</Text>
@@ -504,14 +508,14 @@ export default function OrnamentDetailScreen() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteModalVisible(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: isDark ? '#090d16' : '#f0f5fa',
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -519,9 +523,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 14 : 10,
     paddingBottom: 14,
-    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    backgroundColor: isDark ? '#0f172a' : '#d8edfa',
     borderBottomWidth: 1,
-    borderBottomColor: isDark ? '#1e293b' : '#e2e8f0',
+    borderBottomColor: isDark ? '#1e293b' : '#bfe0f2',
   },
   headerBackBtn: {
     padding: 6,
@@ -543,9 +547,27 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   headerMenuBtn: {
     padding: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuDotsContainer: {
+    width: 20,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3.5,
+  },
+  menuDotCircle: {
+    width: 6.5,
+    height: 6.5,
+    borderRadius: 3.5,
+    borderWidth: 1.8,
+    borderColor: isDark ? '#f8fafc' : '#0d172a',
+    backgroundColor: 'transparent',
   },
   scrollContainer: {
     flex: 1,
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
   },
   content: {
     padding: 16,
@@ -553,6 +575,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     maxWidth: 700,
     width: '100%',
     alignSelf: 'center',
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
   },
 
   // Gallery
@@ -821,10 +844,17 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: isDark ? '#94a3b8' : '#64748b',
     marginBottom: 4,
   },
+  netWeightLabel: {
+    color: isDark ? '#f8fafc' : '#000000',
+    fontWeight: '700',
+  },
   weightValue: {
     fontSize: 13,
     fontWeight: '800',
     color: isDark ? '#f8fafc' : '#0d172a',
+  },
+  netWeightValue: {
+    color: isDark ? '#f8fafc' : '#000000',
   },
 
   // Table Rows inside Cards

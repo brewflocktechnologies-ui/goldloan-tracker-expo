@@ -10,7 +10,6 @@ import {
   Modal,
   Platform,
   StatusBar as RNStatusBar,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -276,7 +275,8 @@ export default function NewOrnamentScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      <RNStatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? "#0f172a" : "#d8edfa"} />
       {/* ─── TOP HEADER ─── */}
       <View style={[styles.header, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? RNStatusBar.currentHeight || 28 : 12) }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn} accessibilityLabel="Back">
@@ -917,14 +917,14 @@ export default function NewOrnamentScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: isDark ? '#090d16' : '#f0f5fa',
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -932,9 +932,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 14 : 10,
     paddingBottom: 12,
-    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    backgroundColor: isDark ? '#0f172a' : '#d8edfa',
     borderBottomWidth: 1,
-    borderBottomColor: isDark ? '#1e293b' : '#e2e8f0',
+    borderBottomColor: isDark ? '#1e293b' : '#bfe0f2',
   },
   backBtn: {
     padding: 6,
@@ -1018,6 +1018,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
 
   scrollContainer: {
     flex: 1,
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
   },
   content: {
     padding: 16,
@@ -1025,6 +1026,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     maxWidth: 680,
     width: '100%',
     alignSelf: 'center',
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
   },
 
   // Customer Search & Dropdown
