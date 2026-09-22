@@ -217,6 +217,20 @@ export default function OrnamentsScreen() {
   const appreciation = marketValue - totalBuyingValue;
   const appreciationPct = totalBuyingValue > 0 ? (appreciation / totalBuyingValue) * 100 : 29.31;
 
+  const [refreshingRates, setRefreshingRates] = useState(false);
+  const handleRefreshRates = async () => {
+    if (refreshingRates) return;
+    setRefreshingRates(true);
+    try {
+      await store.refreshGoldRates();
+      toast.success('Live gold rates updated');
+    } catch {
+      toast.danger('Failed to refresh gold rates');
+    } finally {
+      setRefreshingRates(false);
+    }
+  };
+
   const handleNextStep = () => {
     if (wizardStep === 1) {
       if (!form.OrnamentName.trim()) {
@@ -807,12 +821,14 @@ export default function OrnamentsScreen() {
             <View>
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <View style={styles.iconBox}>
-                    <Ionicons name="document-text-outline" size={18} color="#0284c7" />
-                  </View>
-                  <View>
-                    <Text style={styles.cardTitle}>Basic Information</Text>
-                    <Text style={styles.cardSubtitle}>Enter basic details about the ornament</Text>
+                  <View style={styles.cardHeaderLeft}>
+                    <View style={styles.iconBox}>
+                      <Ionicons name="document-text-outline" size={18} color="#0284c7" />
+                    </View>
+                    <View>
+                      <Text style={styles.cardTitle}>Basic Information</Text>
+                      <Text style={styles.cardSubtitle}>Enter basic details about the ornament</Text>
+                    </View>
                   </View>
                 </View>
 
@@ -942,12 +958,14 @@ export default function OrnamentsScreen() {
             <View>
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <View style={styles.iconBox}>
-                    <Ionicons name="scale-outline" size={18} color="#0284c7" />
-                  </View>
-                  <View>
-                    <Text style={styles.cardTitle}>Weight Details</Text>
-                    <Text style={styles.cardSubtitle}>Enter weight details of the ornament</Text>
+                  <View style={styles.cardHeaderLeft}>
+                    <View style={styles.iconBox}>
+                      <Ionicons name="scale-outline" size={18} color="#0284c7" />
+                    </View>
+                    <View>
+                      <Text style={styles.cardTitle}>Weight Details</Text>
+                      <Text style={styles.cardSubtitle}>Enter weight details of the ornament</Text>
+                    </View>
                   </View>
                 </View>
 
@@ -988,9 +1006,14 @@ export default function OrnamentsScreen() {
                     </View>
                     <View style={[styles.unitInputBox, styles.readonlyInputBox]}>
                       <Text style={styles.readonlyInputText}>{net.toFixed(3)}</Text>
-                      <View style={styles.unitBadge}><Text style={styles.unitBadgeText}>g</Text></View>
+                      <View style={[styles.unitBadge, styles.readonlyUnitBadge]}><Text style={styles.unitBadgeText}>g</Text></View>
                     </View>
-                    <Text style={styles.autoCalcText}>Auto calculated</Text>
+                    <View style={styles.autoCalcRow}>
+                      <View style={styles.autoCalcBadge}>
+                        <Text style={styles.autoCalcBadgeText}>Auto calculated</Text>
+                      </View>
+                      <Ionicons name="lock-closed-outline" size={13} color={isDark ? '#94a3b8' : '#64748b'} />
+                    </View>
                   </View>
                   <View style={[styles.fieldGroup, { flex: 1 }]}>
                     <View style={styles.labelWithInfo}>
@@ -999,9 +1022,14 @@ export default function OrnamentsScreen() {
                     </View>
                     <View style={[styles.unitInputBox, styles.readonlyInputBox]}>
                       <Text style={styles.readonlyInputText}>{net.toFixed(3)}</Text>
-                      <View style={styles.unitBadge}><Text style={styles.unitBadgeText}>g</Text></View>
+                      <View style={[styles.unitBadge, styles.readonlyUnitBadge]}><Text style={styles.unitBadgeText}>g</Text></View>
                     </View>
-                    <Text style={styles.autoCalcText}>Auto calculated</Text>
+                    <View style={styles.autoCalcRow}>
+                      <View style={styles.autoCalcBadge}>
+                        <Text style={styles.autoCalcBadgeText}>Auto calculated</Text>
+                      </View>
+                      <Ionicons name="lock-closed-outline" size={13} color={isDark ? '#94a3b8' : '#64748b'} />
+                    </View>
                   </View>
                 </View>
               </View>
@@ -1018,8 +1046,24 @@ export default function OrnamentsScreen() {
                     </View>
                   </View>
                   <View style={styles.liveRateBadge}>
-                    <View style={styles.liveRateDot} />
-                    <Text style={styles.liveRateText}>Live Gold Rate (22K)</Text>
+                    <Text style={styles.liveRateTitle}>Live Gold Rate</Text>
+                    <View style={styles.liveRateSubRow}>
+                      <View style={styles.liveRateDotWithPurity}>
+                        <View style={styles.liveRateGreenDot} />
+                        <Text style={styles.liveRatePurityText}>(22K)</Text>
+                      </View>
+                      <TouchableOpacity 
+                        onPress={handleRefreshRates}
+                        activeOpacity={0.6}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        {refreshingRates ? (
+                          <ActivityIndicator size={11} color={isDark ? '#94a3b8' : '#64748b'} />
+                        ) : (
+                          <Ionicons name="refresh-outline" size={13} color={isDark ? '#94a3b8' : '#64748b'} />
+                        )}
+                      </TouchableOpacity>
+                    </View>
                     <Text style={styles.liveRateValue}>₹ {liveRate22k.toLocaleString('en-IN')}/g</Text>
                   </View>
                 </View>
@@ -1092,12 +1136,14 @@ export default function OrnamentsScreen() {
             <View>
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <View style={styles.iconBox}>
-                    <Ionicons name="image-outline" size={18} color="#0284c7" />
-                  </View>
-                  <View>
-                    <Text style={styles.cardTitle}>Ornament Photos</Text>
-                    <Text style={styles.cardSubtitle}>Add clear photos of the ornament (at least 1)</Text>
+                  <View style={styles.cardHeaderLeft}>
+                    <View style={styles.iconBox}>
+                      <Ionicons name="image-outline" size={18} color="#0284c7" />
+                    </View>
+                    <View>
+                      <Text style={styles.cardTitle}>Ornament Photos</Text>
+                      <Text style={styles.cardSubtitle}>Add clear photos of the ornament (at least 1)</Text>
+                    </View>
                   </View>
                 </View>
 
@@ -1129,12 +1175,14 @@ export default function OrnamentsScreen() {
 
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <View style={styles.iconBox}>
-                    <Ionicons name="document-text-outline" size={18} color="#0284c7" />
-                  </View>
-                  <View>
-                    <Text style={styles.cardTitle}>Additional Information</Text>
-                    <Text style={styles.cardSubtitle}>Add any additional details</Text>
+                  <View style={styles.cardHeaderLeft}>
+                    <View style={styles.iconBox}>
+                      <Ionicons name="document-text-outline" size={18} color="#0284c7" />
+                    </View>
+                    <View>
+                      <Text style={styles.cardTitle}>Additional Information</Text>
+                      <Text style={styles.cardSubtitle}>Add any additional details</Text>
+                    </View>
                   </View>
                 </View>
 
@@ -2309,7 +2357,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     borderLeftColor: isDark ? '#334155' : '#e2e8f0',
   },
   unitBadgeText: { fontSize: 12, fontWeight: '700', color: isDark ? '#94a3b8' : '#64748b' },
-  readonlyInputBox: { backgroundColor: isDark ? '#162032' : '#f8fafc' },
+  readonlyInputBox: {
+    backgroundColor: isDark ? 'rgba(148, 163, 184, 0.12)' : '#e9edf5',
+    borderColor: isDark ? '#334155' : '#d5dbe7',
+  },
+  readonlyUnitBadge: {
+    backgroundColor: isDark ? 'rgba(148, 163, 184, 0.18)' : '#e2e7f0',
+    borderLeftColor: isDark ? '#334155' : '#d5dbe7',
+  },
   readonlyInputText: {
     flex: 1,
     paddingHorizontal: 12,
@@ -2319,26 +2374,68 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: isDark ? '#f8fafc' : '#0f172a',
   },
   labelWithInfo: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  autoCalcRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  autoCalcBadge: {
+    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#e2f5ec',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  autoCalcBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: isDark ? '#34d399' : '#00b575',
+  },
   autoCalcText: { fontSize: 10, fontWeight: '700', color: '#16a34a', marginTop: 3 },
 
   liveRateBadge: {
-    backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
-    borderRadius: 8,
+    backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: isDark ? '#334155' : '#e2e8f0',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    alignItems: 'flex-end',
+    minWidth: 115,
   },
-  liveRateDot: {
-    position: 'absolute',
-    left: 8,
-    top: 10,
+  liveRateTitle: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: isDark ? '#94a3b8' : '#64748b',
+  },
+  liveRateSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  liveRateDotWithPurity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  liveRateGreenDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#0284c7',
+    backgroundColor: '#10b981',
   },
-  liveRateText: { fontSize: 10, fontWeight: '600', color: '#0284c7', paddingLeft: 10 },
-  liveRateValue: { fontSize: 13, fontWeight: '800', color: '#0284c7', marginTop: 1 },
+  liveRatePurityText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: isDark ? '#94a3b8' : '#64748b',
+  },
+  liveRateValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: isDark ? '#f8fafc' : '#0d172a',
+    marginTop: 2,
+  },
 
   prefixSuffixBox: {
     flexDirection: 'row',
