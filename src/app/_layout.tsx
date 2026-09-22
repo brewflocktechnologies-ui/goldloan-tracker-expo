@@ -1,6 +1,7 @@
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ApiConfig } from '../config/api';
 import { AuthProvider, useAuth } from '../context/AuthContext';
@@ -10,6 +11,25 @@ import { ToastProvider } from '../context/ToastContext';
 export default function RootLayout() {
   useEffect(() => {
     ApiConfig.init();
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const styleId = 'rnw-input-focus-reset';
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+          input, textarea, select {
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+          }
+          input:focus, textarea:focus, select:focus {
+            outline: none !important;
+            box-shadow: none !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
   }, []);
 
   return (

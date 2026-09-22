@@ -605,14 +605,16 @@ export default function NewOrnamentScreen() {
 
             {/* Card 2: Valuation Details */}
             <View style={styles.card}>
-              <View style={[styles.cardHeader, { alignItems: 'flex-start' }]}>
+              <View style={[styles.cardHeader, { alignItems: 'flex-start', gap: 10 }]}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={styles.iconBox}>
                     <Ionicons name="bar-chart-outline" size={18} color="#0284c7" />
                   </View>
-                  <View>
+                  <View style={{ flex: 1, paddingRight: 4 }}>
                     <Text style={styles.cardTitle}>Valuation Details</Text>
-                    <Text style={styles.cardSubtitle}>Enter buying price and view auto calculated values</Text>
+                    <Text style={styles.cardSubtitle}>
+                      Enter buying price and view{'\n'}auto calculated values
+                    </Text>
                   </View>
                 </View>
 
@@ -1179,6 +1181,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     paddingVertical: 10,
     fontSize: 13,
     color: isDark ? '#f8fafc' : '#0f172a',
+    outlineWidth: 0,
   },
   twoColRow: {
     flexDirection: 'row',
@@ -1217,6 +1220,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     paddingVertical: 10,
     fontSize: 13,
     color: isDark ? '#f8fafc' : '#0f172a',
+    outlineWidth: 0,
   },
   unitBadge: {
     backgroundColor: isDark ? '#0f172a' : '#f1f5f9',
@@ -1342,6 +1346,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: isDark ? '#f8fafc' : '#0f172a',
+    outlineWidth: 0,
   },
   suffixText: {
     fontSize: 12,
