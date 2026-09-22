@@ -30,6 +30,7 @@ import { getDriveImageUrl } from '../../services/api';
 import { useAppStore } from '../../services/store';
 import { Ornament } from '../../types';
 import { calculateOrnamentValuation } from '../../utils/ornamentCalculations';
+import { sanitizeDecimalInput, sanitizeIntegerInput } from '../../utils/numericInput';
 
 export default function OrnamentsScreen() {
   const router = useRouter();
@@ -900,7 +901,7 @@ export default function OrnamentsScreen() {
                       style={styles.textInput}
                       keyboardType="number-pad"
                       value={form.Quantity}
-                      onChangeText={v => setForm(p => ({ ...p, Quantity: v }))}
+                      onChangeText={v => setForm(p => ({ ...p, Quantity: sanitizeIntegerInput(v) }))}
                     />
                   </View>
                 </View>
@@ -960,7 +961,7 @@ export default function OrnamentsScreen() {
                         keyboardType="decimal-pad"
                         placeholder="0.000"
                         value={form.GrossWeight}
-                        onChangeText={v => setForm(p => ({ ...p, GrossWeight: v }))}
+                        onChangeText={v => setForm(p => ({ ...p, GrossWeight: sanitizeDecimalInput(v) }))}
                       />
                       <View style={styles.unitBadge}><Text style={styles.unitBadgeText}>g</Text></View>
                     </View>
@@ -973,7 +974,7 @@ export default function OrnamentsScreen() {
                         keyboardType="decimal-pad"
                         placeholder="0.000"
                         value={form.StoneWeight}
-                        onChangeText={v => setForm(p => ({ ...p, StoneWeight: v }))}
+                        onChangeText={v => setForm(p => ({ ...p, StoneWeight: sanitizeDecimalInput(v) }))}
                       />
                       <View style={styles.unitBadge}><Text style={styles.unitBadgeText}>g</Text></View>
                     </View>
@@ -1060,7 +1061,7 @@ export default function OrnamentsScreen() {
                       style={styles.prefixInput}
                       keyboardType="numeric"
                       value={form.BuyingPricePerGram}
-                      onChangeText={v => setForm(p => ({ ...p, BuyingPricePerGram: v }))}
+                      onChangeText={v => setForm(p => ({ ...p, BuyingPricePerGram: sanitizeDecimalInput(v) }))}
                     />
                     <Text style={styles.suffixText}>/g</Text>
                   </View>
