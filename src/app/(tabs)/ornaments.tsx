@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -31,6 +31,8 @@ import { Ornament } from '../../types';
 import { sanitizeDecimalInput, sanitizeIntegerInput } from '../../utils/numericInput';
 import { calculateOrnamentValuation } from '../../utils/ornamentCalculations';
 
+const SORT_OPTIONS = ['Newest First', 'Oldest First', 'Name (A-Z)', 'Name (Z-A)', 'Weight (High-Low)', 'Weight (Low-High)'];
+
 export default function OrnamentsScreen() {
   const router = useRouter();
   const { action } = useLocalSearchParams<{ action?: string }>();
@@ -48,7 +50,9 @@ export default function OrnamentsScreen() {
   // List State
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Available' | 'Pledged' | 'Released'>('All');
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Available' | 'Pledged'>('All');
+  const [sortOption, setSortOption] = useState('Newest First');
+  const [sortModalVisible, setSortModalVisible] = useState(false);
 
   // Details State
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
@@ -72,7 +76,7 @@ export default function OrnamentsScreen() {
     BuyingPricePerGram: String(store.goldRates?.gold22k?.rate1g || ''),
     Description: '',
     Remarks: '',
-    Status: 'Available' as 'Available' | 'Pledged' | 'Released',
+    Status: 'Available' as 'Available' | 'Pledged',
   });
   const [formImages, setFormImages] = useState<string[]>([]);
   const [pickerModal, setPickerModal] = useState<{
@@ -102,13 +106,12 @@ export default function OrnamentsScreen() {
   // Filter counts
   const availableCount = useMemo(() => store.ornaments.filter(o => o.Status === 'Available').length, [store.ornaments]);
   const pledgedCount = useMemo(() => store.ornaments.filter(o => o.Status === 'Pledged').length, [store.ornaments]);
-  const releasedCount = useMemo(() => store.ornaments.filter(o => o.Status === 'Released').length, [store.ornaments]);
   const totalCount = store.ornaments.length;
 
   // Filtered Ornaments
   const filteredOrnaments = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return store.ornaments.filter(o => {
+    const filtered = store.ornaments.filter(o => {
       if (activeFilter !== 'All' && o.Status !== activeFilter) return false;
       if (!q) return true;
       const name = (o.OrnamentName || '').toLowerCase();
@@ -131,7 +134,27 @@ export default function OrnamentsScreen() {
         loan.includes(q)
       );
     });
-  }, [store.ornaments, activeFilter, searchQuery]);
+
+    const idNum = (o: Ornament) => parseInt(String(o.OrnamentId || '').replace(/\D/g, ''), 10) || 0;
+
+    return [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case 'Oldest First':
+          return idNum(a) - idNum(b);
+        case 'Name (A-Z)':
+          return (a.OrnamentName || '').localeCompare(b.OrnamentName || '');
+        case 'Name (Z-A)':
+          return (b.OrnamentName || '').localeCompare(a.OrnamentName || '');
+        case 'Weight (High-Low)':
+          return (b.GrossWeight || 0) - (a.GrossWeight || 0);
+        case 'Weight (Low-High)':
+          return (a.GrossWeight || 0) - (b.GrossWeight || 0);
+        case 'Newest First':
+        default:
+          return idNum(b) - idNum(a);
+      }
+    });
+  }, [store.ornaments, activeFilter, searchQuery, sortOption]);
 
   const getLoanNumber = (orn: Ornament) => {
     if (orn.LoanNumber) return orn.LoanNumber;
@@ -201,7 +224,7 @@ export default function OrnamentsScreen() {
       BuyingPricePerGram: String(orn.BuyingPricePerGram || '5800'),
       Description: orn.Description || '',
       Remarks: orn.Remarks || '',
-      Status: orn.Status === 'Pledged' ? 'Pledged' : (orn.Status === 'Released' ? 'Released' : 'Available'),
+      Status: orn.Status === 'Pledged' ? 'Pledged' : 'Available',
     });
     setViewMode('edit');
   };
@@ -1162,7 +1185,7 @@ export default function OrnamentsScreen() {
                   <Text style={styles.inputLabel}>Status</Text>
                   <TouchableOpacity
                     style={styles.dropdownInput}
-                    onPress={() => openDropdown('Status', 'Select Status', ['Available', 'Pledged', 'Released'])}
+                    onPress={() => openDropdown('Status', 'Select Status', ['Available', 'Pledged'])}
                   >
                     <Text style={styles.dropdownValue}>{form.Status}</Text>
                     <Ionicons name="chevron-down" size={16} color="#64748b" />
@@ -1243,69 +1266,81 @@ export default function OrnamentsScreen() {
             <Text style={styles.totalNumber}>{String(totalCount).padStart(2, '0')}</Text>
           </View>
         </View>
+      </View>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color={isDark ? '#94a3b8' : '#64748b'} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name, type, hallmark or ID..."
-            placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearBtn}>
-              <Ionicons name="close-circle" size={16} color={isDark ? '#94a3b8' : '#64748b'} />
+      {/* Search & Filter Section with curved background transition */}
+      <View style={styles.searchCardWrapper}>
+        {/* Curved bottom sheet background */}
+        <View style={styles.sheetBackground} pointerEvents="none" />
+
+        {/* Search & Filter Card */}
+        <View style={styles.searchFilterCard}>
+          {/* Top Row: Boxy Search Input + Outside Filter Icon */}
+          <View style={styles.searchRow}>
+            <View style={styles.boxySearchBox}>
+              <Ionicons name="search-outline" size={22} color={isDark ? '#94a3b8' : '#64748b'} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by name, type, hallmark or ID..."
+                placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={16} color={isDark ? '#94a3b8' : '#64748b'} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.filterIconBtn, sortOption !== 'Newest First' && styles.filterIconBtnActive]}
+              activeOpacity={0.7}
+              onPress={() => setSortModalVisible(true)}
+              accessibilityLabel="Sort and filter options"
+            >
+              <MaterialIcons
+                name="filter-list"
+                size={24}
+                color={sortOption !== 'Newest First' ? '#0284c7' : (isDark ? '#cbd5e1' : '#475569')}
+              />
             </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity style={styles.filterOptionsBtn} activeOpacity={0.7}>
-            <Ionicons name="options-outline" size={20} color={isDark ? '#cbd5e1' : '#334155'} />
-          </TouchableOpacity>
+          </View>
+
+          {/* Bottom Row: Status Filter Pills (Inside the Card) */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterPillsContainer}
+          >
+            <TouchableOpacity
+              style={[styles.filterPill, activeFilter === 'All' && styles.filterPillActive]}
+              onPress={() => setActiveFilter('All')}
+            >
+              <Text style={[styles.filterPillText, activeFilter === 'All' && styles.filterPillTextActive]}>
+                All ({totalCount})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.filterPill, activeFilter === 'Available' && styles.filterPillActive]}
+              onPress={() => setActiveFilter('Available')}
+            >
+              <Text style={[styles.filterPillText, activeFilter === 'Available' && styles.filterPillTextActive]}>
+                Available ({availableCount})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.filterPill, activeFilter === 'Pledged' && styles.filterPillActive]}
+              onPress={() => setActiveFilter('Pledged')}
+            >
+              <Text style={[styles.filterPillText, activeFilter === 'Pledged' && styles.filterPillTextActive]}>
+                Pledged ({pledgedCount})
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-
-        {/* Filter Pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterPillsContainer}
-        >
-          <TouchableOpacity
-            style={[styles.filterPill, activeFilter === 'All' && styles.filterPillActive]}
-            onPress={() => setActiveFilter('All')}
-          >
-            <Text style={[styles.filterPillText, activeFilter === 'All' && styles.filterPillTextActive]}>
-              All ({totalCount})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterPill, activeFilter === 'Available' && styles.filterPillActive]}
-            onPress={() => setActiveFilter('Available')}
-          >
-            <Text style={[styles.filterPillText, activeFilter === 'Available' && styles.filterPillTextActive]}>
-              Available ({availableCount})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterPill, activeFilter === 'Pledged' && styles.filterPillActive]}
-            onPress={() => setActiveFilter('Pledged')}
-          >
-            <Text style={[styles.filterPillText, activeFilter === 'Pledged' && styles.filterPillTextActive]}>
-              Pledged ({pledgedCount})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterPill, activeFilter === 'Released' && styles.filterPillActive]}
-            onPress={() => setActiveFilter('Released')}
-          >
-            <Text style={[styles.filterPillText, activeFilter === 'Released' && styles.filterPillTextActive]}>
-              Released ({releasedCount})
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
       </View>
 
       {/* Ornaments Cards List (White below) */}
@@ -1405,6 +1440,17 @@ export default function OrnamentsScreen() {
       >
         <Ionicons name="add" size={28} color="#ffffff" />
       </TouchableOpacity>
+
+      <OptionPickerModal
+        visible={sortModalVisible}
+        title="Sort By"
+        options={SORT_OPTIONS}
+        selectedValue={sortOption}
+        onSelect={(opt) => { setSortOption(opt); setSortModalVisible(false); }}
+        onClose={() => setSortModalVisible(false)}
+        isDark={isDark}
+        secondaryTextColor={colors.textSecondary}
+      />
     </SafeAreaView>
   );
 }
@@ -1438,9 +1484,24 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     backgroundColor: isDark ? '#0f172a' : '#d8edfa',
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: isDark ? '#1e293b' : '#bfe0f2',
+    paddingBottom: 2,
+  },
+  searchCardWrapper: {
+    position: 'relative',
+    paddingTop: 4,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+    backgroundColor: isDark ? '#0f172a' : '#d8edfa',
+  },
+  sheetBackground: {
+    position: 'absolute',
+    top: 64,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
   },
   cardsScrollContainer: {
     flex: 1,
@@ -1448,7 +1509,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   cardsScrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 100,
     maxWidth: 680,
     width: '100%',
@@ -1522,64 +1583,87 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: isDark ? '#94a3b8' : '#64748b',
     marginTop: 1,
   },
-  // Search Container
-  searchContainer: {
+  // Search & Filter Card (Unified Card matching mockup)
+  searchFilterCard: {
+    backgroundColor: isDark ? '#1e293b' : '#ffffff',
+    borderRadius: 20,
+    padding: 14,
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: isDark ? '#334155' : 'rgba(226, 232, 240, 0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: isDark ? 0.25 : 0.07,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  boxySearchBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: isDark ? '#0f172a' : '#ffffff',
-    borderRadius: 24,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: isDark ? '#1e293b' : '#e2e8f0',
-    paddingHorizontal: 14,
-    height: 48,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: isDark ? 0.2 : 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    borderColor: isDark ? '#334155' : '#e2e8f0',
+    paddingHorizontal: 12,
+    height: 52,
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 13.5,
     color: isDark ? '#f8fafc' : '#0f172a',
     paddingVertical: 8,
   },
   clearBtn: {
     padding: 4,
-    marginRight: 6,
+    marginRight: 2,
   },
-  filterOptionsBtn: {
-    padding: 4,
-    marginLeft: 4,
+  filterIconBtn: {
+    padding: 8,
+    marginLeft: 10,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterIconBtnActive: {
+    backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
   },
 
-  // Filter Pills
+  // Filter Pills (Inside Card)
   filterPillsContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    marginBottom: 20,
     paddingVertical: 2,
   },
   filterPill: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 20,
     backgroundColor: isDark ? '#0f172a' : '#ffffff',
     borderWidth: 1,
-    borderColor: isDark ? '#1e293b' : '#e2e8f0',
+    borderColor: isDark ? '#334155' : '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterPillActive: {
     backgroundColor: '#0284c7',
     borderColor: '#0284c7',
   },
   filterPillText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: isDark ? '#94a3b8' : '#475569',
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: isDark ? '#cbd5e1' : '#334155',
   },
   filterPillTextActive: {
     color: '#ffffff',
@@ -1642,13 +1726,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
 
   cardCenterCol: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 2,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 6,
   },
   listCardTitle: {
     fontSize: 15,
@@ -1661,12 +1746,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   cardIdText: {
     fontSize: 11,
     color: isDark ? '#94a3b8' : '#64748b',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   specsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
   },
   specsText: {
     fontSize: 11,
@@ -1956,7 +2041,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingBottom: 12,
     marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? '#1e293b' : '#e2e8f0',
   },
   cardHeaderLeft: {
     flexDirection: 'row',
@@ -1989,7 +2077,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   weightGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 4,
+    paddingTop: 0,
   },
   weightCol: { flex: 1, alignItems: 'flex-start' },
   weightLabel: { fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 },

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-export type OrnamentStatusValue = 'Available' | 'Pledged' | 'Released' | string;
+export type OrnamentStatusValue = 'Available' | 'Pledged' | string;
 
 interface OrnamentStatusBadgeProps {
   status: OrnamentStatusValue;
@@ -24,19 +24,19 @@ const STATUS_TONES = {
     pillBorder: (isDark: boolean) => (isDark ? '#f59e0b' : '#fde68a'),
     text: (isDark: boolean) => (isDark ? '#fbbf24' : '#b45309'),
   },
-  Released: {
-    dot: '#0284c7',
-    badgeBg: (isDark: boolean) => (isDark ? 'rgba(2, 132, 199, 0.15)' : '#f0f9ff'),
-    pillBg: (isDark: boolean) => (isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe'),
-    pillBorder: (isDark: boolean) => (isDark ? '#0284c7' : '#bae6fd'),
-    text: (isDark: boolean) => (isDark ? '#38bdf8' : '#0284c7'),
+  Neutral: {
+    dot: '#64748b',
+    badgeBg: (isDark: boolean) => (isDark ? 'rgba(100, 116, 139, 0.15)' : '#f1f5f9'),
+    pillBg: (isDark: boolean) => (isDark ? 'rgba(100, 116, 139, 0.15)' : '#f1f5f9'),
+    pillBorder: (isDark: boolean) => (isDark ? '#64748b' : '#e2e8f0'),
+    text: (isDark: boolean) => (isDark ? '#cbd5e1' : '#475569'),
   },
 } as const;
 
 function getTone(status: OrnamentStatusValue) {
   if (status === 'Available') return STATUS_TONES.Available;
   if (status === 'Pledged') return STATUS_TONES.Pledged;
-  return STATUS_TONES.Released;
+  return STATUS_TONES.Neutral;
 }
 
 export function OrnamentStatusBadge({ status, isDark, variant = 'badge' }: OrnamentStatusBadgeProps) {

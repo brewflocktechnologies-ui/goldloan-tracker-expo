@@ -69,7 +69,7 @@ export interface Ornament {
   EstimatedValue?: number;
   OrnamentImages?: string; // separated by " | "
   Remarks?: string;
-  Status: "Available" | "Pledged" | "Released" | "Deleted";
+  Status: "Available" | "Pledged" | "Deleted";
   ReleaseDate?: string;
   ReleasedLoanId?: string;
   AssayCenter?: string;

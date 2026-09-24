@@ -102,7 +102,7 @@ export default function LoansScreen() {
     if (form.UserId && o.UserId && o.UserId !== form.UserId) return false;
     if (isEditing && editingLoan?.ornamentIds?.includes(o.OrnamentId)) return true;
     if (selectedOrnIds.includes(o.OrnamentId)) return true;
-    return o.Status === 'Available' || o.Status === 'Released';
+    return o.Status === 'Available';
   });
   const selectedOrnsList = store.ornaments.filter(o => selectedOrnIds.includes(o.OrnamentId));
   const totalGrossWeight = selectedOrnsList.reduce((s, o) => s + (Number(o.GrossWeight) || 0), 0);
@@ -155,7 +155,7 @@ export default function LoansScreen() {
       NetWeight: '',
       Remarks: '',
     });
-    const candidateInitial = store.ornaments.filter(o => (o.Status === 'Available' || o.Status === 'Released') && (!initialUser || o.UserId === initialUser));
+    const candidateInitial = store.ornaments.filter(o => o.Status === 'Available' && (!initialUser || o.UserId === initialUser));
     setSelectedOrnIds(candidateInitial.slice(0, 1).map(o => o.OrnamentId));
     setModalVisible(true);
   };
