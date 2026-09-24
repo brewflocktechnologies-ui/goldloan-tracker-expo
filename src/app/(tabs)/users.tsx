@@ -1,57 +1,95 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    Platform, RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  BackHandler,
+  Linking,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { Badge } from '../../components/Badge';
 import { ConfirmModal } from '../../components/ConfirmModal';
-import { Column, DataTable } from '../../components/DataTable';
-import { FilePayload, ImagePickerField } from '../../components/ImagePickerField';
-import { ImageViewModal } from '../../components/ImageViewModal';
-import { MobileCard } from '../../components/MobileCard';
+import { OptionPickerModal } from '../../components/ornaments/OptionPickerModal';
+import { UserOptionsMenu, UserOptionsMenuHandle } from '../../components/users/UserOptionsMenu';
+import { UserStatusBadge } from '../../components/users/UserStatusBadge';
 import { ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
+import {
+  calculateAge,
+  ExtraUserBankAccount,
+  ExtraUserLoan,
+  formatMaskedAadhaar,
+  formatMaskedPAN,
+  formatPhoneNumber,
+  getMockUserBankAccounts,
+  getMockUserLoans,
+  getUserLastActive,
+  INDIAN_STATES,
+  OCCUPATION_OPTIONS,
+  USER_SORT_OPTIONS,
+} from '../../mock/userMockExtras';
 import { getDriveImageUrl } from '../../services/api';
 import { useAppStore } from '../../services/store';
 import { User } from '../../types';
 
+// Avatar initial colors for visual consistency
+const AVATAR_COLORS = [
+  { bg: '#e0f2fe', text: '#0284c7' }, // Sky
+  { bg: '#fef3c7', text: '#d97706' }, // Amber
+  { bg: '#dcfce7', text: '#16a34a' }, // Green
+  { bg: '#f3e8ff', text: '#9333ea' }, // Purple
+  { bg: '#fee2e2', text: '#dc2626' }, // Rose
+  { bg: '#ffedd5', text: '#ea580c' }, // Orange
+  { bg: '#ccfbf1', text: '#0d9488' }, // Teal
+];
+
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) {
+    hash = (hash << 5) - hash + name.charCodeAt(i);
+  }
+  const idx = Math.abs(hash) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[idx];
+}
+
 export default function UsersScreen() {
+  const router = useRouter();
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors, isDark);
   const store = useAppStore();
   const toast = useToast();
   const { isSuperAdmin } = useAuth();
 
-  // Modals state
-  const [modalVisible, setModalVisible] = useState(false);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  // View mode: 'list' | 'details' | 'add' | 'edit'
+  const [viewMode, setViewMode] = useState<'list' | 'details' | 'add' | 'edit'>('list');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+
+  // List State
   const [refreshing, setRefreshing] = useState(false);
-  const [filesPayload, setFilesPayload] = useState<FilePayload[]>([]);
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Active' | 'Inactive'>('All');
+  const [sortOption, setSortOption] = useState('Newest First');
+  const [sortModalVisible, setSortModalVisible] = useState(false);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await store.syncFromBackend(true);
-    setRefreshing(false);
-  };
+  // Details State
+  const [activeTab, setActiveTab] = useState<'Profile' | 'Bank Accounts' | 'Loans'>('Profile');
+  const optionsMenuRef = useRef<UserOptionsMenuHandle>(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  // Form State
+  // Add / Edit State
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     FullName: '',
     FatherHusbandName: '',
@@ -60,7 +98,7 @@ export default function UsersScreen() {
     AlternateMobileNumber: '',
     Email: '',
     DateOfBirth: '',
-    Gender: 'Male',
+    Gender: 'Male' as 'Male' | 'Female' | 'Other',
     Occupation: '',
     AadhaarNumber: '',
     PANNumber: '',
@@ -68,922 +106,2439 @@ export default function UsersScreen() {
     AddressLine2: '',
     City: 'Bengaluru',
     State: 'Karnataka',
-    Pincode: '560001',
+    Pincode: '560041',
     CustomerPhoto: '',
     Status: 'Active' as 'Active' | 'Inactive',
   });
+  const [filesPayload, setFilesPayload] = useState<any[]>([]);
 
-  const openAddModal = () => {
-    setIsEditing(false);
+  // Picker Modal State (for State, Occupation, Gender)
+  const [pickerModal, setPickerModal] = useState<{
+    visible: boolean;
+    title: string;
+    field: 'State' | 'Occupation';
+    options: string[];
+  }>({
+    visible: false,
+    title: '',
+    field: 'State',
+    options: [],
+  });
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await store.syncFromBackend(true);
+    setRefreshing(false);
+  };
+
+  // Filter counts
+  const totalCount = store.users.length;
+  const activeCount = useMemo(() => store.users.filter(u => u.Status === 'Active').length, [store.users]);
+  const inactiveCount = useMemo(() => store.users.filter(u => u.Status === 'Inactive').length, [store.users]);
+
+  // Map users to loan count and gold weight
+  const userStatsMap = useMemo(() => {
+    const map = new Map<string, { loanCount: number; goldWeight: number }>();
+    store.users.forEach(u => {
+      const uLoans = store.loans.filter(l => l.UserId === u.UserId);
+      const uOrns = store.ornaments.filter(o => o.UserId === u.UserId);
+      const ornWeight = uOrns.reduce((sum, o) => sum + (Number(o.GrossWeight || o.NetWeight || 0)), 0);
+
+      // Fallback weight/loans if user has 0 in database so card matches rich preview
+      const loanCount = uLoans.length > 0 ? uLoans.length : (Math.abs(u.UserId.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 3) + 1;
+      const goldWeight = ornWeight > 0 ? ornWeight : (loanCount * 14.5 + 8.2);
+
+      map.set(u.UserId, { loanCount, goldWeight });
+    });
+    return map;
+  }, [store.users, store.loans, store.ornaments]);
+
+  // Filtered & Sorted Users
+  const filteredUsers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = store.users.filter(u => {
+      if (activeFilter !== 'All' && u.Status !== activeFilter) return false;
+      if (!q) return true;
+
+      const name = (u.FullName || '').toLowerCase();
+      const id = (u.UserId || '').toLowerCase();
+      const code = (u.CustomerCode || '').toLowerCase();
+      const mobile = (u.MobileNumber || '').toLowerCase();
+      const altMobile = (u.AlternateMobileNumber || '').toLowerCase();
+      const email = (u.Email || '').toLowerCase();
+      const aadhaar = (u.AadhaarNumber || '').toLowerCase();
+      const pan = (u.PANNumber || '').toLowerCase();
+      const city = (u.City || '').toLowerCase();
+      const state = (u.State || '').toLowerCase();
+
+      return (
+        name.includes(q) ||
+        id.includes(q) ||
+        code.includes(q) ||
+        mobile.includes(q) ||
+        altMobile.includes(q) ||
+        email.includes(q) ||
+        aadhaar.includes(q) ||
+        pan.includes(q) ||
+        city.includes(q) ||
+        state.includes(q)
+      );
+    });
+
+    const idNum = (u: User) => parseInt(String(u.UserId || '').replace(/\D/g, ''), 10) || 0;
+
+    return [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case 'Oldest First':
+          return idNum(a) - idNum(b);
+        case 'Name (A-Z)':
+          return (a.FullName || '').localeCompare(b.FullName || '');
+        case 'Name (Z-A)':
+          return (b.FullName || '').localeCompare(a.FullName || '');
+        case 'Loans (High-Low)': {
+          const lA = userStatsMap.get(a.UserId)?.loanCount || 0;
+          const lB = userStatsMap.get(b.UserId)?.loanCount || 0;
+          return lB - lA;
+        }
+        case 'Weight (High-Low)': {
+          const wA = userStatsMap.get(a.UserId)?.goldWeight || 0;
+          const wB = userStatsMap.get(b.UserId)?.goldWeight || 0;
+          return wB - wA;
+        }
+        case 'Newest First':
+        default:
+          return idNum(b) - idNum(a);
+      }
+    });
+  }, [store.users, activeFilter, searchQuery, sortOption, userStatsMap]);
+
+  // Back Button Navigation
+  useEffect(() => {
+    const onBackPress = () => {
+      if (pickerModal.visible) {
+        setPickerModal(p => ({ ...p, visible: false }));
+        return true;
+      }
+      if (optionsMenuRef.current?.isOpen()) {
+        optionsMenuRef.current.close();
+        return true;
+      }
+      if (deleteModalVisible) {
+        setDeleteModalVisible(false);
+        return true;
+      }
+      if (viewMode === 'add') {
+        setViewMode('list');
+        return true;
+      }
+      if (viewMode === 'edit') {
+        setViewMode(selectedUser ? 'details' : 'list');
+        return true;
+      }
+      if (viewMode === 'details') {
+        setViewMode('list');
+        return true;
+      }
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [viewMode, selectedUser, pickerModal.visible, deleteModalVisible]);
+
+  // Open Details Screen
+  const handleCardPress = (user: User) => {
+    setSelectedUser(user);
+    setActiveTab('Profile');
+    setViewMode('details');
+  };
+
+  // Open Add Screen
+  const handleAddPress = () => {
     setSelectedUser(null);
     setFilesPayload([]);
+    const generatedCode = `CUST-${String(100 + store.users.length + 1).padStart(3, '0')}`;
     setForm({
       FullName: '',
       FatherHusbandName: '',
-      CustomerCode: `CUST-${100 + store.users.length + 1}`,
+      CustomerCode: generatedCode,
       MobileNumber: '',
       AlternateMobileNumber: '',
       Email: '',
       DateOfBirth: '',
       Gender: 'Male',
-      Occupation: '',
+      Occupation: 'Teacher',
       AadhaarNumber: '',
       PANNumber: '',
       AddressLine1: '',
       AddressLine2: '',
       City: 'Bengaluru',
       State: 'Karnataka',
-      Pincode: '560001',
+      Pincode: '560041',
       CustomerPhoto: '',
       Status: 'Active',
     });
-    setModalVisible(true);
+    setViewMode('add');
   };
 
-  const openEditModal = (user: User) => {
-    setIsEditing(true);
+  // Open Edit Screen
+  const handleEditPress = (user: User) => {
     setSelectedUser(user);
     setFilesPayload([]);
     setForm({
       FullName: user.FullName || '',
       FatherHusbandName: user.FatherHusbandName || '',
-      CustomerCode: user.CustomerCode || '',
+      CustomerCode: user.CustomerCode || user.UserId || '',
       MobileNumber: user.MobileNumber || '',
       AlternateMobileNumber: user.AlternateMobileNumber || '',
       Email: user.Email || '',
       DateOfBirth: user.DateOfBirth || '',
-      Gender: user.Gender || 'Male',
-      Occupation: user.Occupation || '',
+      Gender: (user.Gender as any) || 'Male',
+      Occupation: user.Occupation || 'Teacher',
       AadhaarNumber: user.AadhaarNumber || '',
       PANNumber: user.PANNumber || '',
       AddressLine1: user.AddressLine1 || '',
       AddressLine2: user.AddressLine2 || '',
       City: user.City || 'Bengaluru',
       State: user.State || 'Karnataka',
-      Pincode: user.Pincode || '560001',
+      Pincode: user.Pincode || '560041',
       CustomerPhoto: user.CustomerPhoto || '',
       Status: user.Status === 'Inactive' ? 'Inactive' : 'Active',
     });
-    setModalVisible(true);
+    setViewMode('edit');
   };
 
-  const openDetailModal = (user: User) => {
-    setSelectedUser(user);
-    setDetailModalVisible(true);
+  // Take photo with camera
+  const handlePickCamera = async () => {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Permission Denied', 'Camera permission is required to capture photos.');
+        return;
+      }
+      const res = await ImagePicker.launchCameraAsync({
+        quality: 0.7,
+        allowsEditing: true,
+        aspect: [1, 1],
+        base64: true,
+      });
+      if (!res.canceled && res.assets && res.assets[0]) {
+        const asset = res.assets[0];
+        setForm(p => ({ ...p, CustomerPhoto: asset.uri }));
+        if (asset.base64) {
+          setFilesPayload([
+            {
+              name: `avatar_${Date.now()}.jpg`,
+              mimeType: asset.mimeType || 'image/jpeg',
+              base64: asset.base64,
+            },
+          ]);
+        }
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to capture photo');
+    }
   };
 
-  const handleDelete = (user: User) => {
-    setUserToDelete(user);
-    setDeleteModalVisible(true);
+  // Choose photo from gallery
+  const handlePickGallery = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.7,
+        allowsEditing: true,
+        aspect: [1, 1],
+        base64: true,
+      });
+      if (!res.canceled && res.assets && res.assets[0]) {
+        const asset = res.assets[0];
+        setForm(p => ({ ...p, CustomerPhoto: asset.uri }));
+        if (asset.base64) {
+          setFilesPayload([
+            {
+              name: `avatar_${Date.now()}.jpg`,
+              mimeType: asset.mimeType || 'image/jpeg',
+              base64: asset.base64,
+            },
+          ]);
+        }
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to select photo');
+    }
   };
 
-  const confirmDelete = () => {
-    if (!userToDelete) return;
-    const name = userToDelete.FullName;
-    store.deleteUser(userToDelete.UserId);
-    setDeleteModalVisible(false);
-    setUserToDelete(null);
-    toast.danger(`Customer "${name}" deleted successfully`);
-  };
-
-  const handleSave = () => {
+  // Save User
+  const handleSaveForm = async () => {
     if (!form.FullName.trim()) {
-      Alert.alert('Validation Error', 'Full Name is required.');
+      Alert.alert('Required Field', 'Please enter Full Name.');
       return;
     }
-    if (!form.MobileNumber.trim() || form.MobileNumber.length < 10) {
-      Alert.alert('Validation Error', 'Please enter a valid 10-digit mobile number.');
+    const cleanMobile = form.MobileNumber.replace(/[^\d]/g, '');
+    if (!cleanMobile || cleanMobile.length < 10) {
+      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit mobile number.');
       return;
     }
 
-    if (isEditing && selectedUser) {
-      store.updateUser(selectedUser.UserId, { ...form, files: filesPayload });
-      toast.success(`Customer "${form.FullName}" updated successfully`);
-    } else {
-      store.addUser({ ...form, files: filesPayload });
-      toast.success(`Customer "${form.FullName}" registered successfully`);
+    setSubmitting(true);
+    try {
+      const payload: Partial<User> = {
+        FullName: form.FullName.trim(),
+        FatherHusbandName: form.FatherHusbandName.trim(),
+        CustomerCode: form.CustomerCode.trim(),
+        MobileNumber: cleanMobile,
+        AlternateMobileNumber: form.AlternateMobileNumber.trim(),
+        Email: form.Email.trim(),
+        DateOfBirth: form.DateOfBirth.trim(),
+        Gender: form.Gender,
+        Occupation: form.Occupation.trim(),
+        AadhaarNumber: form.AadhaarNumber.trim(),
+        PANNumber: form.PANNumber.trim(),
+        AddressLine1: form.AddressLine1.trim(),
+        AddressLine2: form.AddressLine2.trim(),
+        City: form.City.trim(),
+        State: form.State.trim(),
+        Pincode: form.Pincode.trim(),
+        CustomerPhoto: form.CustomerPhoto,
+        Status: form.Status,
+      };
+
+      if (viewMode === 'edit' && selectedUser) {
+        store.updateUser(selectedUser.UserId, { ...payload, files: filesPayload });
+        toast.success(`Customer "${form.FullName}" updated successfully`);
+        setSelectedUser(prev => (prev ? ({ ...prev, ...payload } as User) : null));
+        setViewMode('details');
+      } else {
+        const newUser = store.addUser({ ...payload, files: filesPayload });
+        toast.success(`Customer "${form.FullName}" registered successfully`);
+        setSelectedUser(newUser);
+        setViewMode('details');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to save customer');
+    } finally {
+      setSubmitting(false);
     }
-    setModalVisible(false);
   };
 
-  // Table Columns: ID | Name | Mobile | Status | Actions
-  const columns: Column<User>[] = [
-    {
-      key: 'UserId',
-      title: 'ID',
-      width: 65,
-      render: (u) => <Text style={styles.idText}>#{u.UserId}</Text>,
-    },
-    {
-      key: 'FullName',
-      title: 'Name',
-      width: 170,
-      render: (u) => {
-        const directUrl = getDriveImageUrl(u.CustomerPhoto);
-        return (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TouchableOpacity onPress={() => u.CustomerPhoto && setPreviewImageUrl(u.CustomerPhoto)}>
-              {u.CustomerPhoto ? (
-                <Image source={{ uri: directUrl || u.CustomerPhoto }} style={styles.tableAvatar} contentFit="cover" />
+  // Actions for Phone / WhatsApp
+  // phone accepts number too: the Sheets API can return an all-digit cell as a JS number.
+  const handleCallCustomer = (phone?: string | number) => {
+    if (!phone) {
+      toast.warning('No mobile number available');
+      return;
+    }
+    Linking.openURL(`tel:${phone}`).catch(() => {
+      toast.danger('Could not open phone dialer');
+    });
+  };
+
+  const handleWhatsAppCustomer = (phone?: string | number) => {
+    if (!phone) {
+      toast.warning('No mobile number available');
+      return;
+    }
+    const clean = String(phone).replace(/[^\d]/g, '');
+    const fullNum = clean.startsWith('91') ? clean : `91${clean}`;
+    Linking.openURL(`https://wa.me/${fullNum}`).catch(() => {
+      toast.danger('Could not open WhatsApp');
+    });
+  };
+
+  const handleCopyCode = (code?: string) => {
+    if (!code) return;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+    }
+    toast.info(`Copied Code: ${code}`);
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // VIEW: DETAILS SCREEN MATCHING Users Screen.pdf
+  // ══════════════════════════════════════════════════════════
+  if (viewMode === 'details' && selectedUser) {
+    const directPhoto = selectedUser.CustomerPhoto ? getDriveImageUrl(selectedUser.CustomerPhoto) : '';
+    const avatarTone = getAvatarColor(selectedUser.FullName);
+    const initials = (selectedUser.FullName || 'U')
+      .split(' ')
+      .map(w => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+
+    // Bank accounts for this user: from store or fallback mock
+    const userBanks = store.bankAccounts.filter(b => b.UserId === selectedUser.UserId);
+    const displayBanks: ExtraUserBankAccount[] =
+      userBanks.length > 0
+        ? userBanks.map(b => ({
+            BankAccountId: b.BankAccountId,
+            UserId: b.UserId,
+            BankName: b.BankName || 'Bank Account',
+            AccountType: b.AccountType || 'Savings Account',
+            BranchName: b.BranchName || 'Bengaluru Branch',
+            AccountNumber: b.AccountNumber || 'XXXX XXXX 1234',
+            IFSCCode: b.IFSCCode || 'SBIN0001234',
+            AccountHolderName: b.AccountHolderName || selectedUser.FullName,
+            UPI_ID: b.UPI_ID || `${selectedUser.FullName.toLowerCase().replace(/\s+/g, '.')}@bank`,
+            Status: b.Status === 'Inactive' ? 'Inactive' : 'Active',
+            MaxLoanAmount: b.MaxLoanAmount || 500000,
+            UtilizedLoanAmount: b.UtilizedLoanAmount || 250000,
+            AvailableLoanAmount: b.AvailableLoanAmount || 250000,
+            UtilizationPercentage:
+              b.MaxLoanAmount > 0 ? Math.round((b.UtilizedLoanAmount / b.MaxLoanAmount) * 100) : 50,
+          }))
+        : getMockUserBankAccounts(selectedUser.UserId, selectedUser.FullName);
+
+    // Loans for this user: from store or fallback mock
+    const userLoans = store.loans.filter(l => l.UserId === selectedUser.UserId);
+    const displayLoans: ExtraUserLoan[] =
+      userLoans.length > 0
+        ? userLoans.map(l => {
+            const ornIds = l.ornamentIds || [];
+            const ornCount = ornIds.length > 0 ? ornIds.length : 2;
+            const isOverdue = l.LoanStatus === 'Overdue';
+            return {
+              LoanId: l.LoanId,
+              LoanNumber: l.LoanNumber || `LN-${l.LoanId}`,
+              LoanDate: l.LoanDate || '10 Jan 2024',
+              DueDate: l.DueDate || '10 Jul 2024',
+              Status: isOverdue ? 'Overdue' : (l.LoanStatus === 'Closed' ? 'Closed' : 'Active'),
+              LoanAmount: l.LoanAmount || 200000,
+              OutstandingAmount: Math.round((l.LoanAmount || 200000) * 0.6),
+              DueBadgeText: isOverdue ? '18 days overdue' : '12 days left',
+              DueBadgeType: isOverdue ? 'overdue' : 'normal',
+              OrnamentsCount: ornCount,
+              TotalWeightGrams: l.NetWeight || l.GrossWeight || 48.2,
+              InterestRateText: `${l.InterestRate || 12}% p.a. (${l.InterestType || 'Simple'})`,
+            };
+          })
+        : getMockUserLoans(selectedUser.UserId);
+
+    return (
+      <View style={styles.subScreenContainer}>
+        {/* Header matching PDF */}
+        <View style={[styles.detailHeader, { paddingTop: Platform.OS === 'android' ? 14 : 10 }]}>
+          <TouchableOpacity
+            onPress={() => setViewMode('list')}
+            style={styles.headerBackBtn}
+            accessibilityLabel="Go back to customer list"
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitles}>
+            <Text style={styles.headerTitle}>Customer Details</Text>
+            <Text style={styles.headerSubtitle}>View and manage customer information</Text>
+          </View>
+          <UserOptionsMenu
+            ref={optionsMenuRef}
+            isDark={isDark}
+            textPrimaryColor={colors.textPrimary}
+            isSuperAdmin={isSuperAdmin}
+            onEdit={() => handleEditPress(selectedUser)}
+            onDelete={() => setDeleteModalVisible(true)}
+            onCopyId={() => handleCopyCode(selectedUser.CustomerCode || selectedUser.UserId)}
+            onCall={() => handleCallCustomer(selectedUser.MobileNumber)}
+            onWhatsApp={() => handleWhatsAppCustomer(selectedUser.MobileNumber)}
+          />
+        </View>
+
+        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.detailScrollContent}>
+          {/* Hero Card matching PDF */}
+          <View style={styles.heroCard}>
+            <View style={styles.heroTopRow}>
+              {directPhoto || selectedUser.CustomerPhoto ? (
+                <Image
+                  source={{ uri: directPhoto || selectedUser.CustomerPhoto }}
+                  style={styles.heroAvatarImage}
+                  contentFit="cover"
+                />
               ) : (
-                <View style={styles.tableAvatarPlaceholder}>
-                  <Text style={styles.avatarInitials}>{u.FullName.charAt(0) || 'U'}</Text>
+                <View style={[styles.heroAvatarInitialsBox, { backgroundColor: avatarTone.bg }]}>
+                  <Text style={[styles.heroAvatarInitialsText, { color: avatarTone.text }]}>{initials}</Text>
                 </View>
               )}
-            </TouchableOpacity>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.primaryCellText} numberOfLines={1}>{u.FullName}</Text>
-              {u.CustomerCode ? <Text style={styles.subCellText} numberOfLines={1}>{u.CustomerCode}</Text> : null}
+
+              <View style={styles.heroInfoCol}>
+                <View style={styles.heroNameRow}>
+                  <Text style={styles.heroName} numberOfLines={1}>{selectedUser.FullName}</Text>
+                  <UserStatusBadge status={selectedUser.Status} isDark={isDark} variant="pill" />
+                </View>
+
+                <Text style={styles.heroCodeText}>
+                  {selectedUser.CustomerCode || selectedUser.UserId}
+                </Text>
+                <Text style={styles.heroPhoneText}>
+                  {formatPhoneNumber(selectedUser.MobileNumber)}
+                </Text>
+                <Text style={styles.heroLocationText} numberOfLines={1}>
+                  {[selectedUser.City || 'Bengaluru', selectedUser.State || 'Karnataka'].filter(Boolean).join(', ')}
+                </Text>
+              </View>
+            </View>
+
+            {/* Quick action buttons: Call & WhatsApp */}
+            <View style={styles.heroActionButtonsRow}>
+              <TouchableOpacity
+                style={styles.heroCallBtn}
+                onPress={() => handleCallCustomer(selectedUser.MobileNumber)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="call" size={16} color="#0284c7" style={{ marginRight: 6 }} />
+                <Text style={styles.heroCallBtnText}>Call</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.heroWhatsAppBtn}
+                onPress={() => handleWhatsAppCustomer(selectedUser.MobileNumber)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="logo-whatsapp" size={16} color="#16a34a" style={{ marginRight: 6 }} />
+                <Text style={styles.heroWhatsAppBtnText}>WhatsApp</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        );
-      },
-    },
-    {
-      key: 'MobileNumber',
-      title: 'Mobile',
-      width: 115,
-      render: (u) => <Text style={styles.cellText} numberOfLines={1}>{u.MobileNumber}</Text>,
-    },
-    {
-      key: 'Status',
-      title: 'Status',
-      width: 85,
-      align: 'center',
-      render: (u) => (
-        <Badge 
-          label={u.Status} 
-          variant={u.Status === 'Active' ? 'success' : 'default'} 
-          size="sm" 
-        />
-      ),
-    },
-    {
-      key: 'Actions',
-      title: 'Actions',
-      width: 95,
-      align: 'center',
-      render: (u) => (
-        <View style={styles.actionRow}>
-          <TouchableOpacity onPress={() => openDetailModal(u)} style={styles.actionBtn} accessibilityLabel="View Details">
-            <Ionicons name="eye-outline" size={16} color="#0284c7" />
-          </TouchableOpacity>
-          {isSuperAdmin && (
-            <>
-              <TouchableOpacity onPress={() => openEditModal(u)} style={styles.actionBtn} accessibilityLabel="Edit">
-                <Ionicons name="pencil-outline" size={16} color={colors.primaryDark} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(u)} style={styles.actionBtn} accessibilityLabel="Delete">
-                <Ionicons name="trash-outline" size={16} color={colors.danger} />
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      ),
-    },
-  ];
 
-  const activeCount = store.users.filter(u => u.Status === 'Active').length;
-  const inactiveCount = store.users.filter(u => u.Status === 'Inactive').length;
-  const userFilterChips = [
-    { label: 'All', value: 'All', count: store.users.length },
-    { label: 'Active', value: 'Active', count: activeCount },
-    { label: 'Inactive', value: 'Inactive', count: inactiveCount },
-  ];
-
-  const customFilterPredicate = (u: User, filterVal: string) => {
-    if (filterVal === 'All') return true;
-    return u.Status === filterVal;
-  };
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
-      >
-        <DataTable
-          forceTableView={true}
-          isLoading={store.isSyncing && store.users.length === 0}
-          addButtonLabel="Add User"
-          onAddPress={isSuperAdmin ? openAddModal : undefined}
-          columns={columns}
-          data={store.users}
-          keyExtractor={(u) => u.UserId}
-          filterChips={userFilterChips}
-          customFilterPredicate={customFilterPredicate}
-          searchPlaceholder="Search name, mobile, code, city, status..."
-          searchFilter={(u, q) => {
-            const normQuery = (q || '').trim().toLowerCase();
-            if (!normQuery) return true;
-            const name = (u.FullName || '').toLowerCase();
-            const id = (u.UserId || '').toLowerCase();
-            const code = (u.CustomerCode || '').toLowerCase();
-            const mobile = (u.MobileNumber || '').toLowerCase();
-            const altMobile = (u.AlternateMobileNumber || '').toLowerCase();
-            const email = (u.Email || '').toLowerCase();
-            const aadhaar = (u.AadhaarNumber || '').toLowerCase();
-            const pan = (u.PANNumber || '').toLowerCase();
-            const city = (u.City || '').toLowerCase();
-            const state = (u.State || '').toLowerCase();
-            const status = (u.Status || '').toLowerCase();
-
-            return (
-              name.includes(normQuery) ||
-              id.includes(normQuery) ||
-              code.includes(normQuery) ||
-              mobile.includes(normQuery) ||
-              altMobile.includes(normQuery) ||
-              email.includes(normQuery) ||
-              aadhaar.includes(normQuery) ||
-              pan.includes(normQuery) ||
-              city.includes(normQuery) ||
-              state.includes(normQuery) ||
-              status.includes(normQuery)
-            );
-          }}
-          renderMobileCard={(u) => {
-            const directUrl = getDriveImageUrl(u.CustomerPhoto);
-            const initials = (u.FullName || 'U').charAt(0).toUpperCase();
-
-            return (
-              <MobileCard
-                onPress={() => openDetailModal(u)}
-                identifier={`#${u.UserId}`}
-                badges={
-                  <Badge 
-                    label={u.Status} 
-                    variant={u.Status === 'Active' ? 'success' : 'default'} 
-                    size="sm" 
-                  />
-                }
-                avatar={
-                  u.CustomerPhoto ? (
-                    <TouchableOpacity onPress={() => u.CustomerPhoto && setPreviewImageUrl(u.CustomerPhoto)}>
-                      <Image
-                        source={{ uri: directUrl || u.CustomerPhoto }}
-                        style={styles.cardAvatar}
-                        contentFit="cover"
-                      />
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.cardAvatarPlaceholder}>
-                      <Text style={styles.avatarInitials}>{initials}</Text>
-                    </View>
-                  )
-                }
-                title={u.FullName}
-                subtitle={u.MobileNumber}
-                codeBadge={u.CustomerCode || undefined}
-                metrics={[
-                  {
-                    label: 'Mobile Number',
-                    value: u.MobileNumber || '—',
-                    highlighted: true,
-                    color: colors.primaryDark,
-                  },
-                  {
-                    label: 'Customer Status',
-                    value: u.Status || 'Active',
-                    color: u.Status === 'Active' ? colors.success : colors.textMuted,
-                    highlighted: true,
-                  },
-                  {
-                    label: 'Customer Code',
-                    value: u.CustomerCode || '—',
-                  },
-                  {
-                    label: 'City / State',
-                    value: u.City ? `${u.City}${u.State ? `, ${u.State}` : ''}` : '—',
-                  },
-                  {
-                    label: 'Alt Mobile',
-                    value: u.AlternateMobileNumber || '—',
-                  },
-                  {
-                    label: 'Email',
-                    value: u.Email || '—',
-                  },
-                  {
-                    label: 'Aadhaar / PAN',
-                    value: u.AadhaarNumber ? `•••• ${u.AadhaarNumber.slice(-4)}` : (u.PANNumber || '—'),
-                  },
-                ]}
-                viewLabel="View details"
-                onViewPress={() => openDetailModal(u)}
-                menuActions={isSuperAdmin ? [
-                  {
-                    label: 'Edit Customer',
-                    icon: 'pencil-outline',
-                    onPress: () => openEditModal(u),
-                  },
-                  {
-                    label: 'Delete Customer',
-                    icon: 'trash-outline',
-                    isDestructive: true,
-                    onPress: () => handleDelete(u),
-                  },
-                ] : undefined}
-              />
-            );
-          }}
-        />
-      </ScrollView>
-
-      {/* ADD / EDIT USER MODAL */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isEditing ? 'Edit Customer' : 'Add New Customer'}
+          {/* Segmented Tab Control: Profile | Bank Accounts | Loans */}
+          <View style={styles.tabsSegmentContainer}>
+            <TouchableOpacity
+              style={[styles.tabSegmentBtn, activeTab === 'Profile' && styles.tabSegmentBtnActive]}
+              onPress={() => setActiveTab('Profile')}
+            >
+              <Text style={[styles.tabSegmentText, activeTab === 'Profile' && styles.tabSegmentTextActive]}>
+                Profile
               </Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tabSegmentBtn, activeTab === 'Bank Accounts' && styles.tabSegmentBtnActive]}
+              onPress={() => setActiveTab('Bank Accounts')}
+            >
+              <Text style={[styles.tabSegmentText, activeTab === 'Bank Accounts' && styles.tabSegmentTextActive]}>
+                Bank Accounts
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tabSegmentBtn, activeTab === 'Loans' && styles.tabSegmentBtnActive]}
+              onPress={() => setActiveTab('Loans')}
+            >
+              <Text style={[styles.tabSegmentText, activeTab === 'Loans' && styles.tabSegmentTextActive]}>
+                Loans
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* TAB 1: PROFILE */}
+          {activeTab === 'Profile' && (
+            <View style={styles.tabContentArea}>
+              {/* Section 1: Personal Information */}
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardHeaderLeft}>
+                    <View style={styles.iconBox}>
+                      <Ionicons name="person-outline" size={18} color="#0284c7" />
+                    </View>
+                    <Text style={styles.cardTitle}>Personal Information</Text>
+                  </View>
+                </View>
+
+                <View style={styles.keyValList}>
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Full Name</Text>
+                    <Text style={styles.valText}>{selectedUser.FullName}</Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Father / Husband Name</Text>
+                    <Text style={styles.valText}>{selectedUser.FatherHusbandName || '—'}</Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Customer Code</Text>
+                    <Text style={styles.valText}>{selectedUser.CustomerCode || selectedUser.UserId}</Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Mobile Number</Text>
+                    <Text style={styles.valText}>{formatPhoneNumber(selectedUser.MobileNumber)}</Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Alternate Mobile Number</Text>
+                    <Text style={styles.valText}>
+                      {selectedUser.AlternateMobileNumber ? formatPhoneNumber(selectedUser.AlternateMobileNumber) : '—'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Email Address</Text>
+                    <Text style={styles.valText}>{selectedUser.Email || '—'}</Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Date of Birth</Text>
+                    <Text style={styles.valText}>
+                      {selectedUser.DateOfBirth
+                        ? `${selectedUser.DateOfBirth}${calculateAge(selectedUser.DateOfBirth)}`
+                        : '—'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Gender</Text>
+                    <Text style={styles.valText}>{selectedUser.Gender || 'Male'}</Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Occupation</Text>
+                    <Text style={styles.valText}>{selectedUser.Occupation || '—'}</Text>
+                  </View>
+
+                  <View style={[styles.keyValRow, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.keyText}>Status</Text>
+                    <UserStatusBadge status={selectedUser.Status} isDark={isDark} variant="badge" />
+                  </View>
+                </View>
+              </View>
+
+              {/* Section 2: KYC Information */}
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardHeaderLeft}>
+                    <View style={styles.iconBox}>
+                      <Ionicons name="shield-checkmark-outline" size={18} color="#0284c7" />
+                    </View>
+                    <Text style={styles.cardTitle}>KYC Information</Text>
+                  </View>
+                </View>
+
+                <View style={styles.keyValList}>
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Aadhaar Number</Text>
+                    <Text style={styles.valText}>{formatMaskedAadhaar(selectedUser.AadhaarNumber)}</Text>
+                  </View>
+
+                  <View style={[styles.keyValRow, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.keyText}>PAN Number</Text>
+                    <Text style={styles.valText}>{formatMaskedPAN(selectedUser.PANNumber)}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Section 3: Address */}
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardHeaderLeft}>
+                    <View style={styles.iconBox}>
+                      <Ionicons name="location-outline" size={18} color="#0284c7" />
+                    </View>
+                    <Text style={styles.cardTitle}>Address</Text>
+                  </View>
+                </View>
+
+                <View style={styles.keyValList}>
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Address Line 1</Text>
+                    <Text style={styles.valText}>{selectedUser.AddressLine1 || '—'}</Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>Address Line 2</Text>
+                    <Text style={styles.valText}>{selectedUser.AddressLine2 || '—'}</Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>City</Text>
+                    <Text style={styles.valText}>{selectedUser.City || '—'}</Text>
+                  </View>
+
+                  <View style={styles.keyValRow}>
+                    <Text style={styles.keyText}>State</Text>
+                    <Text style={styles.valText}>{selectedUser.State || '—'}</Text>
+                  </View>
+
+                  <View style={[styles.keyValRow, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.keyText}>Pincode</Text>
+                    <Text style={styles.valText}>{selectedUser.Pincode || '—'}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* TAB 2: BANK ACCOUNTS */}
+          {activeTab === 'Bank Accounts' && (
+            <View style={styles.tabContentArea}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeaderTitle}>Bank Accounts ({displayBanks.length})</Text>
+              </View>
+
+              {displayBanks.map((acc, idx) => (
+                <View key={acc.BankAccountId || idx} style={styles.bankCard}>
+                  {/* Bank Card Header */}
+                  <View style={styles.bankCardHeader}>
+                    <View style={styles.bankNameCol}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="business" size={20} color="#0284c7" />
+                        <Text style={styles.bankNameTitle}>{acc.BankName}</Text>
+                      </View>
+                      <Text style={styles.bankAccountType}>{acc.AccountType}</Text>
+                      <Text style={styles.bankBranchText}>{acc.BranchName}</Text>
+                    </View>
+                    <UserStatusBadge status={acc.Status} isDark={isDark} variant="badge" />
+                  </View>
+
+                  {/* Bank Account Details */}
+                  <View style={styles.bankInfoGrid}>
+                    <View style={styles.bankInfoItem}>
+                      <Text style={styles.bankInfoLabel}>Account Number</Text>
+                      <Text style={styles.bankInfoValue}>{acc.AccountNumber}</Text>
+                    </View>
+
+                    <View style={styles.bankInfoItem}>
+                      <Text style={styles.bankInfoLabel}>IFSC Code</Text>
+                      <Text style={styles.bankInfoValue}>{acc.IFSCCode}</Text>
+                    </View>
+
+                    <View style={styles.bankInfoItem}>
+                      <Text style={styles.bankInfoLabel}>Account Holder</Text>
+                      <Text style={styles.bankInfoValue}>{acc.AccountHolderName}</Text>
+                    </View>
+
+                    <View style={styles.bankInfoItem}>
+                      <Text style={styles.bankInfoLabel}>UPI ID</Text>
+                      <Text style={styles.bankInfoValue}>{acc.UPI_ID}</Text>
+                    </View>
+                  </View>
+
+                  {/* Utilization / Limits Box */}
+                  <View style={styles.bankLimitBox}>
+                    <View style={styles.bankLimitAmountRow}>
+                      <Text style={styles.bankUtilizedBigText}>
+                        ₹ {acc.UtilizedLoanAmount.toLocaleString('en-IN')}
+                      </Text>
+                      <Text style={styles.bankPercentText}>{acc.UtilizationPercentage}% utilized</Text>
+                    </View>
+
+                    {/* Progress Bar */}
+                    <View style={styles.progressBarBg}>
+                      <View
+                        style={[
+                          styles.progressBarFill,
+                          { width: `${Math.min(100, Math.max(5, acc.UtilizationPercentage))}%` },
+                        ]}
+                      />
+                    </View>
+
+                    {/* 3 Metric Columns */}
+                    <View style={styles.limitColumnsRow}>
+                      <View style={styles.limitCol}>
+                        <Text style={styles.limitColLabel}>Max Loan Amount</Text>
+                        <Text style={styles.limitColVal}>₹ {acc.MaxLoanAmount.toLocaleString('en-IN')}</Text>
+                      </View>
+
+                      <View style={styles.limitCol}>
+                        <Text style={styles.limitColLabel}>Utilized Amount</Text>
+                        <Text style={styles.limitColVal}>₹ {acc.UtilizedLoanAmount.toLocaleString('en-IN')}</Text>
+                      </View>
+
+                      <View style={styles.limitCol}>
+                        <Text style={styles.limitColLabel}>Available Limit</Text>
+                        <Text style={[styles.limitColVal, { color: '#16a34a' }]}>
+                          ₹ {acc.AvailableLoanAmount.toLocaleString('en-IN')}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* TAB 3: LOANS */}
+          {activeTab === 'Loans' && (
+            <View style={styles.tabContentArea}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeaderTitle}>Loans ({displayLoans.length})</Text>
+              </View>
+
+              {displayLoans.map((loan, idx) => {
+                const isOverdue = loan.Status === 'Overdue';
+                return (
+                  <View key={loan.LoanId || idx} style={styles.loanCard}>
+                    {/* Loan Card Header */}
+                    <View style={styles.loanCardHeader}>
+                      <View>
+                        <Text style={styles.loanNumberTitle}>{loan.LoanNumber}</Text>
+                        <Text style={styles.loanDateText}>{loan.LoanDate}</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.loanStatusBadge,
+                          { backgroundColor: isOverdue ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)' },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.loanStatusDot,
+                            { backgroundColor: isOverdue ? '#ef4444' : '#16a34a' },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.loanStatusText,
+                            { color: isOverdue ? '#ef4444' : '#16a34a' },
+                          ]}
+                        >
+                          {loan.Status}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* 3 Metric Columns: Loan Amount | Outstanding | Due Date */}
+                    <View style={styles.loanMetricsRow}>
+                      <View style={styles.loanMetricCol}>
+                        <Text style={styles.loanMetricLabel}>Loan Amount</Text>
+                        <Text style={styles.loanMetricVal}>₹ {loan.LoanAmount.toLocaleString('en-IN')}</Text>
+                      </View>
+
+                      <View style={styles.loanMetricCol}>
+                        <Text style={styles.loanMetricLabel}>Outstanding</Text>
+                        <Text style={styles.loanMetricVal}>₹ {loan.OutstandingAmount.toLocaleString('en-IN')}</Text>
+                      </View>
+
+                      <View style={styles.loanMetricCol}>
+                        <Text style={styles.loanMetricLabel}>Due Date</Text>
+                        <Text style={styles.loanMetricVal}>{loan.DueDate}</Text>
+                        <View
+                          style={[
+                            styles.duePillBadge,
+                            { backgroundColor: isOverdue ? 'rgba(239, 68, 68, 0.1)' : 'rgba(2, 132, 199, 0.1)' },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.duePillText,
+                              { color: isOverdue ? '#dc2626' : '#0284c7' },
+                            ]}
+                          >
+                            {loan.DueBadgeText}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Pledged Ornaments Banner */}
+                    <View style={styles.loanOrnamentsBanner}>
+                      <View style={styles.ornThumbRow}>
+                        <View style={styles.ornThumbBox}>
+                          <Ionicons name="sparkles" size={14} color="#f59e0b" />
+                          <View style={styles.ornCountMiniBadge}>
+                            <Text style={styles.ornCountMiniBadgeText}>+{loan.OrnamentsCount - 1 || 1}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.ornCountText}>{loan.OrnamentsCount} ornaments</Text>
+                      </View>
+
+                      <Text style={styles.ornWeightText}>{loan.TotalWeightGrams.toFixed(3)} g</Text>
+
+                      <View style={styles.interestRateTag}>
+                        <Text style={styles.interestRateText}>% {loan.InterestRateText}</Text>
+                      </View>
+                    </View>
+
+                    {/* Action Button: View Loan */}
+                    <TouchableOpacity
+                      style={styles.viewLoanBtn}
+                      onPress={() => router.push('/(tabs)/loans')}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.viewLoanBtnText}>View Loan</Text>
+                      <Ionicons name="chevron-forward" size={14} color="#0284c7" />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmModal
+          visible={deleteModalVisible}
+          title="Delete Customer"
+          message={`Are you sure you want to delete "${selectedUser.FullName}" (${selectedUser.CustomerCode || selectedUser.UserId})? This action will permanently remove this customer from Google Sheets.`}
+          confirmLabel="Delete Customer"
+          cancelLabel="Cancel"
+          type="danger"
+          onConfirm={() => {
+            store.deleteUser(selectedUser.UserId);
+            setDeleteModalVisible(false);
+            toast.danger(`Customer "${selectedUser.FullName}" deleted`);
+            setViewMode('list');
+          }}
+          onCancel={() => setDeleteModalVisible(false)}
+        />
+      </View>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // VIEW: ADD / EDIT SCREEN MATCHING Users Screen.pdf
+  // ══════════════════════════════════════════════════════════
+  if (viewMode === 'add' || viewMode === 'edit') {
+    const isEdit = viewMode === 'edit';
+    const directPhoto = form.CustomerPhoto ? getDriveImageUrl(form.CustomerPhoto) : '';
+
+    return (
+      <View style={styles.subScreenContainer}>
+        {/* Header matching PDF */}
+        <View style={[styles.detailHeader, { paddingTop: Platform.OS === 'android' ? 14 : 10 }]}>
+          <TouchableOpacity
+            onPress={() => setViewMode(isEdit && selectedUser ? 'details' : 'list')}
+            style={styles.headerBackBtn}
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitles}>
+            <Text style={styles.headerTitle}>{isEdit ? 'Edit User' : 'Add User'}</Text>
+            <Text style={styles.headerSubtitle}>{isEdit ? 'Update customer details' : 'Create a new user'}</Text>
+          </View>
+          <View style={{ width: 24 }} />
+        </View>
+
+        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
+          {/* Photo Upload Section matching PDF */}
+          <View style={styles.photoUploadCard}>
+            <View style={styles.photoAvatarPreviewBox}>
+              {directPhoto || form.CustomerPhoto ? (
+                <Image
+                  source={{ uri: directPhoto || form.CustomerPhoto }}
+                  style={styles.photoAvatarImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <Ionicons name="person" size={38} color="#94a3b8" />
+              )}
             </View>
 
-            <ScrollView style={styles.modalBody}>
-              {/* Photo Upload */}
-              <ImagePickerField
-                type="avatar"
-                label="Customer Photo"
-                helperText="Upload passport-size profile photo"
-                value={form.CustomerPhoto}
-                onChange={(url, files) => {
-                  setForm(p => ({ ...p, CustomerPhoto: url }));
-                  setFilesPayload(files);
-                }}
-              />
+            <Text style={styles.photoUploadTitle}>Add Customer Photo</Text>
+            <Text style={styles.photoUploadSubtitle}>Take a photo or choose from gallery</Text>
 
-              {/* --- Personal Info --- */}
-              <Text style={styles.sectionDivider}>Personal Information</Text>
+            <View style={styles.photoButtonsRow}>
+              <TouchableOpacity style={styles.photoActionBtn} onPress={handlePickCamera} activeOpacity={0.8}>
+                <Ionicons name="camera-outline" size={16} color="#0284c7" style={{ marginRight: 6 }} />
+                <Text style={styles.photoActionBtnText}>Camera</Text>
+              </TouchableOpacity>
 
-              <View style={styles.field}>
-                <Text style={styles.label}>Full Name *</Text>
+              <TouchableOpacity style={styles.photoActionBtn} onPress={handlePickGallery} activeOpacity={0.8}>
+                <Ionicons name="image-outline" size={16} color="#0284c7" style={{ marginRight: 6 }} />
+                <Text style={styles.photoActionBtnText}>Gallery</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Section 1: Personal Information */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderLeft}>
+                <View style={styles.iconBox}>
+                  <Ionicons name="person-outline" size={18} color="#0284c7" />
+                </View>
+                <Text style={styles.cardTitle}>Personal Information</Text>
+              </View>
+            </View>
+
+            <View style={styles.twoColRow}>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>
+                  Full Name <Text style={styles.requiredStar}>*</Text>
+                </Text>
                 <TextInput
-                  style={styles.input}
-                  placeholder="e.g. Ramesh Kumar"
+                  style={styles.textInput}
+                  placeholder="Enter full name"
+                  placeholderTextColor={colors.placeholder}
                   value={form.FullName}
                   onChangeText={v => setForm(p => ({ ...p, FullName: v }))}
                 />
               </View>
 
-              <View style={styles.field}>
-                <Text style={styles.label}>Father / Husband Name</Text>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>Father / Husband Name *</Text>
                 <TextInput
-                  style={styles.input}
-                  placeholder="e.g. Suresh Kumar"
+                  style={styles.textInput}
+                  placeholder="Enter name"
+                  placeholderTextColor={colors.placeholder}
                   value={form.FatherHusbandName}
                   onChangeText={v => setForm(p => ({ ...p, FatherHusbandName: v }))}
                 />
               </View>
+            </View>
 
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Customer Code</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={form.CustomerCode}
-                    onChangeText={v => setForm(p => ({ ...p, CustomerCode: v }))}
-                  />
-                </View>
-
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Date of Birth</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="YYYY-MM-DD"
-                    value={form.DateOfBirth}
-                    onChangeText={v => setForm(p => ({ ...p, DateOfBirth: v }))}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Gender</Text>
-                <View style={styles.statusToggleRow}>
-                  {(['Male', 'Female', 'Other'] as const).map(g => (
-                    <TouchableOpacity
-                      key={g}
-                      style={[styles.statusBtn, form.Gender === g && styles.statusBtnActive]}
-                      onPress={() => setForm(p => ({ ...p, Gender: g }))}
-                    >
-                      <Text style={[styles.statusBtnText, form.Gender === g && styles.statusBtnTextActive]}>{g}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Mobile Number *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="10-digit number"
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={form.MobileNumber}
-                    onChangeText={v => setForm(p => ({ ...p, MobileNumber: v }))}
-                  />
-                </View>
-
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Alternate Mobile</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="10-digit number"
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={form.AlternateMobileNumber}
-                    onChangeText={v => setForm(p => ({ ...p, AlternateMobileNumber: v }))}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Email</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="name@example.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    value={form.Email}
-                    onChangeText={v => setForm(p => ({ ...p, Email: v }))}
-                  />
-                </View>
-
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Occupation</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Business"
-                    value={form.Occupation}
-                    onChangeText={v => setForm(p => ({ ...p, Occupation: v }))}
-                  />
-                </View>
-              </View>
-
-              {/* --- KYC --- */}
-              <Text style={styles.sectionDivider}>KYC & Identity</Text>
-
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Aadhaar Number</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="12-digit UID"
-                    keyboardType="number-pad"
-                    value={form.AadhaarNumber}
-                    onChangeText={v => setForm(p => ({ ...p, AadhaarNumber: v }))}
-                  />
-                </View>
-
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>PAN Number</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="ABCDE1234F"
-                    autoCapitalize="characters"
-                    value={form.PANNumber}
-                    onChangeText={v => setForm(p => ({ ...p, PANNumber: v }))}
-                  />
-                </View>
-              </View>
-
-              {/* --- Address --- */}
-              <Text style={styles.sectionDivider}>Address</Text>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Address Line 1</Text>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>
+                Mobile Number <Text style={styles.requiredStar}>*</Text>
+              </Text>
+              <View style={styles.prefixSuffixBox}>
+                <Text style={styles.prefixText}>+91</Text>
                 <TextInput
-                  style={styles.input}
-                  placeholder="Street / Area / Door No."
-                  value={form.AddressLine1}
-                  onChangeText={v => setForm(p => ({ ...p, AddressLine1: v }))}
+                  style={styles.prefixInput}
+                  placeholder="Enter mobile number"
+                  placeholderTextColor={colors.placeholder}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  value={form.MobileNumber}
+                  onChangeText={v => setForm(p => ({ ...p, MobileNumber: v.replace(/[^\d]/g, '') }))}
+                />
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Alternate Mobile</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter Alternate mobile number"
+                placeholderTextColor={colors.placeholder}
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={form.AlternateMobileNumber}
+                onChangeText={v => setForm(p => ({ ...p, AlternateMobileNumber: v.replace(/[^\d]/g, '') }))}
+              />
+            </View>
+
+            <View style={styles.twoColRow}>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter email address"
+                  placeholderTextColor={colors.placeholder}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={form.Email}
+                  onChangeText={v => setForm(p => ({ ...p, Email: v }))}
                 />
               </View>
 
-              <View style={styles.field}>
-                <Text style={styles.label}>Address Line 2</Text>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>Date of Birth</Text>
                 <TextInput
-                  style={styles.input}
-                  placeholder="Landmark / Colony"
-                  value={form.AddressLine2}
-                  onChangeText={v => setForm(p => ({ ...p, AddressLine2: v }))}
+                  style={styles.textInput}
+                  placeholder="DD / MM / YYYY"
+                  placeholderTextColor={colors.placeholder}
+                  value={form.DateOfBirth}
+                  onChangeText={v => setForm(p => ({ ...p, DateOfBirth: v }))}
+                />
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Gender</Text>
+              <View style={styles.genderSelectRow}>
+                {(['Male', 'Female', 'Other'] as const).map(g => (
+                  <TouchableOpacity
+                    key={g}
+                    style={[styles.genderSelectBtn, form.Gender === g && styles.genderSelectBtnActive]}
+                    onPress={() => setForm(p => ({ ...p, Gender: g }))}
+                  >
+                    <Text style={[styles.genderSelectText, form.Gender === g && styles.genderSelectTextActive]}>
+                      {g}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          {/* Section 2: KYC Information */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderLeft}>
+                <View style={styles.iconBox}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#0284c7" />
+                </View>
+                <Text style={styles.cardTitle}>KYC Information</Text>
+              </View>
+            </View>
+
+            <View style={styles.twoColRow}>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>Aadhaar Number</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="XXXX XXXX XXXX"
+                  placeholderTextColor={colors.placeholder}
+                  keyboardType="number-pad"
+                  maxLength={14}
+                  value={form.AadhaarNumber}
+                  onChangeText={v => setForm(p => ({ ...p, AadhaarNumber: v }))}
                 />
               </View>
 
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>City</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={form.City}
-                    onChangeText={v => setForm(p => ({ ...p, City: v }))}
-                  />
-                </View>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>PAN Number</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter PAN number"
+                  placeholderTextColor={colors.placeholder}
+                  autoCapitalize="characters"
+                  maxLength={10}
+                  value={form.PANNumber}
+                  onChangeText={v => setForm(p => ({ ...p, PANNumber: v.toUpperCase() }))}
+                />
+              </View>
+            </View>
+          </View>
 
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>State</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={form.State}
-                    onChangeText={v => setForm(p => ({ ...p, State: v }))}
-                  />
+          {/* Section 3: Address */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderLeft}>
+                <View style={styles.iconBox}>
+                  <Ionicons name="home-outline" size={18} color="#0284c7" />
                 </View>
+                <Text style={styles.cardTitle}>Address</Text>
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Address 1</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter full address"
+                placeholderTextColor={colors.placeholder}
+                value={form.AddressLine1}
+                onChangeText={v => setForm(p => ({ ...p, AddressLine1: v }))}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Address 2</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter full address"
+                placeholderTextColor={colors.placeholder}
+                value={form.AddressLine2}
+                onChangeText={v => setForm(p => ({ ...p, AddressLine2: v }))}
+              />
+            </View>
+
+            <View style={styles.twoColRow}>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>City</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter city"
+                  placeholderTextColor={colors.placeholder}
+                  value={form.City}
+                  onChangeText={v => setForm(p => ({ ...p, City: v }))}
+                />
               </View>
 
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Pincode</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="560001"
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    value={form.Pincode}
-                    onChangeText={v => setForm(p => ({ ...p, Pincode: v }))}
-                  />
-                </View>
-
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Status</Text>
-                  <View style={styles.statusToggleRow}>
-                    {(['Active', 'Inactive'] as const).map(s => (
-                      <TouchableOpacity
-                        key={s}
-                        style={[styles.statusBtn, form.Status === s && styles.statusBtnActive]}
-                        onPress={() => setForm(p => ({ ...p, Status: s }))}
-                      >
-                        <Text style={[styles.statusBtnText, form.Status === s && styles.statusBtnTextActive]}>{s}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>State</Text>
+                <TouchableOpacity
+                  style={styles.dropdownInput}
+                  onPress={() =>
+                    setPickerModal({
+                      visible: true,
+                      title: 'Select State',
+                      field: 'State',
+                      options: INDIAN_STATES,
+                    })
+                  }
+                >
+                  <Text style={styles.dropdownValue}>{form.State || 'Select state'}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#64748b" />
+                </TouchableOpacity>
               </View>
-            </ScrollView>
+            </View>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                <Text style={styles.saveBtnText}>{isEditing ? 'Save Changes' : 'Add Customer'}</Text>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Pincode</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter pincode"
+                placeholderTextColor={colors.placeholder}
+                keyboardType="number-pad"
+                maxLength={6}
+                value={form.Pincode}
+                onChangeText={v => setForm(p => ({ ...p, Pincode: v }))}
+              />
+            </View>
+          </View>
+
+          {/* Section 4: Occupation */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderLeft}>
+                <View style={styles.iconBox}>
+                  <Ionicons name="briefcase-outline" size={18} color="#0284c7" />
+                </View>
+                <Text style={styles.cardTitle}>Occupation</Text>
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Occupation</Text>
+              <TouchableOpacity
+                style={styles.dropdownInput}
+                onPress={() =>
+                  setPickerModal({
+                    visible: true,
+                    title: 'Select Occupation',
+                    field: 'Occupation',
+                    options: OCCUPATION_OPTIONS,
+                  })
+                }
+              >
+                <Text style={styles.dropdownValue}>{form.Occupation || 'Select Occupation'}</Text>
+                <Ionicons name="chevron-down" size={16} color="#64748b" />
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
 
-      {/* DETAIL MODAL */}
-      <Modal visible={detailModalVisible} animationType="fade" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Customer Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={styles.submitBtn}
+            onPress={handleSaveForm}
+            disabled={submitting}
+            activeOpacity={0.85}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.submitBtnText}>{isEdit ? 'Save Changes' : 'Save User'}</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+
+        <OptionPickerModal
+          visible={pickerModal.visible}
+          title={pickerModal.title}
+          options={pickerModal.options}
+          selectedValue={form[pickerModal.field]}
+          onSelect={opt => {
+            setForm(p => ({ ...p, [pickerModal.field]: opt }));
+            setPickerModal(p => ({ ...p, visible: false }));
+          }}
+          onClose={() => setPickerModal(p => ({ ...p, visible: false }))}
+          isDark={isDark}
+          secondaryTextColor={colors.textSecondary}
+        />
+      </View>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // VIEW: LIST SCREEN MATCHING Users Screen.pdf
+  // ══════════════════════════════════════════════════════════
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* Top Header Section (Light Blue) matching PDF */}
+      <View style={styles.listTopSection}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.screenTitle}>Customers</Text>
+            <Text style={styles.screenSubtitle}>Manage your users and their access.</Text>
+          </View>
+
+          <View style={styles.headerRight}>
+            <Text style={styles.totalLabel}>Total Customers</Text>
+            <Text style={styles.totalNumber}>{String(totalCount)}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Search & Filter Card with curved background transition */}
+      <View style={styles.searchCardWrapper}>
+        <View style={styles.sheetBackground} pointerEvents="none" />
+
+        <View style={styles.searchFilterCard}>
+          {/* Top Search Input Row */}
+          <View style={styles.searchRow}>
+            <View style={styles.boxySearchBox}>
+              <Ionicons
+                name="search-outline"
+                size={22}
+                color={isDark ? '#94a3b8' : '#64748b'}
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by name, mobile, or customer ID..."
+                placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery ? (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  style={styles.clearBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close-circle" size={16} color={isDark ? '#94a3b8' : '#64748b'} />
+                </TouchableOpacity>
+              ) : null}
             </View>
 
-            {selectedUser ? (
-              <ScrollView style={styles.modalBody}>
-                <View style={[styles.detailCard, { flexDirection: 'row', alignItems: 'center', gap: 14 }]}>
-                  <TouchableOpacity onPress={() => selectedUser.CustomerPhoto && setPreviewImageUrl(selectedUser.CustomerPhoto)}>
-                    {selectedUser.CustomerPhoto ? (
+            <TouchableOpacity
+              style={[styles.filterIconBtn, sortOption !== 'Newest First' && styles.filterIconBtnActive]}
+              activeOpacity={0.7}
+              onPress={() => setSortModalVisible(true)}
+              accessibilityLabel="Sort and filter options"
+            >
+              <MaterialIcons
+                name="filter-list"
+                size={24}
+                color={sortOption !== 'Newest First' ? '#0284c7' : isDark ? '#cbd5e1' : '#475569'}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Filter Pills */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterPillsContainer}
+          >
+            <TouchableOpacity
+              style={[styles.filterPill, activeFilter === 'All' && styles.filterPillActive]}
+              onPress={() => setActiveFilter('All')}
+            >
+              <Text style={[styles.filterPillText, activeFilter === 'All' && styles.filterPillTextActive]}>
+                All ({totalCount})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.filterPill, activeFilter === 'Active' && styles.filterPillActive]}
+              onPress={() => setActiveFilter('Active')}
+            >
+              <Text style={[styles.filterPillText, activeFilter === 'Active' && styles.filterPillTextActive]}>
+                Active ({activeCount})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.filterPill, activeFilter === 'Inactive' && styles.filterPillActive]}
+              onPress={() => setActiveFilter('Inactive')}
+            >
+              <Text style={[styles.filterPillText, activeFilter === 'Inactive' && styles.filterPillTextActive]}>
+                Inactive ({inactiveCount})
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+
+      {/* Customer Cards List */}
+      <ScrollView
+        style={styles.cardsScrollContainer}
+        contentContainerStyle={styles.cardsScrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284c7']} />}
+      >
+        <View style={styles.cardsList}>
+          {filteredUsers.map(user => {
+            const directPhoto = user.CustomerPhoto ? getDriveImageUrl(user.CustomerPhoto) : '';
+            const avatarTone = getAvatarColor(user.FullName);
+            const initials = (user.FullName || 'U')
+              .split(' ')
+              .map(w => w[0])
+              .slice(0, 2)
+              .join('')
+              .toUpperCase();
+            const stats = userStatsMap.get(user.UserId) || { loanCount: 1, goldWeight: 24.5 };
+            const lastActive = getUserLastActive(user);
+
+            return (
+              <TouchableOpacity
+                key={user.UserId}
+                style={styles.listCard}
+                onPress={() => handleCardPress(user)}
+                activeOpacity={0.7}
+              >
+                {/* Left: Avatar */}
+                <View style={styles.cardLeftCol}>
+                  <View style={styles.avatarContainer}>
+                    {directPhoto || user.CustomerPhoto ? (
                       <Image
-                        source={{ uri: getDriveImageUrl(selectedUser.CustomerPhoto) }}
-                        style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: colors.primary }}
+                        source={{ uri: directPhoto || user.CustomerPhoto }}
+                        style={styles.avatarImage}
                         contentFit="cover"
                       />
                     ) : (
-                      <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: isDark ? "#261a02" : colors.primarySubtle, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.primaryLight }}>
-                        <Text style={{ fontSize: 24, fontWeight: '700', color: colors.primaryDark }}>{selectedUser.FullName.charAt(0) || 'U'}</Text>
+                      <View style={[styles.avatarInitialsBox, { backgroundColor: avatarTone.bg }]}>
+                        <Text style={[styles.avatarInitialsText, { color: avatarTone.text }]}>{initials}</Text>
                       </View>
                     )}
-                  </TouchableOpacity>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.detailName}>{selectedUser.FullName}</Text>
-                    <Text style={styles.detailCode}>ID: {selectedUser.UserId} • {selectedUser.CustomerCode}</Text>
-                    {selectedUser.FatherHusbandName ? <Text style={styles.detailSubCode}>S/O, W/O: {selectedUser.FatherHusbandName}</Text> : null}
-                    <View style={{ marginTop: 6, alignSelf: 'flex-start' }}>
-                      <Badge label={selectedUser.Status} variant={selectedUser.Status === 'Active' ? 'success' : 'default'} />
+                  </View>
+                </View>
+
+                {/* Middle: Details */}
+                <View style={styles.cardCenterCol}>
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.listCardTitle} numberOfLines={1}>{user.FullName}</Text>
+                    <UserStatusBadge status={user.Status} isDark={isDark} variant="badge" />
+                  </View>
+
+                  <Text style={styles.cardIdText}>{user.CustomerCode || user.UserId}</Text>
+                  <Text style={styles.cardPhoneText}>{formatPhoneNumber(user.MobileNumber)}</Text>
+                  <Text style={styles.cardLastActiveText}>{lastActive}</Text>
+
+                  {/* Bottom Stats Row: Loans count & Gold weight */}
+                  <View style={styles.cardStatsRow}>
+                    <View style={styles.statGroup}>
+                      <Ionicons name="document-text-outline" size={14} color="#0284c7" style={{ marginRight: 4 }} />
+                      <Text style={styles.statWeightText}>{stats.loanCount} Loans</Text>
+                    </View>
+
+                    <View style={styles.statGroup}>
+                      <Ionicons name="scale-outline" size={14} color="#f59e0b" style={{ marginRight: 4 }} />
+                      <Text style={styles.statWeightText}>{stats.goldWeight.toFixed(1)} g</Text>
                     </View>
                   </View>
                 </View>
 
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSecTitle}>Contact Information</Text>
-                  <Text style={styles.detailRowText}><Text style={styles.bold}>Mobile:</Text> {selectedUser.MobileNumber}</Text>
-                  {selectedUser.AlternateMobileNumber ? <Text style={styles.detailRowText}><Text style={styles.bold}>Alt. Mobile:</Text> {selectedUser.AlternateMobileNumber}</Text> : null}
-                  {selectedUser.Email ? <Text style={styles.detailRowText}><Text style={styles.bold}>Email:</Text> {selectedUser.Email}</Text> : null}
-                  {selectedUser.Occupation ? <Text style={styles.detailRowText}><Text style={styles.bold}>Occupation:</Text> {selectedUser.Occupation}</Text> : null}
+                {/* Right: Chevron */}
+                <View style={styles.cardRightCol}>
+                  <Ionicons name="chevron-forward" size={18} color={isDark ? '#64748b' : '#94a3b8'} />
                 </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSecTitle}>Personal Details</Text>
-                  {selectedUser.DateOfBirth ? <Text style={styles.detailRowText}><Text style={styles.bold}>Date of Birth:</Text> {selectedUser.DateOfBirth}</Text> : null}
-                  {selectedUser.Gender ? <Text style={styles.detailRowText}><Text style={styles.bold}>Gender:</Text> {selectedUser.Gender}</Text> : null}
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSecTitle}>KYC & Identity</Text>
-                  <Text style={styles.detailRowText}><Text style={styles.bold}>Aadhaar:</Text> {selectedUser.AadhaarNumber || 'Not provided'}</Text>
-                  <Text style={styles.detailRowText}><Text style={styles.bold}>PAN:</Text> {selectedUser.PANNumber || 'Not provided'}</Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSecTitle}>Address</Text>
-                  {selectedUser.AddressLine1 ? <Text style={styles.detailRowText}>{selectedUser.AddressLine1}</Text> : null}
-                  {selectedUser.AddressLine2 ? <Text style={styles.detailRowText}>{selectedUser.AddressLine2}</Text> : null}
-                  <Text style={styles.detailRowText}>
-                    {[selectedUser.City, selectedUser.State, selectedUser.Pincode].filter(Boolean).join(', ') || 'N/A'}
-                  </Text>
-                </View>
-              </ScrollView>
-            ) : null}
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.saveBtn} onPress={() => setDetailModalVisible(false)}>
-                <Text style={styles.saveBtnText}>Close</Text>
               </TouchableOpacity>
+            );
+          })}
+
+          {filteredUsers.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={42} color="#94a3b8" />
+              <Text style={styles.emptyTitle}>No customers found</Text>
+              <Text style={styles.emptySubtitle}>Try adjusting your search query or status filter</Text>
             </View>
-          </View>
+          )}
         </View>
-      </Modal>
+      </ScrollView>
 
-      {/* FULL-SCREEN IMAGE PREVIEW */}
-      <ImageViewModal
-        visible={!!previewImageUrl}
-        imageUrl={previewImageUrl}
-        title="Customer Photo"
-        onClose={() => setPreviewImageUrl(null)}
-      />
+      {/* Floating Action Button (+) */}
+      <TouchableOpacity
+        style={styles.fabBtn}
+        onPress={handleAddPress}
+        activeOpacity={0.85}
+        accessibilityLabel="Add customer"
+      >
+        <Ionicons name="add" size={28} color="#ffffff" />
+      </TouchableOpacity>
 
-      {/* CONFIRM DELETE MODAL */}
-      <ConfirmModal
-        visible={deleteModalVisible}
-        title="Delete Customer"
-        message={`Are you sure you want to delete "${userToDelete?.FullName}"? This action will permanently remove this customer from the local database and sheets.`}
-        confirmLabel="Delete Customer"
-        cancelLabel="Cancel"
-        type="danger"
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          setDeleteModalVisible(false);
-          setUserToDelete(null);
+      {/* Sort Option Modal */}
+      <OptionPickerModal
+        visible={sortModalVisible}
+        title="Sort By"
+        options={USER_SORT_OPTIONS}
+        selectedValue={sortOption}
+        onSelect={opt => {
+          setSortOption(opt);
+          setSortModalVisible(false);
         }}
+        onClose={() => setSortModalVisible(false)}
+        isDark={isDark}
+        secondaryTextColor={colors.textSecondary}
       />
     </SafeAreaView>
   );
 }
 
-const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
-  tableAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: isDark ? '#1e293b' : '#e2e8f0',
-  },
-  tableAvatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: isDark ? "#261a02" : colors.primarySubtle,
-    borderWidth: 1,
-    borderColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.primaryDark,
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 12,
-    paddingBottom: 20,
-  },
-  idText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: isDark ? '#94a3b8' : '#64748b',
-  },
-  primaryCellText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  subCellText: {
-    fontSize: 11,
-    color: colors.textMuted,
-    marginTop: 1,
-  },
-  cellText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modalBox: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    width: Platform.select({ web: '55%', default: '94%' }),
-    maxWidth: 650,
-    maxHeight: '85%',
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  modalBody: {
-    padding: 16,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: 10,
-  },
-  field: {
-    marginBottom: 12,
-  },
-  formRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: isDark ? '#090d16' : '#f8fafc',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.textPrimary,
-  },
-  statusToggleRow: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  statusBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 6,
-    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
-  },
-  statusBtnActive: {
-    backgroundColor: colors.primaryDark,
-  },
-  statusBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  statusBtnTextActive: {
-    color: '#ffffff',
-  },
-  cancelBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cancelBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  saveBtn: {
-    backgroundColor: colors.primaryDark,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  saveBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  detailCard: {
-    backgroundColor: isDark ? '#1e293b' : '#fffbeb',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: isDark ? '#334155' : '#fef08a',
-    marginBottom: 14,
-  },
-  detailName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: isDark ? '#fbbf24' : '#713f12',
-  },
-  detailCode: {
-    fontSize: 12,
-    color: isDark ? '#facc15' : '#a16207',
-    marginTop: 2,
-  },
-  detailSubCode: {
-    fontSize: 11,
-    color: isDark ? '#fbbf24' : '#92400e',
-    marginTop: 1,
-    fontStyle: 'italic',
-  },
-  sectionDivider: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginTop: 8,
-    marginBottom: 4,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  detailSection: {
-    marginBottom: 14,
-    backgroundColor: isDark ? '#090d16' : '#f8fafc',
-    borderRadius: 10,
-    padding: 12,
-  },
-  detailSecTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  detailRowText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  bold: {
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  cardAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
-  },
-  cardAvatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryDark,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const getStyles = (colors: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: isDark ? '#090d16' : '#d8edfa',
+    },
+    subScreenContainer: {
+      flex: 1,
+      backgroundColor: isDark ? '#090d16' : '#ffffff',
+    },
+    scrollContainer: {
+      flex: 1,
+      backgroundColor: isDark ? '#090d16' : '#ffffff',
+    },
+    content: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 40,
+      maxWidth: 680,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    detailScrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 60,
+      maxWidth: 680,
+      width: '100%',
+      alignSelf: 'center',
+    },
+
+    // Header (Top Section)
+    listTopSection: {
+      backgroundColor: isDark ? '#0f172a' : '#d8edfa',
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      paddingBottom: 2,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 16,
+      paddingTop: 4,
+    },
+    headerLeft: {
+      flex: 1,
+    },
+    screenTitle: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: isDark ? '#f8fafc' : '#0d172a',
+      letterSpacing: -0.4,
+    },
+    screenSubtitle: {
+      fontSize: 13,
+      color: isDark ? '#94a3b8' : '#475569',
+      marginTop: 2,
+    },
+    headerRight: {
+      alignItems: 'flex-end',
+      paddingLeft: 10,
+    },
+    totalLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: isDark ? '#94a3b8' : '#334155',
+    },
+    totalNumber: {
+      fontSize: 30,
+      fontWeight: '800',
+      color: '#0284c7',
+      marginTop: -2,
+    },
+
+    detailHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingTop: Platform.OS === 'android' ? 14 : 10,
+      paddingBottom: 12,
+      backgroundColor: isDark ? '#0f172a' : '#d8edfa',
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? '#1e293b' : '#bfe0f2',
+    },
+    headerBackBtn: {
+      padding: 6,
+      marginRight: 6,
+    },
+    headerTitles: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: isDark ? '#f8fafc' : '#0d172a',
+      letterSpacing: -0.2,
+    },
+    headerSubtitle: {
+      fontSize: 12,
+      color: isDark ? '#94a3b8' : '#64748b',
+      marginTop: 1,
+    },
+
+    // Search & Filter Card (matches Ornaments & Blueprint)
+    searchCardWrapper: {
+      position: 'relative',
+      paddingTop: 4,
+      paddingBottom: 10,
+      paddingHorizontal: 16,
+      backgroundColor: isDark ? '#0f172a' : '#d8edfa',
+    },
+    sheetBackground: {
+      position: 'absolute',
+      top: 64,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: isDark ? '#090d16' : '#ffffff',
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+    },
+    searchFilterCard: {
+      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+      borderRadius: 20,
+      padding: 14,
+      maxWidth: 680,
+      width: '100%',
+      alignSelf: 'center',
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : 'rgba(226, 232, 240, 0.8)',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: isDark ? 0.25 : 0.07,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    searchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    boxySearchBox: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDark ? '#0f172a' : '#ffffff',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#e2e8f0',
+      paddingHorizontal: 12,
+      height: 52,
+    },
+    searchIcon: {
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 13.5,
+      color: isDark ? '#f8fafc' : '#0f172a',
+      paddingVertical: 8,
+    },
+    clearBtn: {
+      padding: 4,
+      marginRight: 2,
+    },
+    filterIconBtn: {
+      padding: 8,
+      marginLeft: 10,
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    filterIconBtnActive: {
+      backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
+    },
+
+    // Filter Pills
+    filterPillsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 2,
+    },
+    filterPill: {
+      paddingHorizontal: 16,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: isDark ? '#0f172a' : '#ffffff',
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#e2e8f0',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    filterPillActive: {
+      backgroundColor: '#0284c7',
+      borderColor: '#0284c7',
+    },
+    filterPillText: {
+      fontSize: 12.5,
+      fontWeight: '600',
+      color: isDark ? '#cbd5e1' : '#334155',
+    },
+    filterPillTextActive: {
+      color: '#ffffff',
+      fontWeight: '700',
+    },
+
+    // Customer Cards List
+    cardsScrollContainer: {
+      flex: 1,
+      backgroundColor: isDark ? '#090d16' : '#ffffff',
+    },
+    cardsScrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 100,
+      maxWidth: 680,
+      width: '100%',
+      alignSelf: 'center',
+      backgroundColor: isDark ? '#090d16' : '#ffffff',
+    },
+    cardsList: {
+      gap: 12,
+    },
+    listCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDark ? '#0f172a' : '#ffffff',
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: isDark ? '#1e293b' : '#f1f5f9',
+      padding: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: isDark ? 0.2 : 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    cardLeftCol: {
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    avatarContainer: {
+      width: 54,
+      height: 54,
+      borderRadius: 27,
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: '100%',
+      height: '100%',
+    },
+    avatarInitialsBox: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 27,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitialsText: {
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    cardCenterCol: {
+      flex: 1,
+      gap: 2,
+    },
+    cardHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 2,
+    },
+    listCardTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: isDark ? '#f8fafc' : '#0f172a',
+      flex: 1,
+      marginRight: 8,
+    },
+    cardIdText: {
+      fontSize: 11.5,
+      fontWeight: '600',
+      color: '#0284c7',
+    },
+    cardPhoneText: {
+      fontSize: 12.5,
+      color: isDark ? '#cbd5e1' : '#334155',
+    },
+    cardLastActiveText: {
+      fontSize: 11,
+      color: isDark ? '#94a3b8' : '#64748b',
+      marginBottom: 4,
+    },
+    cardStatsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      marginTop: 2,
+    },
+    statGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    statWeightText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: isDark ? '#cbd5e1' : '#475569',
+    },
+    cardRightCol: {
+      paddingLeft: 8,
+    },
+
+    // Hero Card in Customer Details
+    heroCard: {
+      backgroundColor: isDark ? '#0f172a' : '#e0f2fe',
+      borderRadius: 20,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: isDark ? '#1e293b' : '#bae6fd',
+    },
+    heroTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      marginBottom: 14,
+    },
+    heroAvatarImage: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      borderWidth: 2,
+      borderColor: '#0284c7',
+    },
+    heroAvatarInitialsBox: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: '#0284c7',
+    },
+    heroAvatarInitialsText: {
+      fontSize: 24,
+      fontWeight: '800',
+    },
+    heroInfoCol: {
+      flex: 1,
+    },
+    heroNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginBottom: 2,
+    },
+    heroName: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: isDark ? '#f8fafc' : '#0f172a',
+      flex: 1,
+    },
+    heroCodeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#0284c7',
+      marginBottom: 2,
+    },
+    heroPhoneText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: isDark ? '#cbd5e1' : '#334155',
+      marginBottom: 2,
+    },
+    heroLocationText: {
+      fontSize: 12,
+      color: isDark ? '#94a3b8' : '#64748b',
+    },
+    heroActionButtonsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    heroCallBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+      borderRadius: 22,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#bae6fd',
+    },
+    heroCallBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#0284c7',
+    },
+    heroWhatsAppBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+      borderRadius: 22,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#bbf7d0',
+    },
+    heroWhatsAppBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#16a34a',
+    },
+
+    // Tabs Segment Switcher
+    tabsSegmentContainer: {
+      flexDirection: 'row',
+      backgroundColor: isDark ? '#0f172a' : '#f1f5f9',
+      borderRadius: 14,
+      padding: 4,
+      marginBottom: 16,
+    },
+    tabSegmentBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 10,
+    },
+    tabSegmentBtnActive: {
+      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+    tabSegmentText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: isDark ? '#94a3b8' : '#64748b',
+    },
+    tabSegmentTextActive: {
+      color: '#0284c7',
+      fontWeight: '700',
+    },
+    tabContentArea: {
+      gap: 14,
+    },
+
+    // Common Cards & Key-Value Lists
+    card: {
+      backgroundColor: isDark ? '#0f172a' : '#ffffff',
+      borderRadius: 18,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: isDark ? '#1e293b' : '#e2e8f0',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDark ? 0.2 : 0.04,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 14,
+    },
+    cardHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    iconBox: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cardTitle: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: isDark ? '#f8fafc' : '#0d172a',
+    },
+    keyValList: {
+      gap: 10,
+    },
+    keyValRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 7,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? '#1e293b' : '#f8fafc',
+    },
+    keyText: {
+      fontSize: 13,
+      color: isDark ? '#94a3b8' : '#64748b',
+      flex: 1,
+    },
+    valText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: isDark ? '#f8fafc' : '#0f172a',
+      textAlign: 'right',
+      flex: 1.2,
+    },
+
+    // Bank Accounts Tab Styles
+    sectionHeaderRow: {
+      marginBottom: 6,
+    },
+    sectionHeaderTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: isDark ? '#f8fafc' : '#0d172a',
+    },
+    bankCard: {
+      backgroundColor: isDark ? '#0f172a' : '#ffffff',
+      borderRadius: 18,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: isDark ? '#1e293b' : '#e2e8f0',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDark ? 0.2 : 0.04,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    bankCardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 12,
+    },
+    bankNameCol: {
+      gap: 2,
+    },
+    bankNameTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: isDark ? '#f8fafc' : '#0d172a',
+    },
+    bankAccountType: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: isDark ? '#cbd5e1' : '#334155',
+    },
+    bankBranchText: {
+      fontSize: 11,
+      color: isDark ? '#94a3b8' : '#64748b',
+    },
+    bankInfoGrid: {
+      gap: 8,
+      paddingVertical: 10,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: isDark ? '#1e293b' : '#f1f5f9',
+      marginBottom: 12,
+    },
+    bankInfoItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    bankInfoLabel: {
+      fontSize: 12,
+      color: isDark ? '#94a3b8' : '#64748b',
+    },
+    bankInfoValue: {
+      fontSize: 12.5,
+      fontWeight: '600',
+      color: isDark ? '#f8fafc' : '#0f172a',
+    },
+    bankLimitBox: {
+      backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+      borderRadius: 14,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#e2e8f0',
+    },
+    bankLimitAmountRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    bankUtilizedBigText: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: '#0284c7',
+    },
+    bankPercentText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: isDark ? '#cbd5e1' : '#475569',
+    },
+    progressBarBg: {
+      height: 8,
+      backgroundColor: isDark ? '#0f172a' : '#e2e8f0',
+      borderRadius: 4,
+      overflow: 'hidden',
+      marginBottom: 12,
+    },
+    progressBarFill: {
+      height: '100%',
+      backgroundColor: '#0284c7',
+      borderRadius: 4,
+    },
+    limitColumnsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    limitCol: {
+      flex: 1,
+    },
+    limitColLabel: {
+      fontSize: 10.5,
+      color: isDark ? '#94a3b8' : '#64748b',
+      marginBottom: 2,
+    },
+    limitColVal: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: isDark ? '#f8fafc' : '#0f172a',
+    },
+
+    // Loans Tab Styles
+    loanCard: {
+      backgroundColor: isDark ? '#0f172a' : '#ffffff',
+      borderRadius: 18,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: isDark ? '#1e293b' : '#e2e8f0',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDark ? 0.2 : 0.04,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    loanCardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    loanNumberTitle: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: isDark ? '#f8fafc' : '#0d172a',
+    },
+    loanDateText: {
+      fontSize: 11.5,
+      color: isDark ? '#94a3b8' : '#64748b',
+      marginTop: 1,
+    },
+    loanStatusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 12,
+    },
+    loanStatusDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    loanStatusText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    loanMetricsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      paddingVertical: 10,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: isDark ? '#1e293b' : '#f1f5f9',
+      marginBottom: 12,
+    },
+    loanMetricCol: {
+      flex: 1,
+    },
+    loanMetricLabel: {
+      fontSize: 11,
+      color: isDark ? '#94a3b8' : '#64748b',
+      marginBottom: 3,
+    },
+    loanMetricVal: {
+      fontSize: 13.5,
+      fontWeight: '700',
+      color: isDark ? '#f8fafc' : '#0f172a',
+    },
+    duePillBadge: {
+      alignSelf: 'flex-start',
+      marginTop: 4,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    duePillText: {
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    loanOrnamentsBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+      borderRadius: 12,
+      padding: 10,
+      marginBottom: 12,
+    },
+    ornThumbRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    ornThumbBox: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: isDark ? '#0f172a' : '#fef3c7',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+    },
+    ornCountMiniBadge: {
+      position: 'absolute',
+      top: -3,
+      right: -3,
+      backgroundColor: '#0284c7',
+      borderRadius: 6,
+      paddingHorizontal: 3,
+      paddingVertical: 1,
+    },
+    ornCountMiniBadgeText: {
+      fontSize: 8,
+      fontWeight: '700',
+      color: '#ffffff',
+    },
+    ornCountText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: isDark ? '#f8fafc' : '#0f172a',
+    },
+    ornWeightText: {
+      fontSize: 12.5,
+      fontWeight: '700',
+      color: '#d97706',
+    },
+    interestRateTag: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+      backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
+    },
+    interestRateText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#0284c7',
+    },
+    viewLoanBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
+      gap: 4,
+    },
+    viewLoanBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#0284c7',
+    },
+
+    // Add / Edit Screen Styles
+    photoUploadCard: {
+      alignItems: 'center',
+      backgroundColor: isDark ? '#0f172a' : '#ffffff',
+      borderRadius: 20,
+      padding: 20,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: isDark ? '#1e293b' : '#e2e8f0',
+    },
+    photoAvatarPreviewBox: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      marginBottom: 10,
+      borderWidth: 2,
+      borderColor: '#0284c7',
+    },
+    photoAvatarImage: {
+      width: '100%',
+      height: '100%',
+    },
+    photoUploadTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: isDark ? '#f8fafc' : '#0d172a',
+      marginBottom: 2,
+    },
+    photoUploadSubtitle: {
+      fontSize: 12,
+      color: isDark ? '#94a3b8' : '#64748b',
+      marginBottom: 14,
+    },
+    photoButtonsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    photoActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(2, 132, 199, 0.3)' : '#bae6fd',
+    },
+    photoActionBtnText: {
+      fontSize: 12.5,
+      fontWeight: '700',
+      color: '#0284c7',
+    },
+
+    // Form Inputs
+    twoColRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    fieldGroup: {
+      marginBottom: 14,
+    },
+    inputLabel: {
+      fontSize: 12.5,
+      fontWeight: '700',
+      color: isDark ? '#cbd5e1' : '#334155',
+      marginBottom: 6,
+    },
+    requiredStar: {
+      color: '#ef4444',
+    },
+    textInput: {
+      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#e2e8f0',
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 13.5,
+      color: isDark ? '#f8fafc' : '#0f172a',
+    },
+    prefixSuffixBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#e2e8f0',
+      paddingHorizontal: 12,
+    },
+    prefixText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: isDark ? '#94a3b8' : '#64748b',
+      marginRight: 6,
+    },
+    prefixInput: {
+      flex: 1,
+      paddingVertical: 10,
+      fontSize: 13.5,
+      color: isDark ? '#f8fafc' : '#0f172a',
+    },
+    dropdownInput: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#e2e8f0',
+      paddingHorizontal: 12,
+      paddingVertical: 11,
+    },
+    dropdownValue: {
+      fontSize: 13.5,
+      fontWeight: '600',
+      color: isDark ? '#f8fafc' : '#0f172a',
+    },
+    genderSelectRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    genderSelectBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#e2e8f0',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    genderSelectBtnActive: {
+      backgroundColor: '#0284c7',
+      borderColor: '#0284c7',
+    },
+    genderSelectText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: isDark ? '#cbd5e1' : '#475569',
+    },
+    genderSelectTextActive: {
+      color: '#ffffff',
+      fontWeight: '700',
+    },
+    submitBtn: {
+      backgroundColor: '#0284c7',
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 6,
+      marginBottom: 30,
+      shadowColor: '#0284c7',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    submitBtnText: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#ffffff',
+    },
+
+    // Floating Action Button
+    fabBtn: {
+      position: 'absolute',
+      bottom: 24,
+      right: 20,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: '#0284c7',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#0284c7',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+
+    // Empty state
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 48,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: isDark ? '#cbd5e1' : '#334155',
+      marginTop: 10,
+    },
+    emptySubtitle: {
+      fontSize: 13,
+      color: isDark ? '#64748b' : '#94a3b8',
+      marginTop: 4,
+      textAlign: 'center',
+    },
+  });
