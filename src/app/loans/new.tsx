@@ -20,7 +20,7 @@ export default function NewLoanScreen() {
   const store = useAppStore();
   const users = store.users;
   const bankAccounts = store.bankAccounts.filter(bank => bank.UserId === form.UserId && bank.Status === 'Active');
-  const ornaments = store.ornaments.filter(o => o.Status === 'Available' || o.Status === 'Released');
+  const ornaments = store.ornaments.filter(o => o.Status === 'Available');
   const [selectedOrnaments, setSelectedOrnaments] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 

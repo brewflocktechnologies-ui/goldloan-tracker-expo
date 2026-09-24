@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react-native';
 import { OrnamentStatusBadge } from '../../../src/components/ornaments/OrnamentStatusBadge';
 
 describe('OrnamentStatusBadge', () => {
-  it.each(['Available', 'Pledged', 'Released'] as const)(
+  it.each(['Available', 'Pledged'] as const)(
     'renders the %s status text',
     (status) => {
       render(<OrnamentStatusBadge status={status} isDark={false} />);
@@ -11,7 +11,7 @@ describe('OrnamentStatusBadge', () => {
     }
   );
 
-  it('falls back to the Released tone for an unknown status', () => {
+  it('falls back to a neutral tone for an unrecognized status (e.g. "Deleted")', () => {
     render(<OrnamentStatusBadge status="SomethingElse" isDark={false} />);
     expect(screen.getByText('SomethingElse')).toBeTruthy();
   });

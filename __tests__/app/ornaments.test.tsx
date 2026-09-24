@@ -88,7 +88,7 @@ const ORNAMENTS: Ornament[] = [
     CurrentPricePerGram: 4200,
     BuyingCost: 18000,
     MarketValue: 18900,
-    Status: 'Released',
+    Status: 'Available',
   } as Ornament,
 ];
 
@@ -119,12 +119,12 @@ describe('OrnamentsScreen (list view)', () => {
     expect(screen.getByText('Antique Ring')).toBeTruthy();
   });
 
-  it('shows correct per-status counts on the filter pills', () => {
+  it('shows correct per-status counts on the filter pills (no Released pill)', () => {
     render(<OrnamentsScreen />);
     expect(screen.getByText('All (3)')).toBeTruthy();
-    expect(screen.getByText('Available (1)')).toBeTruthy();
+    expect(screen.getByText('Available (2)')).toBeTruthy();
     expect(screen.getByText('Pledged (1)')).toBeTruthy();
-    expect(screen.getByText('Released (1)')).toBeTruthy();
+    expect(screen.queryByText(/Released/)).toBeNull();
   });
 
   it('filters the list down to a single status when a filter pill is pressed', () => {

@@ -697,10 +697,10 @@ export function useAppStore() {
     } : l);
 
     if (targetLoan.ornamentIds && targetLoan.ornamentIds.length > 0) {
-      ornamentsState = ornamentsState.map(o => 
+      ornamentsState = ornamentsState.map(o =>
         targetLoan.ornamentIds?.includes(o.OrnamentId) ? {
           ...o,
-          Status: 'Released',
+          Status: 'Available',
           ReleaseDate: new Date().toISOString(),
           ReleasedLoanId: loanId,
         } : o
