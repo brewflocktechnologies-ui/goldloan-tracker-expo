@@ -79,7 +79,9 @@ export const USER_SORT_OPTIONS = [
 ];
 
 /**
- * Derives or mocks last active date for customer card
+ * Derives the last active date for a customer card from real Users sheet
+ * columns (UpdatedDate / CreatedDate). Returns '' when neither is set —
+ * callers should hide the row rather than show a fabricated date.
  */
 export function getUserLastActive(user: User): string {
   if (user.UpdatedDate) {
@@ -94,11 +96,7 @@ export function getUserLastActive(user: User): string {
       return `Last active: ${d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
     }
   }
-
-  // Consistent mock fallback based on user id hash
-  const daysAgo = (Math.abs(hashString(user.UserId || user.FullName || '1')) % 14) + 1;
-  const mockDate = new Date(2025, 8, Math.max(1, 15 - daysAgo));
-  return `Last active: ${mockDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+  return '';
 }
 
 /**
@@ -118,33 +116,34 @@ export function calculateAge(dob?: string): string {
 }
 
 /**
- * Formats Aadhaar as XXXX XXXX 1234
+ * Formats Aadhaar as XXXX XXXX 1234. Returns '—' when the sheet cell is
+ * empty — AadhaarNumber is a real column, so there's no real value to fake.
  */
 export function formatMaskedAadhaar(aadhaar?: string | number): string {
-  if (!aadhaar) return 'XXXX XXXX 1234';
+  if (!aadhaar) return '—';
   const clean = String(aadhaar).replace(/\s+/g, '');
   if (clean.length >= 4) {
     const last4 = clean.slice(-4);
     return `XXXX XXXX ${last4}`;
   }
-  return 'XXXX XXXX 1234';
+  return '—';
 }
 
 /**
- * Formats PAN e.g. ABCDE1234F
+ * Formats PAN e.g. ABCDE1234F. Returns '—' when the sheet cell is empty.
  */
 export function formatMaskedPAN(pan?: string | number): string {
-  if (!pan) return 'ABCDE1234F';
+  if (!pan) return '—';
   return String(pan).toUpperCase();
 }
 
 /**
- * Formats phone with +91 prefix.
+ * Formats phone with +91 prefix. Returns '—' when the sheet cell is empty.
  * Accepts a number too: numeric-looking cells (like a 10-digit mobile number)
  * often come back from the Google Sheets API as a JS number, not a string.
  */
 export function formatPhoneNumber(phone?: string | number): string {
-  if (!phone) return '+91 98765 43210';
+  if (!phone) return '—';
   const value = String(phone);
   const clean = value.replace(/[^\d]/g, '');
   if (clean.length === 10) {
@@ -157,92 +156,3 @@ export function formatPhoneNumber(phone?: string | number): string {
   return value.startsWith('+91') ? value : `+91 ${value}`;
 }
 
-/**
- * Mock Bank Accounts fallback matching the Users Screen.pdf blueprint
- * If the user has bank accounts in Google Sheets, those will be preferred.
- */
-export function getMockUserBankAccounts(userId: string, userName?: string): ExtraUserBankAccount[] {
-  const cleanName = userName || 'Priya Sharma';
-  const slug = cleanName.toLowerCase().replace(/[^a-z]/g, '.');
-
-  return [
-    {
-      BankAccountId: `BA-${userId}-01`,
-      UserId: userId,
-      BankName: 'State Bank of India',
-      AccountType: 'Savings Account',
-      BranchName: 'Main Branch, Bengaluru',
-      AccountNumber: 'XXXX XXXX 1234',
-      IFSCCode: 'SBIN0001234',
-      AccountHolderName: cleanName,
-      UPI_ID: `${slug}@sbi`,
-      Status: 'Active',
-      MaxLoanAmount: 500000,
-      UtilizedLoanAmount: 250000,
-      AvailableLoanAmount: 250000,
-      UtilizationPercentage: 50,
-    },
-    {
-      BankAccountId: `BA-${userId}-02`,
-      UserId: userId,
-      BankName: 'HDFC Bank',
-      AccountType: 'Current Account',
-      BranchName: 'Indiranagar, Bengaluru',
-      AccountNumber: 'XXXX XXXX 5678',
-      IFSCCode: 'HDFC0004321',
-      AccountHolderName: cleanName,
-      UPI_ID: `${slug}@hdfcbank`,
-      Status: 'Active',
-      MaxLoanAmount: 300000,
-      UtilizedLoanAmount: 120000,
-      AvailableLoanAmount: 180000,
-      UtilizationPercentage: 40,
-    },
-  ];
-}
-
-/**
- * Mock Loans fallback matching the Users Screen.pdf blueprint
- * If the user has loans in Google Sheets, those will be preferred.
- */
-export function getMockUserLoans(userId: string): ExtraUserLoan[] {
-  return [
-    {
-      LoanId: `L-${userId}-01`,
-      LoanNumber: 'LN 2024 001',
-      LoanDate: '10 Jan 2024',
-      DueDate: '10 Jul 2024',
-      Status: 'Active',
-      LoanAmount: 200000,
-      OutstandingAmount: 120000,
-      DueBadgeText: '12 days left',
-      DueBadgeType: 'normal',
-      OrnamentsCount: 3,
-      TotalWeightGrams: 48.200,
-      InterestRateText: '12% p.a. (Simple)',
-    },
-    {
-      LoanId: `L-${userId}-02`,
-      LoanNumber: 'LN 2024 002',
-      LoanDate: '15 Feb 2024',
-      DueDate: '15 May 2024',
-      Status: 'Overdue',
-      LoanAmount: 150000,
-      OutstandingAmount: 90000,
-      DueBadgeText: '18 days overdue',
-      DueBadgeType: 'overdue',
-      OrnamentsCount: 2,
-      TotalWeightGrams: 32.600,
-      InterestRateText: '14% p.a. (Simple)',
-    },
-  ];
-}
-
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return hash;
-}

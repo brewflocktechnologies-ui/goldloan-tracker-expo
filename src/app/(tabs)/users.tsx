@@ -33,8 +33,6 @@ import {
   formatMaskedAadhaar,
   formatMaskedPAN,
   formatPhoneNumber,
-  getMockUserBankAccounts,
-  getMockUserLoans,
   getUserLastActive,
   INDIAN_STATES,
   OCCUPATION_OPTIONS,
@@ -144,11 +142,7 @@ export default function UsersScreen() {
       const uOrns = store.ornaments.filter(o => o.UserId === u.UserId);
       const ornWeight = uOrns.reduce((sum, o) => sum + (Number(o.GrossWeight || o.NetWeight || 0)), 0);
 
-      // Fallback weight/loans if user has 0 in database so card matches rich preview
-      const loanCount = uLoans.length > 0 ? uLoans.length : (Math.abs(u.UserId.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 3) + 1;
-      const goldWeight = ornWeight > 0 ? ornWeight : (loanCount * 14.5 + 8.2);
-
-      map.set(u.UserId, { loanCount, goldWeight });
+      map.set(u.UserId, { loanCount: uLoans.length, goldWeight: ornWeight });
     });
     return map;
   }, [store.users, store.loans, store.ornaments]);
@@ -466,53 +460,66 @@ export default function UsersScreen() {
       .join('')
       .toUpperCase();
 
-    // Bank accounts for this user: from store or fallback mock
+    // Bank accounts for this user — real data only; blank fields show '—', not a fake value.
     const userBanks = store.bankAccounts.filter(b => b.UserId === selectedUser.UserId);
-    const displayBanks: ExtraUserBankAccount[] =
-      userBanks.length > 0
-        ? userBanks.map(b => ({
-            BankAccountId: b.BankAccountId,
-            UserId: b.UserId,
-            BankName: b.BankName || 'Bank Account',
-            AccountType: b.AccountType || 'Savings Account',
-            BranchName: b.BranchName || 'Bengaluru Branch',
-            AccountNumber: b.AccountNumber || 'XXXX XXXX 1234',
-            IFSCCode: b.IFSCCode || 'SBIN0001234',
-            AccountHolderName: b.AccountHolderName || selectedUser.FullName,
-            UPI_ID: b.UPI_ID || `${selectedUser.FullName.toLowerCase().replace(/\s+/g, '.')}@bank`,
-            Status: b.Status === 'Inactive' ? 'Inactive' : 'Active',
-            MaxLoanAmount: b.MaxLoanAmount || 500000,
-            UtilizedLoanAmount: b.UtilizedLoanAmount || 250000,
-            AvailableLoanAmount: b.AvailableLoanAmount || 250000,
-            UtilizationPercentage:
-              b.MaxLoanAmount > 0 ? Math.round((b.UtilizedLoanAmount / b.MaxLoanAmount) * 100) : 50,
-          }))
-        : getMockUserBankAccounts(selectedUser.UserId, selectedUser.FullName);
+    const displayBanks: ExtraUserBankAccount[] = userBanks.map(b => ({
+      BankAccountId: b.BankAccountId,
+      UserId: b.UserId,
+      BankName: b.BankName || '—',
+      AccountType: b.AccountType || '—',
+      BranchName: b.BranchName || '—',
+      AccountNumber: b.AccountNumber || '—',
+      IFSCCode: b.IFSCCode || '—',
+      AccountHolderName: b.AccountHolderName || selectedUser.FullName,
+      UPI_ID: b.UPI_ID || '—',
+      Status: b.Status === 'Inactive' ? 'Inactive' : 'Active',
+      MaxLoanAmount: b.MaxLoanAmount || 0,
+      UtilizedLoanAmount: b.UtilizedLoanAmount || 0,
+      AvailableLoanAmount: b.AvailableLoanAmount || 0,
+      UtilizationPercentage:
+        b.MaxLoanAmount > 0 ? Math.round((b.UtilizedLoanAmount / b.MaxLoanAmount) * 100) : 0,
+    }));
 
-    // Loans for this user: from store or fallback mock
+    // Loans for this user — real data only. DueBadgeText is computed for real from the
+    // real DueDate column (was previously a hardcoded "12 days left" / "18 days overdue").
+    // OutstandingAmount has no backing sheet field or payments-based calc anywhere in the
+    // app yet, so it's the one value still derived rather than real — flagged "(mock)" in the UI.
     const userLoans = store.loans.filter(l => l.UserId === selectedUser.UserId);
-    const displayLoans: ExtraUserLoan[] =
-      userLoans.length > 0
-        ? userLoans.map(l => {
-            const ornIds = l.ornamentIds || [];
-            const ornCount = ornIds.length > 0 ? ornIds.length : 2;
-            const isOverdue = l.LoanStatus === 'Overdue';
-            return {
-              LoanId: l.LoanId,
-              LoanNumber: l.LoanNumber || `LN-${l.LoanId}`,
-              LoanDate: l.LoanDate || '10 Jan 2024',
-              DueDate: l.DueDate || '10 Jul 2024',
-              Status: isOverdue ? 'Overdue' : (l.LoanStatus === 'Closed' ? 'Closed' : 'Active'),
-              LoanAmount: l.LoanAmount || 200000,
-              OutstandingAmount: Math.round((l.LoanAmount || 200000) * 0.6),
-              DueBadgeText: isOverdue ? '18 days overdue' : '12 days left',
-              DueBadgeType: isOverdue ? 'overdue' : 'normal',
-              OrnamentsCount: ornCount,
-              TotalWeightGrams: l.NetWeight || l.GrossWeight || 48.2,
-              InterestRateText: `${l.InterestRate || 12}% p.a. (${l.InterestType || 'Simple'})`,
-            };
-          })
-        : getMockUserLoans(selectedUser.UserId);
+    const displayLoans: ExtraUserLoan[] = userLoans.map(l => {
+      const ornCount = (l.ornamentIds || []).length;
+      const isOverdue = l.LoanStatus === 'Overdue';
+
+      let dueBadgeText = '—';
+      let dueBadgeType: ExtraUserLoan['DueBadgeType'] = 'normal';
+      if (l.DueDate) {
+        const due = new Date(l.DueDate);
+        if (!isNaN(due.getTime())) {
+          const diffDays = Math.ceil((due.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          if (diffDays < 0 || isOverdue) {
+            dueBadgeText = `${Math.abs(diffDays)} days overdue`;
+            dueBadgeType = 'overdue';
+          } else {
+            dueBadgeText = `${diffDays} days left`;
+            dueBadgeType = diffDays <= 7 ? 'urgent' : 'normal';
+          }
+        }
+      }
+
+      return {
+        LoanId: l.LoanId,
+        LoanNumber: l.LoanNumber || `LN-${l.LoanId}`,
+        LoanDate: l.LoanDate || '—',
+        DueDate: l.DueDate || '—',
+        Status: isOverdue ? 'Overdue' : (l.LoanStatus === 'Closed' ? 'Closed' : 'Active'),
+        LoanAmount: l.LoanAmount || 0,
+        OutstandingAmount: Math.round((l.LoanAmount || 0) * 0.6),
+        DueBadgeText: dueBadgeText,
+        DueBadgeType: dueBadgeType,
+        OrnamentsCount: ornCount,
+        TotalWeightGrams: l.NetWeight || l.GrossWeight || 0,
+        InterestRateText: `${l.InterestRate || 0}% p.a. (${l.InterestType || '—'})`,
+      };
+    });
 
     return (
       <View style={styles.subScreenContainer}>
@@ -773,6 +780,15 @@ export default function UsersScreen() {
                 <Text style={styles.sectionHeaderTitle}>Bank Accounts ({displayBanks.length})</Text>
               </View>
 
+              {displayBanks.length === 0 && (
+                <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                  <Ionicons name="business-outline" size={28} color={isDark ? '#475569' : '#cbd5e1'} />
+                  <Text style={{ marginTop: 8, fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
+                    No bank accounts on file
+                  </Text>
+                </View>
+              )}
+
               {displayBanks.map((acc, idx) => (
                 <View key={acc.BankAccountId || idx} style={styles.bankCard}>
                   {/* Bank Card Header */}
@@ -862,6 +878,15 @@ export default function UsersScreen() {
                 <Text style={styles.sectionHeaderTitle}>Loans ({displayLoans.length})</Text>
               </View>
 
+              {displayLoans.length === 0 && (
+                <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                  <Ionicons name="document-text-outline" size={28} color={isDark ? '#475569' : '#cbd5e1'} />
+                  <Text style={{ marginTop: 8, fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
+                    No loans on file
+                  </Text>
+                </View>
+              )}
+
               {displayLoans.map((loan, idx) => {
                 const isOverdue = loan.Status === 'Overdue';
                 return (
@@ -903,7 +928,7 @@ export default function UsersScreen() {
                       </View>
 
                       <View style={styles.loanMetricCol}>
-                        <Text style={styles.loanMetricLabel}>Outstanding</Text>
+                        <Text style={styles.loanMetricLabel}>Outstanding (mock)</Text>
                         <Text style={styles.loanMetricVal}>₹ {loan.OutstandingAmount.toLocaleString('en-IN')}</Text>
                       </View>
 
@@ -933,9 +958,11 @@ export default function UsersScreen() {
                       <View style={styles.ornThumbRow}>
                         <View style={styles.ornThumbBox}>
                           <Ionicons name="sparkles" size={14} color="#f59e0b" />
-                          <View style={styles.ornCountMiniBadge}>
-                            <Text style={styles.ornCountMiniBadgeText}>+{loan.OrnamentsCount - 1 || 1}</Text>
-                          </View>
+                          {loan.OrnamentsCount > 1 && (
+                            <View style={styles.ornCountMiniBadge}>
+                              <Text style={styles.ornCountMiniBadgeText}>+{loan.OrnamentsCount - 1}</Text>
+                            </View>
+                          )}
                         </View>
                         <Text style={styles.ornCountText}>{loan.OrnamentsCount} ornaments</Text>
                       </View>
@@ -1449,7 +1476,7 @@ export default function UsersScreen() {
               .slice(0, 2)
               .join('')
               .toUpperCase();
-            const stats = userStatsMap.get(user.UserId) || { loanCount: 1, goldWeight: 24.5 };
+            const stats = userStatsMap.get(user.UserId) || { loanCount: 0, goldWeight: 0 };
             const lastActive = getUserLastActive(user);
 
             return (
@@ -1485,7 +1512,7 @@ export default function UsersScreen() {
 
                   <Text style={styles.cardIdText}>{user.CustomerCode || user.UserId}</Text>
                   <Text style={styles.cardPhoneText}>{formatPhoneNumber(user.MobileNumber)}</Text>
-                  <Text style={styles.cardLastActiveText}>{lastActive}</Text>
+                  {lastActive ? <Text style={styles.cardLastActiveText}>{lastActive}</Text> : null}
 
                   {/* Bottom Stats Row: Loans count & Gold weight */}
                   <View style={styles.cardStatsRow}>
