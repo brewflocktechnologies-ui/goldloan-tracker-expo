@@ -2051,7 +2051,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingBottom: 12,
     marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? '#1e293b' : '#e2e8f0',
   },
   cardHeaderLeft: {
     flexDirection: 'row',
@@ -2084,7 +2087,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   weightGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 4,
+    paddingTop: 0,
   },
   weightCol: { flex: 1, alignItems: 'flex-start' },
   weightLabel: { fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 },
