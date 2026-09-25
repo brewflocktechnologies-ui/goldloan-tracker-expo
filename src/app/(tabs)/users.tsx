@@ -820,7 +820,7 @@ export default function UsersScreen() {
               })()}
 
               {/* Section 3: Address */}
-              <View style={styles.profileSection}>
+              <View style={[styles.profileSection, styles.profileSectionLast]}>
                 <View style={styles.profileHeadingRow}>
                   <View style={styles.profileIconBox}>
                     <Ionicons name="location-outline" size={17} color="#0284c7" />
@@ -895,6 +895,7 @@ export default function UsersScreen() {
                 <BankCard
                   key={acc.BankAccountId || idx}
                   account={acc}
+                  style={idx === displayBanks.length - 1 ? { marginBottom: 0 } : undefined}
                 />
               ))}
             </View>
@@ -927,6 +928,7 @@ export default function UsersScreen() {
                   key={loan.LoanId || idx}
                   loan={loan}
                   onViewLoan={() => router.push(`/loans/${loan.LoanId}` as any)}
+                  style={idx === displayLoans.length - 1 ? { marginBottom: 0 } : undefined}
                 />
               ))}
             </View>
@@ -1317,7 +1319,7 @@ export default function UsersScreen() {
   // VIEW: LIST SCREEN MATCHING Users Screen.pdf
   // ══════════════════════════════════════════════════════════
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       {/* Top Header Section (Light Blue) matching PDF */}
       <View style={styles.listTopSection}>
         <View style={styles.headerRow}>
@@ -1592,7 +1594,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = fals
     detailScrollContent: {
       paddingHorizontal: isSmall ? 12 : 16,
       paddingTop: 14,
-      paddingBottom: 60,
+      paddingBottom: 20,
       maxWidth: 680,
       width: '100%',
       alignSelf: 'center',
@@ -1783,7 +1785,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = fals
     cardsScrollContent: {
       paddingHorizontal: 16,
       paddingTop: 8,
-      paddingBottom: 100,
+      paddingBottom: 20,
       maxWidth: 680,
       width: '100%',
       alignSelf: 'center',
@@ -2056,12 +2058,15 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = fals
       borderTopRightRadius: 3,
     },
     tabContentArea: {
-      gap: 16,
+      gap: 0,
     },
 
     // Profile Flat Sections (No card, heading with underline and content below)
     profileSection: {
-      marginBottom: 24,
+      marginBottom: 20,
+    },
+    profileSectionLast: {
+      marginBottom: 0,
     },
     profileHeadingRow: {
       flexDirection: 'row',

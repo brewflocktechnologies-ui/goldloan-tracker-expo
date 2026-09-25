@@ -6,11 +6,13 @@ import {
   Modal,
   Platform,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
+  ViewStyle,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
@@ -22,6 +24,7 @@ export interface LoanCardProps {
   onPress?: () => void;
   onViewLoan?: () => void;
   hideMenu?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function LoanCard({
@@ -29,6 +32,7 @@ export function LoanCard({
   onPress,
   onViewLoan,
   hideMenu = false,
+  style,
 }: LoanCardProps) {
   const { isDark } = useTheme();
   const toast = useToast();
@@ -94,7 +98,7 @@ export function LoanCard({
   return (
     <>
       <TouchableOpacity
-        style={styles.cardContainer}
+        style={[styles.cardContainer, style]}
         activeOpacity={0.88}
         onPress={handleView}
       >

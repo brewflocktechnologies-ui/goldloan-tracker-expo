@@ -5,11 +5,13 @@ import {
   Modal,
   Platform,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
+  ViewStyle,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
@@ -25,6 +27,7 @@ export interface BankCardProps {
   onDelete?: () => void;
   onImagePress?: (imageUrl: string) => void;
   hideMenu?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function BankCard({
@@ -35,6 +38,7 @@ export function BankCard({
   onDelete,
   onImagePress,
   hideMenu = false,
+  style,
 }: BankCardProps) {
   const { isDark } = useTheme();
   const toast = useToast();
@@ -115,7 +119,7 @@ export function BankCard({
   return (
     <>
       <TouchableOpacity
-        style={styles.cardContainer}
+        style={[styles.cardContainer, style]}
         activeOpacity={onPress ? 0.85 : 1}
         onPress={onPress}
       >
