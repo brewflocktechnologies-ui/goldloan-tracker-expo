@@ -1,5 +1,3 @@
-import { User } from '../types';
-
 export interface ExtraUserBankAccount {
   BankAccountId: string;
   UserId: string;
@@ -77,43 +75,6 @@ export const USER_SORT_OPTIONS = [
   'Loans (High-Low)',
   'Weight (High-Low)',
 ];
-
-/**
- * Derives the last active date for a customer card from real Users sheet
- * columns (UpdatedDate / CreatedDate). Returns '' when neither is set —
- * callers should hide the row rather than show a fabricated date.
- */
-export function getUserLastActive(user: User): string {
-  if (user.UpdatedDate) {
-    const d = new Date(user.UpdatedDate);
-    if (!isNaN(d.getTime())) {
-      return `Last active: ${d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
-    }
-  }
-  if (user.CreatedDate) {
-    const d = new Date(user.CreatedDate);
-    if (!isNaN(d.getTime())) {
-      return `Last active: ${d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
-    }
-  }
-  return '';
-}
-
-/**
- * Calculates human age string e.g. " (35 years)"
- */
-export function calculateAge(dob?: string): string {
-  if (!dob) return '';
-  const birthDate = new Date(dob);
-  if (isNaN(birthDate.getTime())) return '';
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age > 0 ? ` (${age} years)` : '';
-}
 
 /**
  * Formats Aadhaar as XXXX XXXX 1234. Returns '—' when the sheet cell is

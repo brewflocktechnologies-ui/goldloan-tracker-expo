@@ -7,15 +7,16 @@ interface UserStatusBadgeProps {
   isDark: boolean;
   // 'badge': compact pill used on list cards. 'pill': larger bordered pill used on the details hero card.
   variant?: 'badge' | 'pill';
+  showDot?: boolean;
 }
 
 const STATUS_TONES = {
   Active: {
     dot: '#16a34a',
-    badgeBg: (isDark: boolean) => (isDark ? 'rgba(34, 197, 94, 0.15)' : '#ecfdf5'),
+    badgeBg: (isDark: boolean) => (isDark ? 'rgba(34, 197, 94, 0.15)' : '#e8f8f0'),
     pillBg: (isDark: boolean) => (isDark ? 'rgba(34, 197, 94, 0.15)' : '#dcfce7'),
     pillBorder: (isDark: boolean) => (isDark ? '#22c55e' : '#bbf7d0'),
-    text: (isDark: boolean) => (isDark ? '#4ade80' : '#15803d'),
+    text: (isDark: boolean) => (isDark ? '#4ade80' : '#059669'),
   },
   Inactive: {
     dot: '#64748b',
@@ -31,7 +32,7 @@ function getTone(status: UserStatusValue) {
   return STATUS_TONES.Inactive;
 }
 
-export function UserStatusBadge({ status, isDark, variant = 'badge' }: UserStatusBadgeProps) {
+export function UserStatusBadge({ status, isDark, variant = 'badge', showDot = true }: UserStatusBadgeProps) {
   const tone = getTone(status);
   const isPill = variant === 'pill';
 
@@ -40,11 +41,14 @@ export function UserStatusBadge({ status, isDark, variant = 'badge' }: UserStatu
       style={[
         styles.base,
         isPill ? styles.pill : styles.badge,
+        !showDot && styles.noDotBadge,
         { backgroundColor: isPill ? tone.pillBg(isDark) : tone.badgeBg(isDark) },
         isPill ? { borderColor: tone.pillBorder(isDark) } : null,
       ]}
     >
-      <View style={[isPill ? styles.dotPill : styles.dotBadge, { backgroundColor: tone.dot }]} />
+      {showDot && (
+        <View style={[isPill ? styles.dotPill : styles.dotBadge, { backgroundColor: tone.dot }]} />
+      )}
       <Text style={[isPill ? styles.textPill : styles.textBadge, { color: tone.text(isDark) }]}>
         {status || 'Active'}
       </Text>
@@ -61,6 +65,12 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 8,
     paddingVertical: 3,
+    borderRadius: 12,
+  },
+  noDotBadge: {
+    gap: 0,
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
     borderRadius: 12,
   },
   pill: {
