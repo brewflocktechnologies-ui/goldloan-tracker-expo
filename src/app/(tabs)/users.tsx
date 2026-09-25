@@ -15,11 +15,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BankCard } from '../../components/BankCard';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { LoanCard } from '../../components/LoanCard';
 import { OptionPickerModal } from '../../components/ornaments/OptionPickerModal';
 import { UserOptionsMenu, UserOptionsMenuHandle } from '../../components/users/UserOptionsMenu';
 import { UserStatusBadge } from '../../components/users/UserStatusBadge';
@@ -75,7 +77,9 @@ function getAvatarColor(name: string) {
 export default function UsersScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const styles = getStyles(colors, isDark);
+  const { width: windowWidth } = useWindowDimensions();
+  const isSmall = windowWidth < 460;
+  const styles = getStyles(colors, isDark, isSmall);
   const store = useAppStore();
   const toast = useToast();
   const { isSuperAdmin } = useAuth();
@@ -494,9 +498,15 @@ export default function UsersScreen() {
     // app yet, so it's the one value still derived rather than real — flagged "(mock)" in the UI.
     const userLoans = store.loans.filter(l => l.UserId === selectedUser.UserId);
     const displayLoans: ExtraUserLoan[] = userLoans.map(l => {
-      const ornCount = (l.ornamentIds || []).length;
+      const loanOrns = store.ornaments.filter(o => (l.ornamentIds || []).includes(o.OrnamentId));
+      let firstPhoto = loanOrns.find(o => o.OrnamentImages)?.OrnamentImages?.split('|')?.[0]?.trim() || '';
+      if (!firstPhoto && store.ornaments.length > 0) {
+        firstPhoto = store.ornaments.find(o => o.OrnamentImages)?.OrnamentImages?.split('|')?.[0]?.trim() || '';
+      }
+      const ornCount = (l.ornamentIds || []).length || loanOrns.length;
       const isOverdue = l.LoanStatus === 'Overdue';
       const dueBadge = calculateDueBadge(l.DueDate, l.LoanStatus);
+      const totalWeight = (l.NetWeight || l.GrossWeight) || loanOrns.reduce((sum, o) => sum + (o.NetWeight || o.GrossWeight || 0), 0);
 
       return {
         LoanId: l.LoanId,
@@ -509,8 +519,10 @@ export default function UsersScreen() {
         DueBadgeText: dueBadge.text,
         DueBadgeType: dueBadge.type,
         OrnamentsCount: ornCount,
-        TotalWeightGrams: l.NetWeight || l.GrossWeight || 0,
-        InterestRateText: `${l.InterestRate || 0}% p.a. (${l.InterestType || '—'})`,
+        TotalWeightGrams: totalWeight,
+        InterestRateText: `${l.InterestRate || 0}% p.a.`,
+        InterestType: l.InterestType || 'Simple',
+        OrnamentImageUri: firstPhoto,
       };
     });
 
@@ -890,6 +902,12 @@ export default function UsersScreen() {
           {activeTab === 'Loans' && (
             <View style={styles.tabContentArea}>
               <View style={styles.sectionHeaderRow}>
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  color={isDark ? '#f8fafc' : '#0d172a'}
+                  style={{ marginRight: 8 }}
+                />
                 <Text style={styles.sectionHeaderTitle}>Loans ({displayLoans.length})</Text>
               </View>
 
@@ -902,108 +920,28 @@ export default function UsersScreen() {
                 </View>
               )}
 
-              {displayLoans.map((loan, idx) => {
-                const isOverdue = loan.Status === 'Overdue';
-                return (
-                  <View key={loan.LoanId || idx} style={styles.loanCard}>
-                    {/* Loan Card Header */}
-                    <View style={styles.loanCardHeader}>
-                      <View>
-                        <Text style={styles.loanNumberTitle}>{loan.LoanNumber}</Text>
-                        <Text style={styles.loanDateText}>{loan.LoanDate}</Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.loanStatusBadge,
-                          { backgroundColor: isOverdue ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)' },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.loanStatusDot,
-                            { backgroundColor: isOverdue ? '#ef4444' : '#16a34a' },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.loanStatusText,
-                            { color: isOverdue ? '#ef4444' : '#16a34a' },
-                          ]}
-                        >
-                          {loan.Status}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* 3 Metric Columns: Loan Amount | Outstanding | Due Date */}
-                    <View style={styles.loanMetricsRow}>
-                      <View style={styles.loanMetricCol}>
-                        <Text style={styles.loanMetricLabel}>Loan Amount</Text>
-                        <Text style={styles.loanMetricVal}>₹ {loan.LoanAmount.toLocaleString('en-IN')}</Text>
-                      </View>
-
-                      <View style={styles.loanMetricCol}>
-                        <Text style={styles.loanMetricLabel}>Outstanding (mock)</Text>
-                        <Text style={styles.loanMetricVal}>₹ {loan.OutstandingAmount.toLocaleString('en-IN')}</Text>
-                      </View>
-
-                      <View style={styles.loanMetricCol}>
-                        <Text style={styles.loanMetricLabel}>Due Date</Text>
-                        <Text style={styles.loanMetricVal}>{loan.DueDate}</Text>
-                        <View
-                          style={[
-                            styles.duePillBadge,
-                            { backgroundColor: isOverdue ? 'rgba(239, 68, 68, 0.1)' : 'rgba(2, 132, 199, 0.1)' },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.duePillText,
-                              { color: isOverdue ? '#dc2626' : '#0284c7' },
-                            ]}
-                          >
-                            {loan.DueBadgeText}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Pledged Ornaments Banner */}
-                    <View style={styles.loanOrnamentsBanner}>
-                      <View style={styles.ornThumbRow}>
-                        <View style={styles.ornThumbBox}>
-                          <Ionicons name="sparkles" size={14} color="#f59e0b" />
-                          {loan.OrnamentsCount > 1 && (
-                            <View style={styles.ornCountMiniBadge}>
-                              <Text style={styles.ornCountMiniBadgeText}>+{loan.OrnamentsCount - 1}</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={styles.ornCountText}>{loan.OrnamentsCount} ornaments</Text>
-                      </View>
-
-                      <Text style={styles.ornWeightText}>{loan.TotalWeightGrams.toFixed(3)} g</Text>
-
-                      <View style={styles.interestRateTag}>
-                        <Text style={styles.interestRateText}>% {loan.InterestRateText}</Text>
-                      </View>
-                    </View>
-
-                    {/* Action Button: View Loan */}
-                    <TouchableOpacity
-                      style={styles.viewLoanBtn}
-                      onPress={() => router.push('/(tabs)/loans')}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.viewLoanBtnText}>View Loan</Text>
-                      <Ionicons name="chevron-forward" size={14} color="#0284c7" />
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
+              {displayLoans.map((loan, idx) => (
+                <LoanCard
+                  key={loan.LoanId || idx}
+                  loan={loan}
+                  onViewLoan={() => router.push(`/loans/${loan.LoanId}` as any)}
+                />
+              ))}
             </View>
           )}
         </ScrollView>
+
+        {/* Floating Action Button for Adding Loan */}
+        {activeTab === 'Loans' && (
+          <TouchableOpacity
+            style={styles.loanFabBtn}
+            onPress={() => router.push('/loans/new' as any)}
+            activeOpacity={0.85}
+            accessibilityLabel="Add New Loan"
+          >
+            <Ionicons name="add" size={28} color="#ffffff" />
+          </TouchableOpacity>
+        )}
 
         {/* Delete Confirmation Modal */}
         <ConfirmModal
@@ -1627,7 +1565,7 @@ export default function UsersScreen() {
   );
 }
 
-const getStyles = (colors: ThemeColors, isDark: boolean) =>
+const getStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = false) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
@@ -1642,7 +1580,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       backgroundColor: isDark ? '#090d16' : '#ffffff',
     },
     content: {
-      paddingHorizontal: 16,
+      paddingHorizontal: isSmall ? 12 : 16,
       paddingTop: 16,
       paddingBottom: 40,
       maxWidth: 680,
@@ -1650,7 +1588,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       alignSelf: 'center',
     },
     detailScrollContent: {
-      paddingHorizontal: 16,
+      paddingHorizontal: isSmall ? 12 : 16,
       paddingTop: 14,
       paddingBottom: 60,
       maxWidth: 680,
@@ -2522,6 +2460,31 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       fontSize: 13,
       fontWeight: '700',
       color: '#0284c7',
+    },
+    loanFabBtn: {
+      position: 'absolute',
+      bottom: 24,
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: '#0284c7',
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+        },
+        android: {
+          elevation: 6,
+        },
+        web: {
+          boxShadow: '0 4px 14px rgba(2, 132, 199, 0.45)',
+        } as any,
+      }),
     },
 
     // Add / Edit Screen Styles

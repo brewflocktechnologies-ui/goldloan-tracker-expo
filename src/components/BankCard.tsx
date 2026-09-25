@@ -2,13 +2,14 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
@@ -37,7 +38,9 @@ export function BankCard({
 }: BankCardProps) {
   const { isDark } = useTheme();
   const toast = useToast();
-  const styles = getStyles(isDark);
+  const { width: windowWidth } = useWindowDimensions();
+  const isSmall = windowWidth < 460;
+  const styles = getStyles(isDark, isSmall);
 
   const [isMasked, setIsMasked] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -238,24 +241,45 @@ export function BankCard({
         {/* 3-Column Loan Limits */}
         <View style={styles.metricsRow}>
           <View style={styles.metricCol}>
-            <Text style={styles.metricAmountText}>
+            <Text
+              style={styles.metricAmountText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
               ₹ {maxLoan.toLocaleString('en-IN')}
             </Text>
-            <Text style={styles.metricLabelText}>Max Loan Amount</Text>
+            <Text style={styles.metricLabelText} numberOfLines={1} ellipsizeMode="tail">
+              Max Loan Amount
+            </Text>
           </View>
 
           <View style={styles.metricCol}>
-            <Text style={styles.metricAmountText}>
+            <Text
+              style={styles.metricAmountText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
               ₹ {utilizedLoan.toLocaleString('en-IN')}
             </Text>
-            <Text style={styles.metricLabelText}>Utilized Amount</Text>
+            <Text style={styles.metricLabelText} numberOfLines={1} ellipsizeMode="tail">
+              Utilized Amount
+            </Text>
           </View>
 
           <View style={styles.metricCol}>
-            <Text style={[styles.metricAmountText, styles.availableAmountText]}>
+            <Text
+              style={[styles.metricAmountText, styles.availableAmountText]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
               ₹ {availableLoan.toLocaleString('en-IN')}
             </Text>
-            <Text style={styles.metricLabelText}>Available Limit</Text>
+            <Text style={styles.metricLabelText} numberOfLines={1} ellipsizeMode="tail">
+              Available Limit
+            </Text>
           </View>
         </View>
 
@@ -520,14 +544,14 @@ const styles = StyleSheet.create({
   },
 });
 
-function getStyles(isDark: boolean) {
+function getStyles(isDark: boolean, isSmall: boolean) {
   return StyleSheet.create({
     cardContainer: {
       backgroundColor: isDark ? '#0f172a' : '#ffffff',
       borderRadius: 18,
       borderWidth: 1,
       borderColor: isDark ? '#1e293b' : '#e2e8f0',
-      padding: 18,
+      padding: isSmall ? 13 : 18,
       marginBottom: 14,
       ...Platform.select({
         ios: {
@@ -624,7 +648,7 @@ function getStyles(isDark: boolean) {
       alignItems: 'center',
     },
     detailLabel: {
-      width: 135,
+      width: isSmall ? 115 : 135,
       fontSize: 13,
       color: isDark ? '#94a3b8' : '#64748b',
     },
@@ -655,12 +679,14 @@ function getStyles(isDark: boolean) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
+      gap: 6,
     },
     metricCol: {
       flex: 1,
+      minWidth: 0,
     },
     metricAmountText: {
-      fontSize: 15.5,
+      fontSize: isSmall ? 14 : 15.5,
       fontWeight: '700',
       color: isDark ? '#f8fafc' : '#0f172a',
       letterSpacing: -0.2,

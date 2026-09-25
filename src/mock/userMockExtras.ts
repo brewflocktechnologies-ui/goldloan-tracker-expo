@@ -30,6 +30,7 @@ export interface ExtraUserLoan {
   OrnamentsCount: number;
   TotalWeightGrams: number;
   InterestRateText: string;
+  InterestType?: string;
   OrnamentImageUri?: string;
 }
 
