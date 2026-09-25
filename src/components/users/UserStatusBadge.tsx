@@ -12,11 +12,11 @@ interface UserStatusBadgeProps {
 
 const STATUS_TONES = {
   Active: {
-    dot: '#16a34a',
-    badgeBg: (isDark: boolean) => (isDark ? 'rgba(34, 197, 94, 0.15)' : '#e8f8f0'),
+    dot: '#10b981',
+    badgeBg: (isDark: boolean) => (isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5'),
     pillBg: (isDark: boolean) => (isDark ? 'rgba(34, 197, 94, 0.15)' : '#dcfce7'),
     pillBorder: (isDark: boolean) => (isDark ? '#22c55e' : '#bbf7d0'),
-    text: (isDark: boolean) => (isDark ? '#4ade80' : '#059669'),
+    text: (isDark: boolean) => (isDark ? '#34d399' : '#059669'),
   },
   Inactive: {
     dot: '#64748b',

@@ -557,57 +557,87 @@ export default function UsersScreen() {
         </View>
 
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.detailScrollContent}>
-          {/* Hero Card matching PDF */}
+          {/* Hero Card matching reference design */}
           <View style={styles.heroCard}>
             <View style={styles.heroTopRow}>
-              {directPhoto || selectedUser.CustomerPhoto ? (
-                <Image
-                  source={{ uri: directPhoto || selectedUser.CustomerPhoto }}
-                  style={styles.heroAvatarImage}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={[styles.heroAvatarInitialsBox, { backgroundColor: avatarTone.bg }]}>
-                  <Text style={[styles.heroAvatarInitialsText, { color: avatarTone.text }]}>{initials}</Text>
-                </View>
-              )}
+              <View style={styles.heroAvatarWrapper}>
+                {directPhoto || selectedUser.CustomerPhoto ? (
+                  <Image
+                    source={{ uri: directPhoto || selectedUser.CustomerPhoto }}
+                    style={styles.heroAvatarImage}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.heroAvatarInitialsBox, { backgroundColor: avatarTone.bg }]}>
+                    <Text style={[styles.heroAvatarInitialsText, { color: avatarTone.text }]}>{initials}</Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.heroCameraBadge}
+                  onPress={() => handleEditPress(selectedUser)}
+                  activeOpacity={0.85}
+                  accessibilityLabel="Change customer photo"
+                >
+                  <Ionicons name="camera" size={13} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.heroInfoCol}>
                 <View style={styles.heroNameRow}>
                   <Text style={styles.heroName} numberOfLines={1}>{selectedUser.FullName}</Text>
-                  <UserStatusBadge status={selectedUser.Status} isDark={isDark} variant="pill" />
+                  <UserStatusBadge status={selectedUser.Status} isDark={isDark} variant="badge" />
                 </View>
 
                 <Text style={styles.heroCodeText}>
                   {selectedUser.CustomerCode || selectedUser.UserId}
                 </Text>
-                <Text style={styles.heroPhoneText}>
-                  {formatPhoneNumber(selectedUser.MobileNumber)}
-                </Text>
-                <Text style={styles.heroLocationText} numberOfLines={1}>
-                  {[selectedUser.City || 'Bengaluru', selectedUser.State || 'Karnataka'].filter(Boolean).join(', ')}
-                </Text>
+
+                <View style={styles.heroDetailRow}>
+                  <Ionicons
+                    name="call-outline"
+                    size={14}
+                    color={isDark ? '#94a3b8' : '#64748b'}
+                    style={styles.heroDetailIcon}
+                  />
+                  <Text style={styles.heroDetailText} numberOfLines={1}>
+                    {formatPhoneNumber(selectedUser.MobileNumber)}
+                  </Text>
+                </View>
+
+                <View style={styles.heroDetailRow}>
+                  <Ionicons
+                    name="location-outline"
+                    size={14}
+                    color={isDark ? '#94a3b8' : '#64748b'}
+                    style={styles.heroDetailIcon}
+                  />
+                  <Text style={styles.heroDetailText} numberOfLines={1}>
+                    {[selectedUser.City || 'Bengaluru', selectedUser.State || 'Karnataka'].filter(Boolean).join(', ')}
+                  </Text>
+                </View>
               </View>
             </View>
 
             {/* Quick action buttons: Call & WhatsApp */}
             <View style={styles.heroActionButtonsRow}>
               <TouchableOpacity
-                style={styles.heroCallBtn}
+                style={styles.heroActionBtn}
                 onPress={() => handleCallCustomer(selectedUser.MobileNumber)}
                 activeOpacity={0.8}
+                accessibilityLabel="Call Customer"
               >
-                <Ionicons name="call" size={16} color="#0284c7" style={{ marginRight: 6 }} />
-                <Text style={styles.heroCallBtnText}>Call</Text>
+                <Ionicons name="call-outline" size={17} color={isDark ? '#34d399' : '#10b981'} />
+                <Text style={styles.heroActionBtnText}>Call</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.heroWhatsAppBtn}
+                style={styles.heroActionBtn}
                 onPress={() => handleWhatsAppCustomer(selectedUser.MobileNumber)}
                 activeOpacity={0.8}
+                accessibilityLabel="WhatsApp Customer"
               >
-                <Ionicons name="logo-whatsapp" size={16} color="#16a34a" style={{ marginRight: 6 }} />
-                <Text style={styles.heroWhatsAppBtnText}>WhatsApp</Text>
+                <Ionicons name="logo-whatsapp" size={17} color={isDark ? '#34d399' : '#10b981'} />
+                <Text style={styles.heroActionBtnText}>WhatsApp</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1920,7 +1950,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = fals
     // Hero Card in Customer Details
     heroCard: {
       backgroundColor: isDark ? '#0f172a' : '#e0f2fe',
-      borderRadius: 20,
+      borderRadius: 22,
       padding: 16,
       marginBottom: 16,
       borderWidth: 1,
@@ -1930,96 +1960,124 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = fals
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
-      marginBottom: 14,
+      marginBottom: 4,
+    },
+    heroAvatarWrapper: {
+      position: 'relative',
+      width: 74,
+      height: 74,
     },
     heroAvatarImage: {
-      width: 72,
-      height: 72,
-      borderRadius: 36,
-      borderWidth: 2,
-      borderColor: '#0284c7',
+      width: 74,
+      height: 74,
+      borderRadius: 37,
     },
     heroAvatarInitialsBox: {
-      width: 72,
-      height: 72,
-      borderRadius: 36,
+      width: 74,
+      height: 74,
+      borderRadius: 37,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: '#0284c7',
     },
     heroAvatarInitialsText: {
       fontSize: 24,
       fontWeight: '800',
     },
+    heroCameraBadge: {
+      position: 'absolute',
+      bottom: -1,
+      right: -1,
+      width: 25,
+      height: 25,
+      borderRadius: 13,
+      backgroundColor: '#0284c7',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: '#ffffff',
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.2,
+          shadowRadius: 2,
+        },
+        android: {
+          elevation: 3,
+        },
+      }),
+    },
     heroInfoCol: {
       flex: 1,
+      justifyContent: 'center',
     },
     heroNameRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 8,
-      marginBottom: 2,
+      marginBottom: 3,
     },
     heroName: {
       fontSize: 18,
-      fontWeight: '800',
+      fontWeight: '700',
       color: isDark ? '#f8fafc' : '#0f172a',
       flex: 1,
     },
     heroCodeText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: '#0284c7',
-      marginBottom: 2,
-    },
-    heroPhoneText: {
       fontSize: 13,
       fontWeight: '600',
-      color: isDark ? '#cbd5e1' : '#334155',
-      marginBottom: 2,
-    },
-    heroLocationText: {
-      fontSize: 12,
       color: isDark ? '#94a3b8' : '#64748b',
+      marginBottom: 3,
+      letterSpacing: 0.2,
+    },
+    heroDetailRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 2,
+    },
+    heroDetailIcon: {
+      marginRight: 1,
+    },
+    heroDetailText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: isDark ? '#cbd5e1' : '#475569',
     },
     heroActionButtonsRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: 12,
+      marginTop: 14,
     },
-    heroCallBtn: {
+    heroActionBtn: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 8,
       backgroundColor: isDark ? '#1e293b' : '#ffffff',
-      borderRadius: 22,
-      paddingVertical: 10,
-      borderWidth: 1,
-      borderColor: isDark ? '#334155' : '#bae6fd',
+      borderRadius: 14,
+      height: 42,
+      borderWidth: 1.5,
+      borderColor: isDark ? '#059669' : '#10b981',
+      ...Platform.select({
+        ios: {
+          shadowColor: '#10b981',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.08,
+          shadowRadius: 2,
+        },
+        android: {
+          elevation: 1,
+        },
+      }),
     },
-    heroCallBtnText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: '#0284c7',
-    },
-    heroWhatsAppBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: isDark ? '#1e293b' : '#ffffff',
-      borderRadius: 22,
-      paddingVertical: 10,
-      borderWidth: 1,
-      borderColor: isDark ? '#334155' : '#bbf7d0',
-    },
-    heroWhatsAppBtnText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: '#16a34a',
+    heroActionBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: isDark ? '#34d399' : '#10b981',
     },
 
     // Tabs Underline Switcher
