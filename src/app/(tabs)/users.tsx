@@ -50,6 +50,8 @@ import {
   calculateOutstandingAmount,
   calculateUtilizationPercentage,
   countUsersByStatus,
+  formatDisplayDOB,
+  formatInputDOB,
   getUserLastActive,
 } from '../../utils/calculations';
 
@@ -297,7 +299,7 @@ export default function UsersScreen() {
       MobileNumber: user.MobileNumber || '',
       AlternateMobileNumber: user.AlternateMobileNumber || '',
       Email: user.Email || '',
-      DateOfBirth: user.DateOfBirth || '',
+      DateOfBirth: formatInputDOB(user.DateOfBirth),
       Gender: (user.Gender as any) || 'Male',
       Occupation: user.Occupation || 'Teacher',
       AadhaarNumber: user.AadhaarNumber || '',
@@ -709,7 +711,7 @@ export default function UsersScreen() {
                     <View style={styles.profileRowValueContainer}>
                       <Text style={styles.profileRowValueText}>
                         {selectedUser.DateOfBirth
-                          ? `${selectedUser.DateOfBirth}${calculateAge(selectedUser.DateOfBirth)}`
+                          ? `${formatDisplayDOB(selectedUser.DateOfBirth)}${calculateAge(selectedUser.DateOfBirth)}`
                           : '—'}
                       </Text>
                     </View>

@@ -43,6 +43,7 @@ export function LoanCard({
   const [menuVisible, setMenuVisible] = useState(false);
 
   const isOverdue = loan.Status === 'Overdue';
+  const isDueOverdue = isOverdue || loan.DueBadgeType === 'overdue' || loan.DueBadgeText?.toLowerCase().includes('overdue');
   const isClosed = loan.Status === 'Closed';
   const isActive = loan.Status === 'Active';
 
@@ -253,7 +254,7 @@ export function LoanCard({
                 <Text
                   style={[
                     styles.dueSubText,
-                    isOverdue ? styles.dueSubTextOverdue : styles.dueSubTextActive,
+                    isDueOverdue ? styles.dueSubTextOverdue : styles.dueSubTextActive,
                   ]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
@@ -269,59 +270,55 @@ export function LoanCard({
         {/* Divider Line */}
         <View style={styles.dividerLine} />
 
-        {/* Bottom Row: Attributes + View Loan Action */}
+        {/* Bottom Row: 4 Evenly Distributed Columns matching reference mockup */}
         <View style={styles.bottomRow}>
-          <View style={styles.bottomAttributesGroup}>
-            {/* Ornaments Count */}
-            <View style={styles.bottomMetricItem}>
-              <Ionicons
-                name="time-outline"
-                size={isTiny ? 12 : (isSmall ? 13 : 14)}
-                color={isDark ? '#94a3b8' : '#64748b'}
-              />
-              <View style={styles.bottomMetricStacked}>
-                <Text style={styles.bottomMetricValText} numberOfLines={1}>
-                  {loan.OrnamentsCount}
-                </Text>
-                <Text style={styles.bottomMetricSubText} numberOfLines={1}>
-                  {isTiny ? 'orn' : (isSmall ? 'orns' : 'ornaments')}
-                </Text>
-              </View>
-            </View>
-
-            {/* Total Weight */}
-            <View style={styles.bottomMetricItem}>
-              <Ionicons
-                name="bag-handle-outline"
-                size={isTiny ? 12 : (isSmall ? 13 : 14)}
-                color={isDark ? '#94a3b8' : '#64748b'}
-              />
-              <Text style={styles.bottomWeightValText} numberOfLines={1}>
-                {Number(loan.TotalWeightGrams || 0).toFixed(isTiny ? 1 : 2)} g
+          {/* 1. Ornaments Count */}
+          <View style={styles.bottomMetricItem}>
+            <Ionicons
+              name="time-outline"
+              size={isTiny ? 13 : 14}
+              color={isDark ? '#94a3b8' : '#64748b'}
+            />
+            <View style={styles.bottomMetricStacked}>
+              <Text style={styles.bottomMetricValText} numberOfLines={1}>
+                {loan.OrnamentsCount}
               </Text>
-            </View>
-
-            {/* Interest Rate */}
-            <View style={styles.bottomMetricItem}>
-              <MaterialCommunityIcons
-                name="percent-circle-outline"
-                size={isTiny ? 13 : (isSmall ? 14 : 15)}
-                color={isDark ? '#94a3b8' : '#64748b'}
-              />
-              <View style={styles.bottomMetricStacked}>
-                <Text style={styles.bottomMetricValText} numberOfLines={1}>
-                  {rateDisplay}
-                </Text>
-                {!isTiny && (
-                  <Text style={styles.bottomMetricSubText} numberOfLines={1}>
-                    {interestTypeDisplay}
-                  </Text>
-                )}
-              </View>
+              <Text style={styles.bottomMetricSubText} numberOfLines={1}>
+                {isTiny ? 'orn' : (loan.OrnamentsCount === 1 ? 'ornament' : 'ornaments')}
+              </Text>
             </View>
           </View>
 
-          {/* View Loan -> Action */}
+          {/* 2. Total Weight */}
+          <View style={styles.bottomMetricItem}>
+            <Ionicons
+              name="bag-handle-outline"
+              size={isTiny ? 13 : 14}
+              color={isDark ? '#94a3b8' : '#64748b'}
+            />
+            <Text style={styles.bottomWeightValText} numberOfLines={1}>
+              {Number(loan.TotalWeightGrams || 0).toFixed(isTiny ? 2 : 3)} g
+            </Text>
+          </View>
+
+          {/* 3. Interest Rate */}
+          <View style={styles.bottomMetricItem}>
+            <MaterialCommunityIcons
+              name="percent-circle-outline"
+              size={isTiny ? 14 : 15}
+              color={isDark ? '#94a3b8' : '#64748b'}
+            />
+            <View style={styles.bottomMetricStacked}>
+              <Text style={styles.bottomMetricValText} numberOfLines={1}>
+                {rateDisplay}
+              </Text>
+              <Text style={styles.bottomMetricSubText} numberOfLines={1}>
+                {interestTypeDisplay}
+              </Text>
+            </View>
+          </View>
+
+          {/* 4. View Loan Action */}
           <TouchableOpacity
             style={styles.viewLoanBtn}
             onPress={handleView}
@@ -629,56 +626,47 @@ function getStyles(isDark: boolean, isSmall: boolean, isTiny: boolean) {
       marginBottom: isSmall ? 10 : 12,
     },
 
-    // Bottom Row
+    // Bottom Row (4 evenly distributed columns occupying full card width)
     bottomRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 6,
-    },
-    bottomAttributesGroup: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: isTiny ? 6 : (isSmall ? 8 : 14),
-      flex: 1,
-      minWidth: 0,
-      flexWrap: 'nowrap',
     },
     bottomMetricItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 3,
+      gap: 4,
       flexShrink: 0,
     },
     bottomMetricStacked: {
       justifyContent: 'center',
     },
     bottomMetricValText: {
-      fontSize: isTiny ? 10.5 : (isSmall ? 11.5 : 12),
+      fontSize: isTiny ? 11 : 12,
       fontWeight: '700',
       color: isDark ? '#f8fafc' : '#0f172a',
-      lineHeight: isSmall ? 12 : 13,
+      lineHeight: isSmall ? 13 : 14,
     },
     bottomMetricSubText: {
-      fontSize: isTiny ? 8.5 : (isSmall ? 9 : 9.5),
+      fontSize: isTiny ? 9 : 9.5,
       color: isDark ? '#94a3b8' : '#64748b',
       lineHeight: isSmall ? 10 : 11,
     },
     bottomWeightValText: {
-      fontSize: isTiny ? 10.5 : (isSmall ? 11.5 : 12),
+      fontSize: isTiny ? 11 : 12,
       fontWeight: '700',
       color: isDark ? '#f8fafc' : '#0f172a',
     },
     viewLoanBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 2,
+      gap: 3,
       paddingVertical: 4,
       paddingHorizontal: 2,
       flexShrink: 0,
     },
     viewLoanText: {
-      fontSize: isTiny ? 11.5 : (isSmall ? 12 : 13),
+      fontSize: isTiny ? 12 : 13,
       fontWeight: '700',
       color: '#0284c7',
     },
