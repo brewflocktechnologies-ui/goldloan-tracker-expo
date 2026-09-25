@@ -10,7 +10,6 @@ import {
   Linking,
   Platform,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +17,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { OptionPickerModal } from '../../components/ornaments/OptionPickerModal';
 import { UserOptionsMenu, UserOptionsMenuHandle } from '../../components/users/UserOptionsMenu';
@@ -30,11 +30,10 @@ import {
   ExtraUserBankAccount,
   ExtraUserLoan,
   formatMaskedAadhaar,
-  formatMaskedPAN,
   formatPhoneNumber,
   INDIAN_STATES,
   OCCUPATION_OPTIONS,
-  USER_SORT_OPTIONS,
+  USER_SORT_OPTIONS
 } from '../../mock/userMockExtras';
 import { getDriveImageUrl } from '../../services/api';
 import { useAppStore } from '../../services/store';
@@ -92,6 +91,8 @@ export default function UsersScreen() {
 
   // Details State
   const [activeTab, setActiveTab] = useState<'Profile' | 'Bank Accounts' | 'Loans'>('Profile');
+  const [showAadhaar, setShowAadhaar] = useState(false);
+  const [showPAN, setShowPAN] = useState(true);
   const optionsMenuRef = useRef<UserOptionsMenuHandle>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
@@ -246,6 +247,8 @@ export default function UsersScreen() {
   const handleCardPress = (user: User) => {
     setSelectedUser(user);
     setActiveTab('Profile');
+    setShowAadhaar(false);
+    setShowPAN(true);
     setViewMode('details');
   };
 
@@ -591,33 +594,39 @@ export default function UsersScreen() {
             </View>
           </View>
 
-          {/* Segmented Tab Control: Profile | Bank Accounts | Loans */}
+          {/* Tab Switcher: Profile | Bank Accounts | Loans */}
           <View style={styles.tabsSegmentContainer}>
             <TouchableOpacity
-              style={[styles.tabSegmentBtn, activeTab === 'Profile' && styles.tabSegmentBtnActive]}
+              style={styles.tabSegmentBtn}
               onPress={() => setActiveTab('Profile')}
+              activeOpacity={0.7}
             >
               <Text style={[styles.tabSegmentText, activeTab === 'Profile' && styles.tabSegmentTextActive]}>
                 Profile
               </Text>
+              {activeTab === 'Profile' && <View style={styles.activeTabIndicator} />}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.tabSegmentBtn, activeTab === 'Bank Accounts' && styles.tabSegmentBtnActive]}
+              style={styles.tabSegmentBtn}
               onPress={() => setActiveTab('Bank Accounts')}
+              activeOpacity={0.7}
             >
               <Text style={[styles.tabSegmentText, activeTab === 'Bank Accounts' && styles.tabSegmentTextActive]}>
                 Bank Accounts
               </Text>
+              {activeTab === 'Bank Accounts' && <View style={styles.activeTabIndicator} />}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.tabSegmentBtn, activeTab === 'Loans' && styles.tabSegmentBtnActive]}
+              style={styles.tabSegmentBtn}
               onPress={() => setActiveTab('Loans')}
+              activeOpacity={0.7}
             >
               <Text style={[styles.tabSegmentText, activeTab === 'Loans' && styles.tabSegmentTextActive]}>
                 Loans
               </Text>
+              {activeTab === 'Loans' && <View style={styles.activeTabIndicator} />}
             </TouchableOpacity>
           </View>
 
@@ -625,134 +634,219 @@ export default function UsersScreen() {
           {activeTab === 'Profile' && (
             <View style={styles.tabContentArea}>
               {/* Section 1: Personal Information */}
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardHeaderLeft}>
-                    <View style={styles.iconBox}>
-                      <Ionicons name="person-outline" size={18} color="#0284c7" />
-                    </View>
-                    <Text style={styles.cardTitle}>Personal Information</Text>
+              <View style={styles.profileSection}>
+                <View style={styles.profileHeadingRow}>
+                  <View style={styles.profileIconBox}>
+                    <Ionicons name="person-outline" size={17} color="#0284c7" />
                   </View>
+                  <Text style={styles.profileSectionTitle}>Personal Information</Text>
                 </View>
+                <View style={styles.profileDivider} />
 
-                <View style={styles.keyValList}>
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Full Name</Text>
-                    <Text style={styles.valText}>{selectedUser.FullName}</Text>
+                <View style={styles.profileRowsList}>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Full Name</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.FullName}</Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Father / Husband Name</Text>
-                    <Text style={styles.valText}>{selectedUser.FatherHusbandName || '—'}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Father / Husband Name</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.FatherHusbandName || '—'}</Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Customer Code</Text>
-                    <Text style={styles.valText}>{selectedUser.CustomerCode || selectedUser.UserId}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Customer Code</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.CustomerCode || selectedUser.UserId}</Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Mobile Number</Text>
-                    <Text style={styles.valText}>{formatPhoneNumber(selectedUser.MobileNumber)}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Mobile Number</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{formatPhoneNumber(selectedUser.MobileNumber)}</Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Alternate Mobile Number</Text>
-                    <Text style={styles.valText}>
-                      {selectedUser.AlternateMobileNumber ? formatPhoneNumber(selectedUser.AlternateMobileNumber) : '—'}
-                    </Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Alternate Mobile Number</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>
+                        {selectedUser.AlternateMobileNumber ? formatPhoneNumber(selectedUser.AlternateMobileNumber) : '—'}
+                      </Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Email Address</Text>
-                    <Text style={styles.valText}>{selectedUser.Email || '—'}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Email Address</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.Email || '—'}</Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Date of Birth</Text>
-                    <Text style={styles.valText}>
-                      {selectedUser.DateOfBirth
-                        ? `${selectedUser.DateOfBirth}${calculateAge(selectedUser.DateOfBirth)}`
-                        : '—'}
-                    </Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Date of Birth</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>
+                        {selectedUser.DateOfBirth
+                          ? `${selectedUser.DateOfBirth}${calculateAge(selectedUser.DateOfBirth)}`
+                          : '—'}
+                      </Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Gender</Text>
-                    <Text style={styles.valText}>{selectedUser.Gender || 'Male'}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Gender</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.Gender || 'Male'}</Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Occupation</Text>
-                    <Text style={styles.valText}>{selectedUser.Occupation || '—'}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Occupation</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.Occupation || '—'}</Text>
+                    </View>
                   </View>
 
-                  <View style={[styles.keyValRow, { borderBottomWidth: 0 }]}>
-                    <Text style={styles.keyText}>Status</Text>
-                    <UserStatusBadge status={selectedUser.Status} isDark={isDark} variant="badge" />
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Status</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <View style={styles.profileStatusRow}>
+                        <View
+                          style={[
+                            styles.profileStatusDot,
+                            { backgroundColor: selectedUser.Status === 'Active' ? '#10b981' : '#64748b' },
+                          ]}
+                        />
+                        <Text style={styles.profileRowValueText}>{selectedUser.Status || 'Active'}</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               </View>
 
               {/* Section 2: KYC Information */}
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardHeaderLeft}>
-                    <View style={styles.iconBox}>
-                      <Ionicons name="shield-checkmark-outline" size={18} color="#0284c7" />
+              {(() => {
+                const aadhaarRaw = selectedUser.AadhaarNumber != null ? String(selectedUser.AadhaarNumber).replace(/\s+/g, '') : '';
+                const unmaskedAadhaar = aadhaarRaw ? aadhaarRaw.replace(/(\d{4})/g, '$1 ').trim() : '—';
+                const maskedAadhaar = formatMaskedAadhaar(selectedUser.AadhaarNumber);
+
+                const panRaw = selectedUser.PANNumber != null ? String(selectedUser.PANNumber).toUpperCase().trim() : '';
+                const maskedPan = panRaw
+                  ? (panRaw.length >= 6 ? panRaw.slice(0, 5) + '••••' + panRaw.slice(-1) : panRaw)
+                  : '—';
+                const unmaskedPan = panRaw || '—';
+
+                return (
+                  <View style={styles.profileSection}>
+                    <View style={styles.profileHeadingRow}>
+                      <View style={styles.profileIconBox}>
+                        <Ionicons name="shield-checkmark-outline" size={17} color="#0284c7" />
+                      </View>
+                      <Text style={styles.profileSectionTitle}>KYC Information</Text>
                     </View>
-                    <Text style={styles.cardTitle}>KYC Information</Text>
-                  </View>
-                </View>
+                    <View style={styles.profileDivider} />
 
-                <View style={styles.keyValList}>
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Aadhaar Number</Text>
-                    <Text style={styles.valText}>{formatMaskedAadhaar(selectedUser.AadhaarNumber)}</Text>
-                  </View>
+                    <View style={styles.profileRowsList}>
+                      <View style={styles.profileRow}>
+                        <Text style={styles.profileRowLabel}>Aadhaar Number</Text>
+                        <View style={styles.profileRowValueContainer}>
+                          <Text style={styles.profileRowValueText}>
+                            {showAadhaar ? unmaskedAadhaar : maskedAadhaar}
+                          </Text>
+                          {aadhaarRaw ? (
+                            <TouchableOpacity
+                              style={styles.privacyEyeBtn}
+                              onPress={() => setShowAadhaar(!showAadhaar)}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              accessibilityLabel={showAadhaar ? 'Hide Aadhaar number' : 'Show Aadhaar number'}
+                            >
+                              <Ionicons
+                                name={showAadhaar ? 'eye-off-outline' : 'eye-outline'}
+                                size={18}
+                                color={isDark ? '#94a3b8' : '#64748b'}
+                              />
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
+                      </View>
 
-                  <View style={[styles.keyValRow, { borderBottomWidth: 0 }]}>
-                    <Text style={styles.keyText}>PAN Number</Text>
-                    <Text style={styles.valText}>{formatMaskedPAN(selectedUser.PANNumber)}</Text>
+                      <View style={styles.profileRow}>
+                        <Text style={styles.profileRowLabel}>PAN Number</Text>
+                        <View style={styles.profileRowValueContainer}>
+                          <Text style={styles.profileRowValueText}>
+                            {showPAN ? unmaskedPan : maskedPan}
+                          </Text>
+                          {panRaw ? (
+                            <TouchableOpacity
+                              style={styles.privacyEyeBtn}
+                              onPress={() => setShowPAN(!showPAN)}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              accessibilityLabel={showPAN ? 'Hide PAN number' : 'Show PAN number'}
+                            >
+                              <Ionicons
+                                name={showPAN ? 'eye-off-outline' : 'eye-outline'}
+                                size={18}
+                                color={isDark ? '#94a3b8' : '#64748b'}
+                              />
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>
+                );
+              })()}
 
               {/* Section 3: Address */}
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardHeaderLeft}>
-                    <View style={styles.iconBox}>
-                      <Ionicons name="location-outline" size={18} color="#0284c7" />
-                    </View>
-                    <Text style={styles.cardTitle}>Address</Text>
+              <View style={styles.profileSection}>
+                <View style={styles.profileHeadingRow}>
+                  <View style={styles.profileIconBox}>
+                    <Ionicons name="location-outline" size={17} color="#0284c7" />
                   </View>
+                  <Text style={styles.profileSectionTitle}>Address</Text>
                 </View>
+                <View style={styles.profileDivider} />
 
-                <View style={styles.keyValList}>
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Address Line 1</Text>
-                    <Text style={styles.valText}>{selectedUser.AddressLine1 || '—'}</Text>
+                <View style={styles.profileRowsList}>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Address Line 1</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.AddressLine1 || '—'}</Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>Address Line 2</Text>
-                    <Text style={styles.valText}>{selectedUser.AddressLine2 || '—'}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Address Line 2</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.AddressLine2 || '—'}</Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>City</Text>
-                    <Text style={styles.valText}>{selectedUser.City || '—'}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>City</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.City || '—'}</Text>
+                    </View>
                   </View>
 
-                  <View style={styles.keyValRow}>
-                    <Text style={styles.keyText}>State</Text>
-                    <Text style={styles.valText}>{selectedUser.State || '—'}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>State</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.State || '—'}</Text>
+                    </View>
                   </View>
 
-                  <View style={[styles.keyValRow, { borderBottomWidth: 0 }]}>
-                    <Text style={styles.keyText}>Pincode</Text>
-                    <Text style={styles.valText}>{selectedUser.Pincode || '—'}</Text>
+                  <View style={styles.profileRow}>
+                    <Text style={styles.profileRowLabel}>Pincode</Text>
+                    <View style={styles.profileRowValueContainer}>
+                      <Text style={styles.profileRowValueText}>{selectedUser.Pincode || '—'}</Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -2051,40 +2145,112 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       color: '#16a34a',
     },
 
-    // Tabs Segment Switcher
+    // Tabs Underline Switcher
     tabsSegmentContainer: {
       flexDirection: 'row',
-      backgroundColor: isDark ? '#0f172a' : '#f1f5f9',
-      borderRadius: 14,
-      padding: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? '#1e293b' : '#e2e8f0',
       marginBottom: 16,
+      paddingHorizontal: 4,
     },
     tabSegmentBtn: {
       flex: 1,
-      paddingVertical: 10,
+      paddingVertical: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 10,
+      position: 'relative',
     },
-    tabSegmentBtnActive: {
-      backgroundColor: isDark ? '#1e293b' : '#ffffff',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.08,
-      shadowRadius: 3,
-      elevation: 2,
-    },
+    tabSegmentBtnActive: {},
     tabSegmentText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 13.5,
+      fontWeight: '500',
       color: isDark ? '#94a3b8' : '#64748b',
     },
     tabSegmentTextActive: {
       color: '#0284c7',
       fontWeight: '700',
     },
+    activeTabIndicator: {
+      position: 'absolute',
+      bottom: -1,
+      left: 10,
+      right: 10,
+      height: 3,
+      backgroundColor: '#0284c7',
+      borderTopLeftRadius: 3,
+      borderTopRightRadius: 3,
+    },
     tabContentArea: {
-      gap: 14,
+      gap: 16,
+    },
+
+    // Profile Flat Sections (No card, heading with underline and content below)
+    profileSection: {
+      marginBottom: 24,
+    },
+    profileHeadingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    profileIconBox: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    profileSectionTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: isDark ? '#f8fafc' : '#0f172a',
+      marginLeft: 10,
+    },
+    profileDivider: {
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? '#1e293b' : '#e5e7eb',
+      marginTop: 10,
+      marginBottom: 14,
+    },
+    profileRowsList: {
+      gap: 6,
+    },
+    profileRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 28,
+      paddingVertical: 4,
+    },
+    profileRowLabel: {
+      width: 170,
+      fontSize: 13.5,
+      fontWeight: '500',
+      color: isDark ? '#94a3b8' : '#64748b',
+    },
+    profileRowValueContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    profileRowValueText: {
+      fontSize: 13.5,
+      fontWeight: '600',
+      color: isDark ? '#f8fafc' : '#0f172a',
+    },
+    privacyEyeBtn: {
+      padding: 4,
+      marginLeft: 8,
+    },
+    profileStatusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    profileStatusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: 6,
     },
 
     // Common Cards & Key-Value Lists
