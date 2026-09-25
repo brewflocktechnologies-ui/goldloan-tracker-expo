@@ -1,15 +1,22 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  ActivityIndicator, TextInput, Alert, SafeAreaView 
-} from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Colors, ThemeColors } from '../../constants/theme';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert, SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { Badge } from '../../components/Badge';
+import { BankCard } from '../../components/BankCard';
+import { ThemeColors } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import { useAppStore } from '../../services/store';
-import { User, BankAccount, Ornament, Loan } from '../../types';
-import { Badge } from '../../components/Badge';
-import { Ionicons } from '@expo/vector-icons';
+import { BankAccount, Loan, Ornament, User } from '../../types';
 
 export default function CustomerDetailScreen() {
   const { colors, isDark } = useTheme();
@@ -150,7 +157,10 @@ export default function CustomerDetailScreen() {
         {/* Bank Accounts Section */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Bank Accounts ({bankAccounts.length})</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <MaterialCommunityIcons name="bank" size={20} color={colors.textPrimary} />
+              <Text style={styles.sectionTitle}>Bank Accounts ({bankAccounts.length})</Text>
+            </View>
             <TouchableOpacity onPress={() => setShowAddBank(!showAddBank)}>
               <Text style={styles.addBtnText}>{showAddBank ? 'Cancel' : '+ Add Bank'}</Text>
             </TouchableOpacity>
@@ -203,33 +213,12 @@ export default function CustomerDetailScreen() {
           {bankAccounts.length === 0 ? (
             <Text style={styles.emptyNotice}>No bank account added yet.</Text>
           ) : (
-            bankAccounts.map((acc, idx) => {
-              const maxL = acc.MaxLoanAmount || 0;
-              const util = acc.UtilizedLoanAmount || 0;
-              const avail = Math.max(0, maxL - util);
-              const pct = maxL > 0 ? Math.min(100, (util / maxL) * 100) : 0;
-
-              return (
-                <View key={acc.BankAccountId || idx} style={styles.bankItem}>
-                  <View style={styles.bankTop}>
-                    <Text style={styles.bankTitle}>{acc.BankName}</Text>
-                    <Text style={styles.accNum}>•••• {acc.AccountNumber.slice(-4)}</Text>
-                  </View>
-
-                  <View style={styles.utilRow}>
-                    <Text style={styles.utilText}>Utilized: ₹{util.toLocaleString()} / ₹{maxL.toLocaleString()}</Text>
-                    <Text style={[styles.utilText, { fontWeight: '700', color: colors.success }]}>
-                      Avail: ₹{avail.toLocaleString()}
-                    </Text>
-                  </View>
-
-                  {/* Progress bar */}
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${pct}%`, backgroundColor: pct > 80 ? colors.danger : colors.primary }]} />
-                  </View>
-                </View>
-              );
-            })
+            bankAccounts.map((acc, idx) => (
+              <BankCard
+                key={acc.BankAccountId || idx}
+                account={acc}
+              />
+            ))
           )}
         </View>
 

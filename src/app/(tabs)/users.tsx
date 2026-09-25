@@ -1,4 +1,4 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -18,6 +18,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BankCard } from '../../components/BankCard';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { OptionPickerModal } from '../../components/ornaments/OptionPickerModal';
 import { UserOptionsMenu, UserOptionsMenuHandle } from '../../components/users/UserOptionsMenu';
@@ -474,6 +475,8 @@ export default function UsersScreen() {
       BankName: b.BankName || '—',
       AccountType: b.AccountType || '—',
       BranchName: b.BranchName || '—',
+      City: b.City || '',
+      PassbookImage: b.PassbookImage || '',
       AccountNumber: b.AccountNumber || '—',
       IFSCCode: b.IFSCCode || '—',
       AccountHolderName: b.AccountHolderName || selectedUser.FullName,
@@ -856,12 +859,18 @@ export default function UsersScreen() {
           {activeTab === 'Bank Accounts' && (
             <View style={styles.tabContentArea}>
               <View style={styles.sectionHeaderRow}>
+                <MaterialCommunityIcons
+                  name="bank"
+                  size={20}
+                  color={isDark ? '#f8fafc' : '#0d172a'}
+                  style={{ marginRight: 8 }}
+                />
                 <Text style={styles.sectionHeaderTitle}>Bank Accounts ({displayBanks.length})</Text>
               </View>
 
               {displayBanks.length === 0 && (
                 <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-                  <Ionicons name="business-outline" size={28} color={isDark ? '#475569' : '#cbd5e1'} />
+                  <MaterialCommunityIcons name="bank-outline" size={28} color={isDark ? '#475569' : '#cbd5e1'} />
                   <Text style={{ marginTop: 8, fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
                     No bank accounts on file
                   </Text>
@@ -869,83 +878,10 @@ export default function UsersScreen() {
               )}
 
               {displayBanks.map((acc, idx) => (
-                <View key={acc.BankAccountId || idx} style={styles.bankCard}>
-                  {/* Bank Card Header */}
-                  <View style={styles.bankCardHeader}>
-                    <View style={styles.bankNameCol}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="business" size={20} color="#0284c7" />
-                        <Text style={styles.bankNameTitle}>{acc.BankName}</Text>
-                      </View>
-                      <Text style={styles.bankAccountType}>{acc.AccountType}</Text>
-                      <Text style={styles.bankBranchText}>{acc.BranchName}</Text>
-                    </View>
-                    <UserStatusBadge status={acc.Status} isDark={isDark} variant="badge" />
-                  </View>
-
-                  {/* Bank Account Details */}
-                  <View style={styles.bankInfoGrid}>
-                    <View style={styles.bankInfoItem}>
-                      <Text style={styles.bankInfoLabel}>Account Number</Text>
-                      <Text style={styles.bankInfoValue}>{acc.AccountNumber}</Text>
-                    </View>
-
-                    <View style={styles.bankInfoItem}>
-                      <Text style={styles.bankInfoLabel}>IFSC Code</Text>
-                      <Text style={styles.bankInfoValue}>{acc.IFSCCode}</Text>
-                    </View>
-
-                    <View style={styles.bankInfoItem}>
-                      <Text style={styles.bankInfoLabel}>Account Holder</Text>
-                      <Text style={styles.bankInfoValue}>{acc.AccountHolderName}</Text>
-                    </View>
-
-                    <View style={styles.bankInfoItem}>
-                      <Text style={styles.bankInfoLabel}>UPI ID</Text>
-                      <Text style={styles.bankInfoValue}>{acc.UPI_ID}</Text>
-                    </View>
-                  </View>
-
-                  {/* Utilization / Limits Box */}
-                  <View style={styles.bankLimitBox}>
-                    <View style={styles.bankLimitAmountRow}>
-                      <Text style={styles.bankUtilizedBigText}>
-                        ₹ {acc.UtilizedLoanAmount.toLocaleString('en-IN')}
-                      </Text>
-                      <Text style={styles.bankPercentText}>{acc.UtilizationPercentage}% utilized</Text>
-                    </View>
-
-                    {/* Progress Bar */}
-                    <View style={styles.progressBarBg}>
-                      <View
-                        style={[
-                          styles.progressBarFill,
-                          { width: `${Math.min(100, Math.max(5, acc.UtilizationPercentage))}%` },
-                        ]}
-                      />
-                    </View>
-
-                    {/* 3 Metric Columns */}
-                    <View style={styles.limitColumnsRow}>
-                      <View style={styles.limitCol}>
-                        <Text style={styles.limitColLabel}>Max Loan Amount</Text>
-                        <Text style={styles.limitColVal}>₹ {acc.MaxLoanAmount.toLocaleString('en-IN')}</Text>
-                      </View>
-
-                      <View style={styles.limitCol}>
-                        <Text style={styles.limitColLabel}>Utilized Amount</Text>
-                        <Text style={styles.limitColVal}>₹ {acc.UtilizedLoanAmount.toLocaleString('en-IN')}</Text>
-                      </View>
-
-                      <View style={styles.limitCol}>
-                        <Text style={styles.limitColLabel}>Available Limit</Text>
-                        <Text style={[styles.limitColVal, { color: '#16a34a' }]}>
-                          ₹ {acc.AvailableLoanAmount.toLocaleString('en-IN')}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
+                <BankCard
+                  key={acc.BankAccountId || idx}
+                  account={acc}
+                />
               ))}
             </View>
           )}
@@ -2315,7 +2251,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
 
     // Bank Accounts Tab Styles
     sectionHeaderRow: {
-      marginBottom: 6,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
     },
     sectionHeaderTitle: {
       fontSize: 16,

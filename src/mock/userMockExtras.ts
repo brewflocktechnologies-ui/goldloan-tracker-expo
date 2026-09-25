@@ -4,6 +4,8 @@ export interface ExtraUserBankAccount {
   BankName: string;
   AccountType: string;
   BranchName: string;
+  City?: string;
+  PassbookImage?: string;
   AccountNumber: string;
   IFSCCode: string;
   AccountHolderName: string;
