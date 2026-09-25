@@ -91,11 +91,16 @@ export function formatMaskedAadhaar(aadhaar?: string | number): string {
 }
 
 /**
- * Formats PAN e.g. ABCDE1234F. Returns '—' when the sheet cell is empty.
+ * Masks PAN to XXXXXX234F (last 4 characters visible, same idea as Aadhaar).
+ * Returns '—' when the sheet cell is empty. Values of 4 characters or fewer
+ * are fully masked rather than shown.
  */
 export function formatMaskedPAN(pan?: string | number): string {
   if (!pan) return '—';
-  return String(pan).toUpperCase();
+  const clean = String(pan).replace(/\s+/g, '').toUpperCase();
+  if (!clean) return '—';
+  const visible = clean.length > 4 ? clean.slice(-4) : '';
+  return 'X'.repeat(clean.length - visible.length) + visible;
 }
 
 /**

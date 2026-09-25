@@ -30,6 +30,7 @@ import {
   ExtraUserBankAccount,
   ExtraUserLoan,
   formatMaskedAadhaar,
+  formatMaskedPAN,
   formatPhoneNumber,
   INDIAN_STATES,
   OCCUPATION_OPTIONS,
@@ -92,7 +93,7 @@ export default function UsersScreen() {
   // Details State
   const [activeTab, setActiveTab] = useState<'Profile' | 'Bank Accounts' | 'Loans'>('Profile');
   const [showAadhaar, setShowAadhaar] = useState(false);
-  const [showPAN, setShowPAN] = useState(true);
+  const [showPAN, setShowPAN] = useState(false);
   const optionsMenuRef = useRef<UserOptionsMenuHandle>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
@@ -248,7 +249,7 @@ export default function UsersScreen() {
     setSelectedUser(user);
     setActiveTab('Profile');
     setShowAadhaar(false);
-    setShowPAN(true);
+    setShowPAN(false);
     setViewMode('details');
   };
 
@@ -737,9 +738,7 @@ export default function UsersScreen() {
                 const maskedAadhaar = formatMaskedAadhaar(selectedUser.AadhaarNumber);
 
                 const panRaw = selectedUser.PANNumber != null ? String(selectedUser.PANNumber).toUpperCase().trim() : '';
-                const maskedPan = panRaw
-                  ? (panRaw.length >= 6 ? panRaw.slice(0, 5) + '••••' + panRaw.slice(-1) : panRaw)
-                  : '—';
+                const maskedPan = formatMaskedPAN(selectedUser.PANNumber);
                 const unmaskedPan = panRaw || '—';
 
                 return (
