@@ -1474,7 +1474,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 20,
+    paddingBottom: 8,
     maxWidth: 680,
     width: '100%',
     alignSelf: 'center',
@@ -1510,7 +1510,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   cardsScrollContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 100,
+    paddingBottom: 80,
     maxWidth: 680,
     width: '100%',
     alignSelf: 'center',
