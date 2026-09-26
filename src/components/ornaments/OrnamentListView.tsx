@@ -1,7 +1,8 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
-import { RefreshControl, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDriveImageUrl } from '../../services/api';
 import { Ornament } from '../../types';
 import { OptionPickerModal } from './OptionPickerModal';
@@ -54,7 +55,7 @@ export function OrnamentListView({
   const { styles, colors, isDark } = useOrnamentsStyles();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       {/* Top Header Section (Light Blue) */}
       <View style={styles.listTopSection}>
         {/* Header Row */}
