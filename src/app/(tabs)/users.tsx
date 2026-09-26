@@ -1670,7 +1670,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = fals
     content: {
       paddingHorizontal: isSmall ? 12 : 16,
       paddingTop: 16,
-      paddingBottom: 40,
+      paddingBottom: 16,
       maxWidth: 680,
       width: '100%',
       alignSelf: 'center',
@@ -2811,7 +2811,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = fals
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: 6,
-      marginBottom: 30,
+      marginBottom: 0,
       shadowColor: '#0284c7',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
