@@ -3,7 +3,7 @@ import { Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import { ThemeColors } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 
-export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = false) =>
+export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = false, isCompact: boolean = false) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
@@ -38,14 +38,14 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     listTopSection: {
       backgroundColor: isDark ? '#0f172a' : '#d8edfa',
       paddingHorizontal: 16,
-      paddingTop: 10,
+      paddingTop: isCompact ? 4 : 10,
       paddingBottom: 2,
     },
     headerRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      marginBottom: 16,
+      marginBottom: isCompact ? 8 : 16,
       paddingTop: 4,
     },
     headerLeft: {
@@ -117,7 +117,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     },
     sheetBackground: {
       position: 'absolute',
-      top: 64,
+      top: isCompact ? 52 : 64,
       left: 0,
       right: 0,
       bottom: 0,
@@ -128,7 +128,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     searchFilterCard: {
       backgroundColor: isDark ? '#1e293b' : '#ffffff',
       borderRadius: 20,
-      padding: 14,
+      padding: isCompact ? 10 : 14,
       maxWidth: 680,
       width: '100%',
       alignSelf: 'center',
@@ -143,7 +143,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     searchRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: isCompact ? 8 : 12,
     },
     boxySearchBox: {
       flex: 1,
@@ -154,7 +154,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       borderWidth: 1,
       borderColor: isDark ? '#334155' : '#e2e8f0',
       paddingHorizontal: 12,
-      height: 52,
+      height: isCompact ? 44 : 52,
     },
     searchIcon: {
       marginRight: 8,
@@ -226,7 +226,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       backgroundColor: isDark ? '#090d16' : '#ffffff',
     },
     cardsList: {
-      gap: 12,
+      gap: isCompact ? 8 : 12,
     },
     listCard: {
       backgroundColor: isDark ? '#0f172a' : '#ffffff',
@@ -234,7 +234,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       borderWidth: 1,
       borderColor: isDark ? '#1e293b' : '#e8ecf4',
       paddingHorizontal: 16,
-      paddingVertical: 14,
+      paddingVertical: isCompact ? 10 : 14,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: isDark ? 0.2 : 0.04,
@@ -297,7 +297,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginTop: 14,
+      marginTop: isCompact ? 10 : 14,
     },
     cardBottomLeftCol: {
       gap: 7,
@@ -1215,8 +1215,13 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
 /** Themed Users-screen styles shared by the list, details and form views. */
 export function useUsersStyles() {
   const { colors, isDark } = useTheme();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isSmall = width < 460;
-  const styles = useMemo(() => getUsersStyles(colors, isDark, isSmall), [colors, isDark, isSmall]);
+  // Short phones only fit ~2 cards under the header, so tighten the vertical spacing there.
+  const isCompact = height < 700;
+  const styles = useMemo(
+    () => getUsersStyles(colors, isDark, isSmall, isCompact),
+    [colors, isDark, isSmall, isCompact]
+  );
   return { styles, colors, isDark };
 }

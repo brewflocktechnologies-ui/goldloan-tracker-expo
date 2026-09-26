@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import { ThemeColors } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 
-export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
+export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompact: boolean = false) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: isDark ? '#090d16' : '#d8edfa',
@@ -31,7 +31,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => Styl
   listTopSection: {
     backgroundColor: isDark ? '#0f172a' : '#d8edfa',
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: isCompact ? 4 : 10,
     paddingBottom: 2,
   },
   searchCardWrapper: {
@@ -43,7 +43,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => Styl
   },
   sheetBackground: {
     position: 'absolute',
-    top: 64,
+    top: isCompact ? 52 : 64,
     left: 0,
     right: 0,
     bottom: 0,
@@ -70,7 +70,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => Styl
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: isCompact ? 8 : 16,
     paddingTop: 4,
   },
   headerLeft: {
@@ -135,7 +135,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => Styl
   searchFilterCard: {
     backgroundColor: isDark ? '#1e293b' : '#ffffff',
     borderRadius: 20,
-    padding: 14,
+    padding: isCompact ? 10 : 14,
     maxWidth: 680,
     width: '100%',
     alignSelf: 'center',
@@ -150,7 +150,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => Styl
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: isCompact ? 8 : 12,
   },
   boxySearchBox: {
     flex: 1,
@@ -161,7 +161,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => Styl
     borderWidth: 1,
     borderColor: isDark ? '#334155' : '#e2e8f0',
     paddingHorizontal: 12,
-    height: 52,
+    height: isCompact ? 44 : 52,
   },
   searchIcon: {
     marginRight: 8,
@@ -220,7 +220,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => Styl
 
   // Cards List
   cardsList: {
-    gap: 12,
+    gap: isCompact ? 8 : 12,
   },
   listCard: {
     flexDirection: 'row',
@@ -229,7 +229,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => Styl
     borderRadius: 18,
     borderWidth: 1,
     borderColor: isDark ? '#1e293b' : '#f1f5f9',
-    padding: 12,
+    padding: isCompact ? 10 : 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: isDark ? 0.2 : 0.05,
@@ -880,6 +880,9 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean) => Styl
 /** Themed Ornaments-screen styles shared by the list, details and wizard views. */
 export function useOrnamentsStyles() {
   const { colors, isDark } = useTheme();
-  const styles = useMemo(() => getOrnamentsStyles(colors, isDark), [colors, isDark]);
+  const { height } = useWindowDimensions();
+  // Short phones only fit ~2 cards under the header, so tighten the vertical spacing there.
+  const isCompact = height < 700;
+  const styles = useMemo(() => getOrnamentsStyles(colors, isDark, isCompact), [colors, isDark, isCompact]);
   return { styles, colors, isDark };
 }
