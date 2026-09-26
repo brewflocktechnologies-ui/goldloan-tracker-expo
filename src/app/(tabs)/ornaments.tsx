@@ -14,7 +14,13 @@ import { pickOrnamentImages } from '../../components/ornaments/pickOrnamentImage
 import { useToast } from '../../context/ToastContext';
 import { useAppStore } from '../../services/store';
 import { Ornament } from '../../types';
-import { calculateOrnamentValuation } from '../../utils/ornamentCalculations';
+import {
+  calculateOrnamentValuation,
+  countOrnamentsByStatus,
+  filterOrnaments,
+  getOrnamentLoanNumber,
+  sortOrnaments,
+} from '../../utils/userOrnamentCalculations';
 
 export default function OrnamentsScreen() {
   const router = useRouter();
@@ -79,65 +85,17 @@ export default function OrnamentsScreen() {
   };
 
   // Filter counts
-  const availableCount = useMemo(() => store.ornaments.filter(o => o.Status === 'Available').length, [store.ornaments]);
-  const pledgedCount = useMemo(() => store.ornaments.filter(o => o.Status === 'Pledged').length, [store.ornaments]);
+  const availableCount = useMemo(() => countOrnamentsByStatus(store.ornaments, 'Available'), [store.ornaments]);
+  const pledgedCount = useMemo(() => countOrnamentsByStatus(store.ornaments, 'Pledged'), [store.ornaments]);
   const totalCount = store.ornaments.length;
 
   // Filtered Ornaments
-  const filteredOrnaments = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const filtered = store.ornaments.filter(o => {
-      if (activeFilter !== 'All' && o.Status !== activeFilter) return false;
-      if (!q) return true;
-      const name = (o.OrnamentName || '').toLowerCase();
-      const id = (o.OrnamentId || '').toLowerCase();
-      const type = (o.OrnamentType || '').toLowerCase();
-      const category = (o.OrnamentCategory || '').toLowerCase();
-      const hallmark = (o.HallmarkNumber || '').toLowerCase();
-      const maker = (o.MakerName || '').toLowerCase();
-      const purity = (o.Purity || '').toLowerCase();
-      const loan = (o.LoanNumber || '').toLowerCase();
+  const filteredOrnaments = useMemo(
+    () => sortOrnaments(filterOrnaments(store.ornaments, searchQuery, activeFilter), sortOption),
+    [store.ornaments, activeFilter, searchQuery, sortOption]
+  );
 
-      return (
-        name.includes(q) ||
-        id.includes(q) ||
-        type.includes(q) ||
-        category.includes(q) ||
-        hallmark.includes(q) ||
-        maker.includes(q) ||
-        purity.includes(q) ||
-        loan.includes(q)
-      );
-    });
-
-    const idNum = (o: Ornament) => parseInt(String(o.OrnamentId || '').replace(/\D/g, ''), 10) || 0;
-
-    return [...filtered].sort((a, b) => {
-      switch (sortOption) {
-        case 'Oldest First':
-          return idNum(a) - idNum(b);
-        case 'Name (A-Z)':
-          return (a.OrnamentName || '').localeCompare(b.OrnamentName || '');
-        case 'Name (Z-A)':
-          return (b.OrnamentName || '').localeCompare(a.OrnamentName || '');
-        case 'Weight (High-Low)':
-          return (b.GrossWeight || 0) - (a.GrossWeight || 0);
-        case 'Weight (Low-High)':
-          return (a.GrossWeight || 0) - (b.GrossWeight || 0);
-        case 'Newest First':
-        default:
-          return idNum(b) - idNum(a);
-      }
-    });
-  }, [store.ornaments, activeFilter, searchQuery, sortOption]);
-
-  const getLoanNumber = (orn: Ornament) => {
-    if (orn.LoanNumber) return orn.LoanNumber;
-    const loan = store.loans.find(l => l.ornamentIds?.includes(orn.OrnamentId));
-    if (loan) return loan.LoanNumber;
-    if (orn.Status === 'Pledged') return 'LN-2024-001';
-    return null;
-  };
+  const getLoanNumber = (orn: Ornament) => getOrnamentLoanNumber(orn, store.loans);
 
   // Open Details Screen
   const handleCardPress = (orn: Ornament) => {

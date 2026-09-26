@@ -11,8 +11,11 @@ import { User } from '../../types';
 import {
   buildUserStatsMap,
   countUsersByStatus,
+  filterUsers,
   formatInputDOB,
-} from '../../utils/calculations';
+  generateCustomerCode,
+  sortUsers,
+} from '../../utils/userOrnamentCalculations';
 
 export default function UsersScreen() {
   const store = useAppStore();
@@ -88,63 +91,10 @@ export default function UsersScreen() {
   );
 
   // Filtered & Sorted Users
-  const filteredUsers = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const filtered = store.users.filter(u => {
-      if (activeFilter !== 'All' && u.Status !== activeFilter) return false;
-      if (!q) return true;
-
-      const name = (u.FullName || '').toLowerCase();
-      const id = (u.UserId || '').toLowerCase();
-      const code = (u.CustomerCode || '').toLowerCase();
-      const mobile = (u.MobileNumber || '').toLowerCase();
-      const altMobile = (u.AlternateMobileNumber || '').toLowerCase();
-      const email = (u.Email || '').toLowerCase();
-      const aadhaar = (u.AadhaarNumber || '').toLowerCase();
-      const pan = (u.PANNumber || '').toLowerCase();
-      const city = (u.City || '').toLowerCase();
-      const state = (u.State || '').toLowerCase();
-
-      return (
-        name.includes(q) ||
-        id.includes(q) ||
-        code.includes(q) ||
-        mobile.includes(q) ||
-        altMobile.includes(q) ||
-        email.includes(q) ||
-        aadhaar.includes(q) ||
-        pan.includes(q) ||
-        city.includes(q) ||
-        state.includes(q)
-      );
-    });
-
-    const idNum = (u: User) => parseInt(String(u.UserId || '').replace(/\D/g, ''), 10) || 0;
-
-    return [...filtered].sort((a, b) => {
-      switch (sortOption) {
-        case 'Oldest First':
-          return idNum(a) - idNum(b);
-        case 'Name (A-Z)':
-          return (a.FullName || '').localeCompare(b.FullName || '');
-        case 'Name (Z-A)':
-          return (b.FullName || '').localeCompare(a.FullName || '');
-        case 'Loans (High-Low)': {
-          const lA = userStatsMap.get(a.UserId)?.loanCount || 0;
-          const lB = userStatsMap.get(b.UserId)?.loanCount || 0;
-          return lB - lA;
-        }
-        case 'Weight (High-Low)': {
-          const wA = userStatsMap.get(a.UserId)?.goldWeight || 0;
-          const wB = userStatsMap.get(b.UserId)?.goldWeight || 0;
-          return wB - wA;
-        }
-        case 'Newest First':
-        default:
-          return idNum(b) - idNum(a);
-      }
-    });
-  }, [store.users, activeFilter, searchQuery, sortOption, userStatsMap]);
+  const filteredUsers = useMemo(
+    () => sortUsers(filterUsers(store.users, searchQuery, activeFilter), sortOption, userStatsMap),
+    [store.users, activeFilter, searchQuery, sortOption, userStatsMap]
+  );
 
   // Back Button Navigation
   useEffect(() => {
@@ -197,7 +147,7 @@ export default function UsersScreen() {
   const handleAddPress = () => {
     setSelectedUser(null);
     setFilesPayload([]);
-    const generatedCode = `CUST-${String(100 + store.users.length + 1).padStart(3, '0')}`;
+    const generatedCode = generateCustomerCode(store.users.length);
     setForm({
       FullName: '',
       FatherHusbandName: '',

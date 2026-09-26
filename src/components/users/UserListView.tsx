@@ -7,16 +7,16 @@ import { OptionPickerModal } from '../ornaments/OptionPickerModal';
 import { formatPhoneNumber, USER_SORT_OPTIONS } from '../../mock/userMockExtras';
 import { getDriveImageUrl } from '../../services/api';
 import { User } from '../../types';
-import { getUserLastActive } from '../../utils/calculations';
+import { getUserLastActive, UserStats, UserStatusFilter } from '../../utils/userOrnamentCalculations';
 import { getAvatarColor, getInitials } from './userAvatar';
 import { UserStatusBadge } from './UserStatusBadge';
 import { useUsersStyles } from './usersStyles';
 
-export type UserStatusFilter = 'All' | 'Active' | 'Inactive';
+export type { UserStatusFilter };
 
 interface UserListViewProps {
   filteredUsers: User[];
-  userStatsMap: Map<string, { loanCount: number; goldWeight: number }>;
+  userStatsMap: Map<string, UserStats>;
   totalCount: number;
   activeCount: number;
   inactiveCount: number;

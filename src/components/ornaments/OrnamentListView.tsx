@@ -5,13 +5,14 @@ import { RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDriveImageUrl } from '../../services/api';
 import { Ornament } from '../../types';
+import { getOrnamentCardFigures, OrnamentStatusFilter } from '../../utils/userOrnamentCalculations';
 import { OptionPickerModal } from './OptionPickerModal';
 import { OrnamentStatusBadge } from './OrnamentStatusBadge';
 import { useOrnamentsStyles } from './ornamentsStyles';
 
 export const ORNAMENT_SORT_OPTIONS = ['Newest First', 'Oldest First', 'Name (A-Z)', 'Name (Z-A)', 'Weight (High-Low)', 'Weight (Low-High)'];
 
-export type OrnamentStatusFilter = 'All' | 'Available' | 'Pledged';
+export type { OrnamentStatusFilter };
 
 interface OrnamentListViewProps {
   filteredOrnaments: Ornament[];
@@ -159,10 +160,7 @@ export function OrnamentListView({
             const directUrl = firstImg ? getDriveImageUrl(firstImg) : '';
             const isPledged = orn.Status === 'Pledged';
             const loanNum = getLoanNumber(orn);
-            const weight = Number(orn.NetWeight || orn.MetalWeight || orn.GrossWeight || 0);
-            const weightVal = weight > 0 ? weight.toFixed(3) : '-';
-            const price = Number(orn.TotalPrice || orn.BuyingCost || orn.MarketValue || 0);
-            const priceVal = price > 0 ? price.toLocaleString('en-IN') : '-';
+            const { weightVal, priceVal } = getOrnamentCardFigures(orn);
 
             return (
               <TouchableOpacity

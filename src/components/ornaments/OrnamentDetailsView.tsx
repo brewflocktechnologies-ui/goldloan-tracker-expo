@@ -8,6 +8,7 @@ import { useToast } from '../../context/ToastContext';
 import { getDriveImageUrl } from '../../services/api';
 import { useAppStore } from '../../services/store';
 import { Ornament } from '../../types';
+import { getOrnamentDetailFigures } from '../../utils/userOrnamentCalculations';
 import { OrnamentOptionsMenu, OrnamentOptionsMenuHandle } from './OrnamentOptionsMenu';
 import { OrnamentStatusBadge } from './OrnamentStatusBadge';
 import { pickOrnamentImages } from './pickOrnamentImages';
@@ -48,17 +49,8 @@ export function OrnamentDetailsView({
     : [];
   const currentPhoto = detailImages[activePhotoIdx] || detailImages[0];
 
-  const netWt = Number(selectedOrn.NetWeight || selectedOrn.MetalWeight || 0).toFixed(3);
-  const grossWt = Number(selectedOrn.GrossWeight || 0).toFixed(3);
-  const stoneWt = Number(selectedOrn.StoneWeight || 0).toFixed(3);
-  const metalWt = Number(selectedOrn.MetalWeight || selectedOrn.NetWeight || 0).toFixed(3);
-  const buyPrice = selectedOrn.BuyingPricePerGram || null;
-  const buyTotal = selectedOrn.BuyingCost || (buyPrice && parseFloat(netWt) > 0 ? parseFloat(netWt) * buyPrice : null);
-  const estVal = selectedOrn.EstimatedValue || null;
-  const mktVal = selectedOrn.MarketValue || null;
-  const liveVal = parseFloat(netWt) > 0 ? Math.round(parseFloat(netWt) * liveRate22k) : null;
-  const apprVal = selectedOrn.AppreciationValue || (buyTotal && mktVal ? mktVal - buyTotal : null);
-  const apprPct = selectedOrn.AppreciationPercentage || (buyTotal && apprVal ? (apprVal / buyTotal) * 100 : null);
+  const { netWt, grossWt, stoneWt, metalWt, buyPrice, buyTotal, estVal, mktVal, liveVal, apprVal, apprPct } =
+    getOrnamentDetailFigures(selectedOrn, liveRate22k);
 
   const handleCopyId = () => {
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {

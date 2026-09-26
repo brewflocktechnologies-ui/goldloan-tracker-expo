@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { parseDateString } from '../utils/calculations';
+import { parseDateString } from '../utils/userOrnamentCalculations';
 
 interface DatePickerModalProps {
   visible: boolean;

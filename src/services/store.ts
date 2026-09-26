@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BankAccount, DashboardData, GoldRateData, InitialSyncData, Loan, Ornament, Payment, User } from '../types';
 import { api } from './api';
+import { calculateOrnamentFigures, generateCustomerCode } from '../utils/userOrnamentCalculations';
 import { cache, CacheTTL } from './cache';
 
 const defaultGoldRates: GoldRateData = {
@@ -348,7 +349,7 @@ export function useAppStore() {
     const tempId = nextId('U', usersState, 'UserId');
     const newUser: User = {
       UserId: tempId,
-      CustomerCode: userData.CustomerCode || `CUST-${100 + usersState.length + 1}`,
+      CustomerCode: userData.CustomerCode || generateCustomerCode(usersState.length),
       FullName: userData.FullName || 'New Customer',
       FatherHusbandName: userData.FatherHusbandName || '',
       MobileNumber: userData.MobileNumber || '',
@@ -467,18 +468,8 @@ export function useAppStore() {
 
   const addOrnament = (ornData: Partial<Ornament> & { files?: any[] }) => {
     const tempId = nextId('ORN', ornamentsState, 'OrnamentId');
-    const gross = Number(ornData.GrossWeight) || 0;
-    const stone = Number(ornData.StoneWeight) || 0;
-    const metal = ornData.MetalWeight !== undefined && ornData.MetalWeight !== null 
-      ? Number(ornData.MetalWeight) 
-      : Math.max(0, gross - stone);
-    const net = metal;
-    const buyingPrice = Number(ornData.BuyingPricePerGram) || 0;
-    const currentPrice = Number(ornData.CurrentPricePerGram) || 0;
-    const buyingCost = Math.round(net * buyingPrice * 100) / 100;
-    const marketValue = Math.round(net * currentPrice * 100) / 100;
-    const appreciationValue = Math.round((marketValue - buyingCost) * 100) / 100;
-    const appreciationPercentage = buyingCost > 0 ? Math.round(((appreciationValue / buyingCost) * 100) * 100) / 100 : 0;
+    const { gross, stone, metal, net, buyingPrice, currentPrice, buyingCost, marketValue, appreciationValue, appreciationPercentage } =
+      calculateOrnamentFigures(ornData);
 
     const newOrn: Ornament = {
       OrnamentId: tempId,
@@ -526,18 +517,8 @@ export function useAppStore() {
     ornamentsState = ornamentsState.map(o => {
       if (o.OrnamentId === ornId) {
         const merged = { ...o, ...updated };
-        const gross = Number(merged.GrossWeight) || 0;
-        const stone = Number(merged.StoneWeight) || 0;
-        const metal = merged.MetalWeight !== undefined && merged.MetalWeight !== null 
-          ? Number(merged.MetalWeight) 
-          : Math.max(0, gross - stone);
-        const net = metal;
-        const buyingPrice = Number(merged.BuyingPricePerGram) || 0;
-        const currentPrice = Number(merged.CurrentPricePerGram) || 0;
-        const buyingCost = Math.round(net * buyingPrice * 100) / 100;
-        const marketValue = Math.round(net * currentPrice * 100) / 100;
-        const apprVal = Math.round((marketValue - buyingCost) * 100) / 100;
-        const apprPct = buyingCost > 0 ? Math.round(((apprVal / buyingCost) * 100) * 100) / 100 : 0;
+        const { gross, stone, metal, net, buyingCost, marketValue, appreciationValue: apprVal, appreciationPercentage: apprPct } =
+          calculateOrnamentFigures(merged);
 
         return {
           ...merged,

@@ -9,8 +9,6 @@ import { LoanCard } from '../LoanCard';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import {
-  ExtraUserBankAccount,
-  ExtraUserLoan,
   formatMaskedAadhaar,
   formatMaskedPAN,
   formatPhoneNumber,
@@ -19,13 +17,11 @@ import { getDriveImageUrl } from '../../services/api';
 import { useAppStore } from '../../services/store';
 import { User } from '../../types';
 import {
+  buildUserBankDisplay,
+  buildUserLoanDisplay,
   calculateAge,
-  calculateAvailableLimit,
-  calculateDueBadge,
-  calculateOutstandingAmount,
-  calculateUtilizationPercentage,
   formatDisplayDOB,
-} from '../../utils/calculations';
+} from '../../utils/userOrnamentCalculations';
 import { getAvatarColor, getInitials } from './userAvatar';
 import { UserOptionsMenu, UserOptionsMenuHandle } from './UserOptionsMenu';
 import { UserStatusBadge } from './UserStatusBadge';
@@ -74,60 +70,9 @@ export function UserDetailsView({
   const avatarTone = getAvatarColor(selectedUser.FullName);
   const initials = getInitials(selectedUser.FullName);
 
-  // Bank accounts for this user — real data only; blank fields show '—', not a fake value.
-  const userBanks = store.bankAccounts.filter(b => b.UserId === selectedUser.UserId);
-  const displayBanks: ExtraUserBankAccount[] = userBanks.map(b => ({
-    BankAccountId: b.BankAccountId,
-    UserId: b.UserId,
-    BankName: b.BankName || '—',
-    AccountType: b.AccountType || '—',
-    BranchName: b.BranchName || '—',
-    City: b.City || '',
-    PassbookImage: b.PassbookImage || '',
-    AccountNumber: b.AccountNumber || '—',
-    IFSCCode: b.IFSCCode || '—',
-    AccountHolderName: b.AccountHolderName || selectedUser.FullName,
-    UPI_ID: b.UPI_ID || '—',
-    Status: b.Status === 'Inactive' ? 'Inactive' : 'Active',
-    MaxLoanAmount: b.MaxLoanAmount || 0,
-    UtilizedLoanAmount: b.UtilizedLoanAmount || 0,
-    AvailableLoanAmount: calculateAvailableLimit(b),
-    UtilizationPercentage: calculateUtilizationPercentage(b),
-  }));
-
-  // Loans for this user — real data only. DueBadgeText is computed for real from the
-  // real DueDate column (was previously a hardcoded "12 days left" / "18 days overdue").
-  // OutstandingAmount has no backing sheet field or payments-based calc anywhere in the
-  // app yet, so it's the one value still derived rather than real — flagged "(mock)" in the UI.
-  const userLoans = store.loans.filter(l => l.UserId === selectedUser.UserId);
-  const displayLoans: ExtraUserLoan[] = userLoans.map(l => {
-    const loanOrns = store.ornaments.filter(o => (l.ornamentIds || []).includes(o.OrnamentId));
-    let firstPhoto = loanOrns.find(o => o.OrnamentImages)?.OrnamentImages?.split('|')?.[0]?.trim() || '';
-    if (!firstPhoto && store.ornaments.length > 0) {
-      firstPhoto = store.ornaments.find(o => o.OrnamentImages)?.OrnamentImages?.split('|')?.[0]?.trim() || '';
-    }
-    const ornCount = (l.ornamentIds || []).length || loanOrns.length;
-    const isOverdue = l.LoanStatus === 'Overdue';
-    const dueBadge = calculateDueBadge(l.DueDate, l.LoanStatus);
-    const totalWeight = (l.NetWeight || l.GrossWeight) || loanOrns.reduce((sum, o) => sum + (o.NetWeight || o.GrossWeight || 0), 0);
-
-    return {
-      LoanId: l.LoanId,
-      LoanNumber: l.LoanNumber || `LN-${l.LoanId}`,
-      LoanDate: l.LoanDate || '—',
-      DueDate: l.DueDate || '—',
-      Status: isOverdue ? 'Overdue' : (l.LoanStatus === 'Closed' ? 'Closed' : 'Active'),
-      LoanAmount: l.LoanAmount || 0,
-      OutstandingAmount: calculateOutstandingAmount(l),
-      DueBadgeText: dueBadge.text,
-      DueBadgeType: dueBadge.type,
-      OrnamentsCount: ornCount,
-      TotalWeightGrams: totalWeight,
-      InterestRateText: `${l.InterestRate || 0}% p.a.`,
-      InterestType: l.InterestType || 'Simple',
-      OrnamentImageUri: firstPhoto,
-    };
-  });
+  // Real data only — blank fields show '—', not a fake value (see the display builders).
+  const displayBanks = buildUserBankDisplay(store.bankAccounts, selectedUser);
+  const displayLoans = buildUserLoanDisplay(store.loans, store.ornaments, selectedUser.UserId);
 
   return (
     <View style={styles.subScreenContainer}>
