@@ -602,6 +602,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       backgroundColor: isDark ? '#0f172a' : '#ffffff',
       borderRadius: 18,
       padding: 16,
+      marginBottom: 16,
       borderWidth: 1,
       borderColor: isDark ? '#1e293b' : '#e2e8f0',
       shadowColor: '#000',
