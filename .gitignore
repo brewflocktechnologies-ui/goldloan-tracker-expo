@@ -45,3 +45,6 @@ example
 # environment variables
 .env
 .env.production
+
+# Jest coverage output
+coverage/
