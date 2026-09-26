@@ -10,7 +10,7 @@ import {
   formatDisplayDOB,
   formatInputDOB,
   getUserLastActive,
-} from '../../src/utils/calculations';
+} from '../../src/utils/userOrnamentCalculations';
 
 describe('formatPhoneNumber', () => {
   it('formats a 10-digit number with +91', () => {
