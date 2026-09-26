@@ -185,9 +185,11 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
+      flexGrow: 1,
       paddingVertical: 2,
     },
     filterPill: {
+      flex: 1,
       paddingHorizontal: 16,
       paddingVertical: 7,
       borderRadius: 20,
