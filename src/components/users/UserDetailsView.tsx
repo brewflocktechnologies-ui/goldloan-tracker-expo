@@ -511,16 +511,14 @@ export function UserDetailsView({
         )}
       </ScrollView>
 
-      {/* Floating Action Button for Adding Loan */}
-      {activeTab === 'Loans' && (
-        <TouchableOpacity
+      {/* Add icon for the Bank Accounts and Loans tabs (visual only — no action wired yet) */}
+      {(activeTab === 'Bank Accounts' || activeTab === 'Loans') && (
+        <View
           style={styles.loanFabBtn}
-          onPress={() => router.push('/loans/new' as any)}
-          activeOpacity={0.85}
-          accessibilityLabel="Add New Loan"
+          accessibilityLabel={activeTab === 'Loans' ? 'Add New Loan' : 'Add Bank Account'}
         >
           <Ionicons name="add" size={28} color="#ffffff" />
-        </TouchableOpacity>
+        </View>
       )}
 
       {/* Delete Confirmation Modal */}

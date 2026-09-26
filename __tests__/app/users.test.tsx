@@ -277,16 +277,21 @@ describe('UsersScreen — details view', () => {
     expect(screen.getByText('No bank accounts on file')).toBeTruthy();
   });
 
-  it('switches to the Loans tab and shows the add-loan button that opens the new loan screen', () => {
+  it('shows an add icon on the Bank Accounts and Loans tabs only, without navigating anywhere', () => {
     renderScreen();
     openDetails('Ravi Kumar');
     expect(screen.queryByLabelText('Add New Loan')).toBeNull();
+    expect(screen.queryByLabelText('Add Bank Account')).toBeNull();
+
+    fireEvent.press(screen.getByText('Bank Accounts'));
+    fireEvent.press(screen.getByLabelText('Add Bank Account'));
 
     fireEvent.press(screen.getByText('Loans'));
     expect(screen.getByText('Loans (2)')).toBeTruthy();
-
+    expect(screen.queryByLabelText('Add Bank Account')).toBeNull();
     fireEvent.press(screen.getByLabelText('Add New Loan'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/loans/new');
+
+    expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
   it('shows an empty message on the Loans tab when there are none', () => {
