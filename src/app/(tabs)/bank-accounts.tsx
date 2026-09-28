@@ -2,23 +2,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    Platform, RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  Platform, RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Badge } from '../../components/Badge';
+import { BankCard } from '../../components/BankCard';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Column, DataTable } from '../../components/DataTable';
 import { FilePayload, ImagePickerField } from '../../components/ImagePickerField';
 import { ImageViewModal } from '../../components/ImageViewModal';
-import { MobileCard } from '../../components/MobileCard';
 import { ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -334,110 +334,16 @@ export default function BankAccountsScreen() {
               upi.includes(normQuery)
             );
           }}
-          renderMobileCard={(b) => {
-            const directUrl = getDriveImageUrl(b.PassbookImage);
-            const availAmt = b.AvailableLoanAmount !== undefined 
-              ? b.AvailableLoanAmount 
-              : Math.max(0, (b.MaxLoanAmount || 0) - (b.UtilizedLoanAmount || 0));
-            const maskedAcc = b.AccountNumber && b.AccountNumber.length >= 4 
-              ? `•••• ${b.AccountNumber.slice(-4)}` 
-              : (b.AccountNumber || '—');
-
-            return (
-              <MobileCard
-                onPress={() => openDetailModal(b)}
-                identifier={
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                    <Ionicons name="business-outline" size={14} color={colors.primaryDark} />
-                    <Text style={[styles.cellText, { fontWeight: '700', color: colors.primaryDark, fontSize: 13 }]} numberOfLines={1}>
-                      {b.BankName}
-                    </Text>
-                    {b.BankAccountId ? (
-                      <Text style={{ color: colors.textMuted, fontSize: 11 }}> (#{b.BankAccountId})</Text>
-                    ) : null}
-                  </View>
-                }
-                badges={
-                  <Badge 
-                    label={b.Status} 
-                    variant={b.Status === 'Active' ? 'success' : 'default'} 
-                    size="sm" 
-                  />
-                }
-                avatar={
-                  b.PassbookImage ? (
-                    <TouchableOpacity onPress={() => b.PassbookImage && setPreviewImageUrl(b.PassbookImage)}>
-                      <Image
-                        source={{ uri: directUrl || b.PassbookImage }}
-                        style={styles.cardThumb}
-                        contentFit="cover"
-                      />
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.miniAvatar}>
-                      <Ionicons name="card" size={16} color={colors.primaryDark} />
-                    </View>
-                  )
-                }
-                title={b.AccountHolderName}
-                subtitle={b.City ? `${b.BankName} • ${b.City}` : b.BankName}
-                metrics={[
-                  {
-                    label: 'Account Number',
-                    value: b.AccountNumber || '—',
-                    highlighted: true,
-                  },
-                  {
-                    label: 'Available Limit',
-                    value: `₹${availAmt.toLocaleString('en-IN')}`,
-                    highlighted: true,
-                    color: colors.success,
-                  },
-                  {
-                    label: 'Max Loan Limit',
-                    value: `₹${(b.MaxLoanAmount || 0).toLocaleString('en-IN')}`,
-                  },
-                  {
-                    label: 'Utilized Amount',
-                    value: `₹${(b.UtilizedLoanAmount || 0).toLocaleString('en-IN')}`,
-                    color: (b.UtilizedLoanAmount || 0) > 0 ? colors.danger : undefined,
-                  },
-                  {
-                    label: 'City / Location',
-                    value: b.City || '—',
-                  },
-                  {
-                    label: 'Branch Name',
-                    value: b.BranchName || '—',
-                  },
-                  {
-                    label: 'IFSC Code',
-                    value: b.IFSCCode || '—',
-                  },
-                  {
-                    label: 'Account Status',
-                    value: b.Status || 'Active',
-                    color: b.Status === 'Active' ? colors.success : colors.textMuted,
-                  },
-                ]}
-                viewLabel="View details"
-                onViewPress={() => openDetailModal(b)}
-                menuActions={isSuperAdmin ? [
-                  {
-                    label: 'Edit Bank Account',
-                    icon: 'pencil-outline',
-                    onPress: () => openEditModal(b),
-                  },
-                  {
-                    label: 'Delete Bank Account',
-                    icon: 'trash-outline',
-                    isDestructive: true,
-                    onPress: () => handleDelete(b),
-                  },
-                ] : undefined}
-              />
-            );
-          }}
+          renderMobileCard={(b) => (
+            <BankCard
+              account={b}
+              onPress={() => openDetailModal(b)}
+              onViewDetails={() => openDetailModal(b)}
+              onEdit={isSuperAdmin ? () => openEditModal(b) : undefined}
+              onDelete={isSuperAdmin ? () => handleDelete(b) : undefined}
+              onImagePress={(img) => setPreviewImageUrl(img)}
+            />
+          )}
         />
       </ScrollView>
 

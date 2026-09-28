@@ -46,10 +46,11 @@ const NAV_ITEMS: NavItem[] = [
   {
     name: 'users',
     route: '/(tabs)/users',
-    title: 'Customers',
-    shortTitle: 'Customers',
-    icon: 'people-outline',
-    activeIcon: 'people',
+    title: 'Users',
+    shortTitle: 'Users',
+    icon: 'account-group-outline',
+    activeIcon: 'account-group-outline',
+    iconSet: 'MaterialCommunityIcons',
   },
   {
     name: 'bank-accounts',
@@ -258,7 +259,7 @@ function TabLayoutInner() {
                     <View style={styles.desktopNavIconBox}>
                       {item.iconSet === 'MaterialCommunityIcons' ? (
                         <MaterialCommunityIcons
-                          name={item.icon as any}
+                          name={(active ? item.activeIcon : item.icon) as any}
                           size={20}
                           color={active ? (isDark ? '#fbbf24' : colors.primaryDark) : colors.textSecondary}
                         />
@@ -445,7 +446,7 @@ function TabLayoutInner() {
                     <View style={[styles.bottomNavIconWrapper, active && styles.bottomNavIconWrapperActive]}>
                       {item.iconSet === 'MaterialCommunityIcons' ? (
                         <MaterialCommunityIcons
-                          name={item.icon as any}
+                          name={(active ? item.activeIcon : item.icon) as any}
                           size={22}
                           color={active ? (isDark ? '#fbbf24' : colors.primaryDark) : colors.textSecondary}
                         />
@@ -466,6 +467,7 @@ function TabLayoutInner() {
                     >
                       {item.shortTitle}
                     </Text>
+                    <View style={[styles.activeTabUnderline, !active && styles.inactiveTabUnderline]} />
                   </TouchableOpacity>
                 );
               })}
@@ -821,14 +823,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     minWidth: 0,
   },
   bottomNavIconWrapper: {
-    paddingHorizontal: 12,
-    paddingVertical: 3,
-    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   bottomNavIconWrapperActive: {
-    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.16)' : 'rgba(217, 119, 6, 0.12)',
+    backgroundColor: 'transparent',
   },
   bottomNavText: {
     fontSize: 10,
@@ -840,5 +841,15 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   bottomNavTextActive: {
     fontWeight: '800',
     color: isDark ? '#fbbf24' : colors.primaryDark,
+  },
+  activeTabUnderline: {
+    width: 28,
+    height: 2.5,
+    borderRadius: 2,
+    backgroundColor: isDark ? '#fbbf24' : colors.primaryDark,
+    marginTop: 3,
+  },
+  inactiveTabUnderline: {
+    backgroundColor: 'transparent',
   },
 });

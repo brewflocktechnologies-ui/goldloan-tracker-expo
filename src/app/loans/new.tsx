@@ -19,7 +19,6 @@ export default function NewLoanScreen() {
   const { isSuperAdmin } = useAuth();
   const store = useAppStore();
   const users = store.users;
-  const bankAccounts = store.bankAccounts.filter(bank => bank.UserId === form.UserId && bank.Status === 'Active');
   const ornaments = store.ornaments.filter(o => o.Status === 'Available');
   const [selectedOrnaments, setSelectedOrnaments] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -34,6 +33,9 @@ export default function NewLoanScreen() {
     LoanDate: new Date().toISOString().split('T')[0],
     Remarks: '',
   });
+
+  // Derived from `form`, so it must be declared after it (using it earlier throws at render).
+  const bankAccounts = store.bankAccounts.filter(bank => bank.UserId === form.UserId && bank.Status === 'Active');
 
   useEffect(() => {
     if (!form.UserId && users[0]) setForm(p => ({ ...p, UserId: users[0].UserId }));
