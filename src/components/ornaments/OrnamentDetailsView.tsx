@@ -110,12 +110,14 @@ export function OrnamentDetailsView({
                   <TouchableOpacity
                     onPress={() => setActivePhotoIdx(p => p > 0 ? p - 1 : detailImages.length - 1)}
                     style={[styles.arrowBtn, styles.arrowBtnLeft]}
+                    accessibilityLabel="Previous photo"
                   >
                     <OrnamentIcon name="arrow-left-s" size={18} color="#1e293b" />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setActivePhotoIdx(p => p < detailImages.length - 1 ? p + 1 : 0)}
                     style={[styles.arrowBtn, styles.arrowBtnRight]}
+                    accessibilityLabel="Next photo"
                   >
                     <UserIcon name="arrow-right" size={18} color="#1e293b" />
                   </TouchableOpacity>

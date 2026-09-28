@@ -203,12 +203,12 @@ describe('Ornament details — photo gallery', () => {
       screen.UNSAFE_getAllByType(require('expo-image').Image).map(i => i.props.source?.uri);
 
     expect(mainUri()[0]).toBe('https://drive.example/p1');
-    fireEvent.press(screen.getByText('chevron-forward'));
+    fireEvent.press(screen.getByLabelText('Next photo'));
     expect(mainUri()[0]).toBe('https://drive.example/p2');
-    fireEvent.press(screen.getByText('chevron-back'));
-    fireEvent.press(screen.getByText('chevron-back'));
+    fireEvent.press(screen.getByLabelText('Previous photo'));
+    fireEvent.press(screen.getByLabelText('Previous photo'));
     expect(mainUri()[0]).toBe('https://drive.example/p4');
-    fireEvent.press(screen.getByText('chevron-forward'));
+    fireEvent.press(screen.getByLabelText('Next photo'));
     expect(mainUri()[0]).toBe('https://drive.example/p1');
   });
 

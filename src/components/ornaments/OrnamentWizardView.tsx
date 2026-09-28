@@ -106,7 +106,7 @@ export function OrnamentWizardView({
     <View style={styles.subScreenContainer}>
       {/* Header */}
       <View style={[styles.detailHeader, { paddingTop: Platform.OS === 'android' ? 14 : 10 }]}>
-        <TouchableOpacity onPress={onBackStep} style={styles.headerBackBtn}>
+        <TouchableOpacity onPress={onBackStep} style={styles.headerBackBtn} accessibilityLabel="Go back a step">
           <OrnamentIcon name="arrow-left-long" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
