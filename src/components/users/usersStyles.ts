@@ -38,41 +38,41 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     listTopSection: {
       backgroundColor: isDark ? '#0f172a' : '#d8edfa',
       paddingHorizontal: 16,
-      paddingTop: isCompact ? 4 : 10,
+      paddingTop: 0,
       paddingBottom: 2,
     },
     headerRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      marginBottom: isCompact ? 8 : 16,
-      paddingTop: 4,
+      marginBottom: isCompact ? 4 : 8,
+      paddingTop: 0,
     },
     headerLeft: {
       flex: 1,
     },
     screenTitle: {
-      fontSize: 26,
+      fontSize: 22,
       fontWeight: '800',
       color: isDark ? '#f8fafc' : '#0d172a',
       letterSpacing: -0.4,
     },
     screenSubtitle: {
-      fontSize: 13,
+      fontSize: 12,
       color: isDark ? '#94a3b8' : '#475569',
-      marginTop: 2,
+      marginTop: 1,
     },
     headerRight: {
       alignItems: 'flex-end',
       paddingLeft: 10,
     },
     totalLabel: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
       color: isDark ? '#94a3b8' : '#334155',
     },
     totalNumber: {
-      fontSize: 30,
+      fontSize: 24,
       fontWeight: '800',
       color: '#0284c7',
       marginTop: -2,
@@ -110,14 +110,14 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     // Search & Filter Card (matches Ornaments & Blueprint)
     searchCardWrapper: {
       position: 'relative',
-      paddingTop: 4,
-      paddingBottom: 10,
+      paddingTop: 2,
+      paddingBottom: 6,
       paddingHorizontal: 16,
       backgroundColor: isDark ? '#0f172a' : '#d8edfa',
     },
     sheetBackground: {
       position: 'absolute',
-      top: isCompact ? 52 : 64,
+      top: isCompact ? 44 : 54,
       left: 0,
       right: 0,
       bottom: 0,
@@ -128,7 +128,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     searchFilterCard: {
       backgroundColor: isDark ? '#1e293b' : '#ffffff',
       borderRadius: 20,
-      padding: isCompact ? 10 : 14,
+      padding: isCompact ? 8 : 10,
       maxWidth: 680,
       width: '100%',
       alignSelf: 'center',
@@ -143,7 +143,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     searchRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: isCompact ? 8 : 12,
+      marginBottom: isCompact ? 6 : 8,
     },
     boxySearchBox: {
       flex: 1,
@@ -154,7 +154,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       borderWidth: 1,
       borderColor: isDark ? '#334155' : '#e2e8f0',
       paddingHorizontal: 12,
-      height: isCompact ? 44 : 52,
+      height: isCompact ? 40 : 46,
     },
     searchIcon: {
       marginRight: 8,
@@ -190,8 +190,8 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     },
     filterPill: {
       flex: 1,
-      paddingHorizontal: 16,
-      paddingVertical: 7,
+      paddingHorizontal: 14,
+      paddingVertical: 5,
       borderRadius: 20,
       backgroundColor: isDark ? '#0f172a' : '#ffffff',
       borderWidth: 1,
@@ -220,23 +220,23 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     },
     cardsScrollContent: {
       paddingHorizontal: 16,
-      paddingTop: 8,
-      paddingBottom: 20,
+      paddingTop: 6,
+      paddingBottom: 16,
       maxWidth: 680,
       width: '100%',
       alignSelf: 'center',
       backgroundColor: isDark ? '#090d16' : '#ffffff',
     },
     cardsList: {
-      gap: isCompact ? 8 : 12,
+      gap: isCompact ? 6 : 8,
     },
     listCard: {
       backgroundColor: isDark ? '#0f172a' : '#ffffff',
-      borderRadius: 18,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: isDark ? '#1e293b' : '#e8ecf4',
-      paddingHorizontal: 16,
-      paddingVertical: isCompact ? 10 : 14,
+      paddingHorizontal: 12,
+      paddingVertical: isCompact ? 8 : 10,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: isDark ? 0.2 : 0.04,
@@ -255,11 +255,11 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       marginRight: 10,
     },
     avatarContainer: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 38,
+      height: 38,
+      borderRadius: 19,
       overflow: 'hidden',
-      marginRight: 12,
+      marginRight: 10,
     },
     avatarImage: {
       width: '100%',
@@ -268,12 +268,12 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     avatarInitialsBox: {
       width: '100%',
       height: '100%',
-      borderRadius: 22,
+      borderRadius: 19,
       alignItems: 'center',
       justifyContent: 'center',
     },
     avatarInitialsText: {
-      fontSize: 16,
+      fontSize: 14,
       fontWeight: '700',
     },
     cardIdentityCol: {
@@ -281,14 +281,14 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       flex: 1,
     },
     listCardTitle: {
-      fontSize: 16,
+      fontSize: 14,
       fontWeight: '800',
       color: isDark ? '#f8fafc' : '#0f172a',
       letterSpacing: -0.2,
-      marginBottom: 3,
+      marginBottom: 2,
     },
     cardIdText: {
-      fontSize: 12.5,
+      fontSize: 11.5,
       fontWeight: '500',
       color: isDark ? '#94a3b8' : '#64748b',
     },
@@ -299,10 +299,10 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginTop: isCompact ? 10 : 14,
+      marginTop: isCompact ? 6 : 8,
     },
     cardBottomLeftCol: {
-      gap: 7,
+      gap: 5,
       flex: 1,
       justifyContent: 'center',
     },
@@ -311,15 +311,15 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       alignItems: 'center',
     },
     cardInfoIcon: {
-      marginRight: 7,
+      marginRight: 6,
     },
     cardPhoneText: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
       color: isDark ? '#e2e8f0' : '#1e293b',
     },
     cardLastActiveText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '400',
       color: isDark ? '#94a3b8' : '#64748b',
     },
@@ -329,7 +329,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       justifyContent: 'flex-end',
     },
     cardStatsCol: {
-      gap: 7,
+      gap: 5,
       alignItems: 'flex-start',
     },
     cardStatRow: {
@@ -337,20 +337,20 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       alignItems: 'center',
     },
     cardStatIcon: {
-      marginRight: 6,
+      marginRight: 5,
     },
     goldBarIcon: {
-      width: 17,
-      height: 13,
-      marginRight: 6,
+      width: 15,
+      height: 11,
+      marginRight: 5,
     },
     cardStatText: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
       color: isDark ? '#f8fafc' : '#1e293b',
     },
     cardChevronIcon: {
-      marginLeft: 14,
+      marginLeft: 10,
     },
 
     // Hero Card in Customer Details
