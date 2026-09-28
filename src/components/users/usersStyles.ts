@@ -38,7 +38,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     listTopSection: {
       backgroundColor: isDark ? '#0f172a' : '#d8edfa',
       paddingHorizontal: 16,
-      paddingTop: 0,
+      paddingTop: 10,
       paddingBottom: 2,
     },
     headerRow: {

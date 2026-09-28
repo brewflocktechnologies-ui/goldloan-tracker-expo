@@ -31,7 +31,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   listTopSection: {
     backgroundColor: isDark ? '#0f172a' : '#d8edfa',
     paddingHorizontal: 16,
-    paddingTop: 0,
+    paddingTop: 10,
     paddingBottom: 2,
   },
   searchCardWrapper: {
