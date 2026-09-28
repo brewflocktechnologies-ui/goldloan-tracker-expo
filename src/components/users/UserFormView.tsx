@@ -1,11 +1,12 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { OrnamentIcon, UserIcon } from '@/components/Icon';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
 import { ActivityIndicator, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { DatePickerModal } from '../DatePickerModal';
-import { OptionPickerModal } from '../ornaments/OptionPickerModal';
 import { INDIAN_STATES, OCCUPATION_OPTIONS } from '../../mock/userMockExtras';
 import { getDriveImageUrl } from '../../services/api';
+import { DatePickerModal } from '../DatePickerModal';
+import { OptionPickerModal } from '../ornaments/OptionPickerModal';
 import { useUsersStyles } from './usersStyles';
 
 export type UserFormState = {
@@ -78,7 +79,7 @@ export function UserFormView({
           style={styles.headerBackBtn}
           accessibilityLabel="Back"
         >
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <UserIcon name="arrow-left-long" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
           <Text style={styles.headerTitle}>{isEdit ? 'Edit User' : 'Add User'}</Text>
@@ -98,7 +99,7 @@ export function UserFormView({
                 contentFit="cover"
               />
             ) : (
-              <MaterialCommunityIcons name="image-plus" size={28} color={isDark ? '#94a3b8' : '#64748b'} />
+              <UserIcon name="image-add" size={28} color={isDark ? '#94a3b8' : '#64748b'} />
             )}
           </View>
 
@@ -108,12 +109,12 @@ export function UserFormView({
 
             <View style={styles.photoButtonsRow}>
               <TouchableOpacity style={styles.photoActionBtn} onPress={onPickCamera} activeOpacity={0.8}>
-                <Ionicons name="camera-outline" size={16} color="#0284c7" style={{ marginRight: 6 }} />
+                <UserIcon name="camera" size={16} color="#0284c7" style={{ marginRight: 6 }} />
                 <Text style={styles.photoActionBtnText}>Camera</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.photoActionBtn} onPress={onPickGallery} activeOpacity={0.8}>
-                <Ionicons name="image-outline" size={16} color="#0284c7" style={{ marginRight: 6 }} />
+                <UserIcon name="image" size={16} color="#0284c7" style={{ marginRight: 6 }} />
                 <Text style={styles.photoActionBtnText}>Gallery</Text>
               </TouchableOpacity>
             </View>
@@ -125,7 +126,7 @@ export function UserFormView({
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <View style={styles.iconBox}>
-                <Ionicons name="person-outline" size={18} color="#0284c7" />
+                <UserIcon name="user" size={18} color="#0284c7" />
               </View>
               <Text style={styles.cardTitle}>Personal Information</Text>
             </View>
@@ -137,7 +138,7 @@ export function UserFormView({
                 Full Name <Text style={styles.requiredStar}>*</Text>
               </Text>
               <View style={styles.inputWithIconContainer}>
-                <Ionicons name="person-outline" size={18} color={isDark ? '#94a3b8' : '#64748b'} style={styles.inputLeadingIcon} />
+                <UserIcon name="user" size={18} color={isDark ? '#94a3b8' : '#64748b'} style={styles.inputLeadingIcon} />
                 <TextInput
                   style={styles.inputWithIcon}
                   placeholder="Enter full name"
@@ -153,7 +154,7 @@ export function UserFormView({
                 Father / Husband Name <Text style={styles.requiredStar}>*</Text>
               </Text>
               <View style={styles.inputWithIconContainer}>
-                <Ionicons name="person-outline" size={18} color={isDark ? '#94a3b8' : '#64748b'} style={styles.inputLeadingIcon} />
+                <UserIcon name="user" size={18} color={isDark ? '#94a3b8' : '#64748b'} style={styles.inputLeadingIcon} />
                 <TextInput
                   style={styles.inputWithIcon}
                   placeholder="Enter name"
@@ -173,7 +174,7 @@ export function UserFormView({
               <View style={styles.mobilePrefixGroup}>
                 <Ionicons name="call-outline" size={15} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 5 }} />
                 <Text style={styles.prefixText}>+91</Text>
-                <Ionicons name="chevron-down" size={12} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginLeft: 3 }} />
+                <OrnamentIcon name="arrow-down-s" size={12} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginLeft: 3 }} />
               </View>
               <View style={styles.prefixDivider} />
               <TextInput
@@ -208,7 +209,7 @@ export function UserFormView({
             <View style={[styles.fieldGroup, { flex: 1 }]}>
               <Text style={styles.inputLabel}>Email</Text>
               <View style={styles.inputWithIconContainer}>
-                <Ionicons name="mail-outline" size={18} color={isDark ? '#94a3b8' : '#64748b'} style={styles.inputLeadingIcon} />
+                <UserIcon name="mail" size={18} color={isDark ? '#94a3b8' : '#64748b'} style={styles.inputLeadingIcon} />
                 <TextInput
                   style={styles.inputWithIcon}
                   placeholder="Enter email address"
@@ -230,7 +231,7 @@ export function UserFormView({
                 accessibilityLabel="Choose Date of Birth"
                 accessibilityRole="button"
               >
-                <Ionicons name="calendar-outline" size={18} color={isDark ? '#94a3b8' : '#64748b'} style={styles.inputLeadingIcon} />
+                <UserIcon name="calendar" size={18} color={isDark ? '#94a3b8' : '#64748b'} style={styles.inputLeadingIcon} />
                 <Text
                   style={[styles.inputWithIconText, !form.DateOfBirth && styles.inputPlaceholderText]}
                   numberOfLines={1}
@@ -368,7 +369,7 @@ export function UserFormView({
                 }
               >
                 <Text style={styles.dropdownValue}>{form.State || 'Select state'}</Text>
-                <Ionicons name="chevron-down" size={16} color="#64748b" />
+                <OrnamentIcon name="arrow-down-s" size={16} color="#64748b" />
               </TouchableOpacity>
             </View>
           </View>
@@ -392,7 +393,7 @@ export function UserFormView({
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <View style={styles.iconBox}>
-                <Ionicons name="briefcase-outline" size={18} color="#0284c7" />
+                <UserIcon name="briefcase" size={18} color="#0284c7" />
               </View>
               <Text style={styles.cardTitle}>Occupation</Text>
             </View>
@@ -412,7 +413,7 @@ export function UserFormView({
               }
             >
               <Text style={styles.dropdownValue}>{form.Occupation || 'Select Occupation'}</Text>
-              <Ionicons name="chevron-down" size={16} color="#64748b" />
+              <OrnamentIcon name="arrow-down-s" size={16} color="#64748b" />
             </TouchableOpacity>
           </View>
         </View>

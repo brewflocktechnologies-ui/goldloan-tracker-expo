@@ -1,11 +1,9 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { OrnamentIcon, UserIcon } from '@/components/Icon';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Dispatch, RefObject, SetStateAction } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { BankCard } from '../BankCard';
-import { ConfirmModal } from '../ConfirmModal';
-import { LoanCard } from '../LoanCard';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -22,11 +20,14 @@ import {
   calculateAge,
   formatDisplayDOB,
 } from '../../utils/userOrnamentCalculations';
+import { BankCard } from '../BankCard';
+import { ConfirmModal } from '../ConfirmModal';
+import { LoanCard } from '../LoanCard';
+import { useContactActions } from './useContactActions';
 import { getAvatarColor, getInitials } from './userAvatar';
 import { UserOptionsMenu, UserOptionsMenuHandle } from './UserOptionsMenu';
-import { UserStatusBadge } from './UserStatusBadge';
-import { useContactActions } from './useContactActions';
 import { useUsersStyles } from './usersStyles';
+import { UserStatusBadge } from './UserStatusBadge';
 
 export type UserDetailsTab = 'Profile' | 'Bank Accounts' | 'Loans';
 
@@ -83,7 +84,7 @@ export function UserDetailsView({
           style={styles.headerBackBtn}
           accessibilityLabel="Go back to customer list"
         >
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <UserIcon name="arrow-left-long" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
           <Text style={styles.headerTitle}>Customer Details</Text>
@@ -124,7 +125,7 @@ export function UserDetailsView({
                 activeOpacity={0.85}
                 accessibilityLabel="Change customer photo"
               >
-                <Ionicons name="camera" size={13} color="#ffffff" />
+                <UserIcon name="camera" size={13} color="#ffffff" />
               </TouchableOpacity>
             </View>
 
@@ -182,7 +183,7 @@ export function UserDetailsView({
               activeOpacity={0.8}
               accessibilityLabel="WhatsApp Customer"
             >
-              <Ionicons name="logo-whatsapp" size={17} color={isDark ? '#34d399' : '#10b981'} />
+              <UserIcon name="whatsapp" size={17} />
               <Text style={styles.heroActionBtnText}>WhatsApp</Text>
             </TouchableOpacity>
           </View>
@@ -231,7 +232,7 @@ export function UserDetailsView({
             <View style={styles.profileSection}>
               <View style={styles.profileHeadingRow}>
                 <View style={styles.profileIconBox}>
-                  <Ionicons name="person-outline" size={17} color="#0284c7" />
+                  <UserIcon name="user" size={17} color="#0284c7" />
                 </View>
                 <Text style={styles.profileSectionTitle}>Personal Information</Text>
               </View>
@@ -399,7 +400,7 @@ export function UserDetailsView({
             <View style={[styles.profileSection, styles.profileSectionLast]}>
               <View style={styles.profileHeadingRow}>
                 <View style={styles.profileIconBox}>
-                  <Ionicons name="location-outline" size={17} color="#0284c7" />
+                  <UserIcon name="location" size={17} color="#0284c7" />
                 </View>
                 <Text style={styles.profileSectionTitle}>Address</Text>
               </View>
@@ -449,7 +450,7 @@ export function UserDetailsView({
         {activeTab === 'Bank Accounts' && (
           <View style={styles.tabContentArea}>
             <View style={styles.sectionHeaderRow}>
-              <MaterialCommunityIcons
+              <UserIcon
                 name="bank"
                 size={20}
                 color={isDark ? '#f8fafc' : '#0d172a'}
@@ -460,7 +461,7 @@ export function UserDetailsView({
 
             {displayBanks.length === 0 && (
               <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-                <MaterialCommunityIcons name="bank-outline" size={28} color={isDark ? '#475569' : '#cbd5e1'} />
+                <UserIcon name="bank" size={28} color={isDark ? '#475569' : '#cbd5e1'} />
                 <Text style={{ marginTop: 8, fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
                   No bank accounts on file
                 </Text>
@@ -492,7 +493,7 @@ export function UserDetailsView({
 
             {displayLoans.length === 0 && (
               <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-                <Ionicons name="document-text-outline" size={28} color={isDark ? '#475569' : '#cbd5e1'} />
+                <OrnamentIcon name="notes" size={28} color={isDark ? '#475569' : '#cbd5e1'} />
                 <Text style={{ marginTop: 8, fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
                   No loans on file
                 </Text>
@@ -517,7 +518,7 @@ export function UserDetailsView({
           style={styles.loanFabBtn}
           accessibilityLabel={activeTab === 'Loans' ? 'Add New Loan' : 'Add Bank Account'}
         >
-          <Ionicons name="add" size={28} color="#ffffff" />
+          <UserIcon name="add" size={28} color="#ffffff" />
         </View>
       )}
 

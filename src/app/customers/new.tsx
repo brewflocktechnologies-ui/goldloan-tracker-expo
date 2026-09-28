@@ -9,6 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAppStore } from '../../services/store';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { OrnamentIcon, UserIcon } from '@/components/Icon';
 
 export default function NewCustomerScreen() {
   const { colors, isDark } = useTheme();
@@ -63,7 +64,7 @@ export default function NewCustomerScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Ionicons name="lock-closed" size={48} color={colors.warning} style={{ marginBottom: 16 }} />
+          <OrnamentIcon name="lock" size={48} color={colors.warning} style={{ marginBottom: 16 }} />
           <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 8 }}>Read-Only Access</Text>
           <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginBottom: 20 }}>
             You are logged in with read-only permissions. Creating new customers requires SuperAdmin privileges.
@@ -218,7 +219,7 @@ export default function NewCustomerScreen() {
             <ActivityIndicator color="#ffffff" />
           ) : (
             <>
-              <Ionicons name="checkmark-circle" size={18} color="#ffffff" />
+              <UserIcon name="tick-01" size={18} color="#ffffff" />
               <Text style={styles.submitBtnText}>Save Customer</Text>
             </>
           )}

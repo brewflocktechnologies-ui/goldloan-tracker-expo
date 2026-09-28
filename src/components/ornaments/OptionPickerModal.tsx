@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { OrnamentIcon } from '@/components/Icon';
 
 interface OptionPickerModalProps {
   visible: boolean;
@@ -38,7 +39,7 @@ export function OptionPickerModal({
             {options.map(opt => (
               <TouchableOpacity key={opt} style={styles.pickerItem} onPress={() => onSelect(opt)}>
                 <Text style={styles.pickerItemText}>{opt}</Text>
-                {selectedValue === opt && <Ionicons name="checkmark" size={18} color="#0284c7" />}
+                {selectedValue === opt && <OrnamentIcon name="tick-01" size={18} color="#0284c7" />}
               </TouchableOpacity>
             ))}
           </ScrollView>

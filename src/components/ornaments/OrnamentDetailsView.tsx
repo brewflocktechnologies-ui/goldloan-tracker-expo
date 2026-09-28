@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, RefObject, SetStateAction } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { OrnamentIcon, UserIcon } from '@/components/Icon';
 import { ConfirmModal } from '../ConfirmModal';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -78,7 +79,7 @@ export function OrnamentDetailsView({
           style={styles.headerBackBtn}
           accessibilityLabel="Go back to list"
         >
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <OrnamentIcon name="arrow-left-long" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
           <Text style={styles.headerTitle}>Ornaments Details</Text>
@@ -109,14 +110,16 @@ export function OrnamentDetailsView({
                   <TouchableOpacity
                     onPress={() => setActivePhotoIdx(p => p > 0 ? p - 1 : detailImages.length - 1)}
                     style={[styles.arrowBtn, styles.arrowBtnLeft]}
+                    accessibilityLabel="Previous photo"
                   >
-                    <Ionicons name="chevron-back" size={18} color="#1e293b" />
+                    <OrnamentIcon name="arrow-left-s" size={18} color="#1e293b" />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setActivePhotoIdx(p => p < detailImages.length - 1 ? p + 1 : 0)}
                     style={[styles.arrowBtn, styles.arrowBtnRight]}
+                    accessibilityLabel="Next photo"
                   >
-                    <Ionicons name="chevron-forward" size={18} color="#1e293b" />
+                    <UserIcon name="arrow-right" size={18} color="#1e293b" />
                   </TouchableOpacity>
                 </>
               )}
@@ -133,7 +136,7 @@ export function OrnamentDetailsView({
                 </TouchableOpacity>
               ))}
               <TouchableOpacity onPress={handleAddPhotosToDetail} style={styles.addPhotoDashedBtn}>
-                <Ionicons name="camera-outline" size={20} color="#0284c7" />
+                <OrnamentIcon name="camera" size={20} color="#0284c7" />
                 <Text style={styles.addPhotoText}>Add Photos</Text>
               </TouchableOpacity>
             </View>
@@ -141,12 +144,12 @@ export function OrnamentDetailsView({
         ) : (
           <View style={styles.noPhotoCard}>
             <View style={styles.noPhotoIconCircle}>
-              <Ionicons name="image-outline" size={30} color="#0284c7" />
+              <UserIcon name="image" size={30} color="#0284c7" />
             </View>
             <Text style={styles.noPhotoTitle}>No photos linked from Code.gs</Text>
             <Text style={styles.noPhotoSubtitle}>Photos stored in Google Drive will appear here automatically</Text>
             <TouchableOpacity onPress={handleAddPhotosToDetail} style={styles.noPhotoUploadBtn}>
-              <Ionicons name="camera-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+              <OrnamentIcon name="camera" size={16} color="#ffffff" style={{ marginRight: 6 }} />
               <Text style={styles.noPhotoUploadBtnText}>Upload Photo</Text>
             </TouchableOpacity>
           </View>
@@ -158,7 +161,7 @@ export function OrnamentDetailsView({
             <Text style={styles.ornamentTitle}>{selectedOrn.OrnamentName}</Text>
             <TouchableOpacity onPress={handleCopyId} style={styles.idCopyRow}>
               <Text style={styles.ornamentIdText}>{selectedOrn.OrnamentId}</Text>
-              <Ionicons name="copy-outline" size={14} color="#64748b" style={{ marginLeft: 4 }} />
+              <OrnamentIcon name="copy" size={14} color="#64748b" style={{ marginLeft: 4 }} />
             </TouchableOpacity>
           </View>
 
@@ -204,7 +207,7 @@ export function OrnamentDetailsView({
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <View style={styles.iconBox}>
-                <Ionicons name="shield-checkmark-outline" size={18} color="#0284c7" />
+                <OrnamentIcon name="tag" size={18} color={isDark ? '#94a3b8' : '#64748b'} />
               </View>
               <Text style={styles.cardTitle}>Purity & Hallmark</Text>
             </View>
@@ -219,7 +222,7 @@ export function OrnamentDetailsView({
             <View style={styles.tableRow}>
               <Text style={styles.rowLabel}>Hallmark</Text>
               <View style={styles.verifiedRow}>
-                <Ionicons name="checkmark" size={16} color="#16a34a" />
+                <OrnamentIcon name="tick-01" size={16} color="#16a34a" />
                 <Text style={styles.verifiedText}>Verified</Text>
               </View>
             </View>
@@ -243,7 +246,7 @@ export function OrnamentDetailsView({
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <View style={styles.iconBox}>
-                <Ionicons name="business-outline" size={18} color="#0284c7" />
+                <OrnamentIcon name="bank" size={18} color={isDark ? '#94a3b8' : '#64748b'} />
               </View>
               <Text style={styles.cardTitle}>Valuation</Text>
             </View>
@@ -284,7 +287,7 @@ export function OrnamentDetailsView({
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <View style={styles.iconBox}>
-                <Ionicons name="information-circle-outline" size={18} color="#0284c7" />
+                <OrnamentIcon name="information" size={18} color="#0284c7" />
               </View>
               <Text style={styles.cardTitle}>Ornament Information</Text>
             </View>

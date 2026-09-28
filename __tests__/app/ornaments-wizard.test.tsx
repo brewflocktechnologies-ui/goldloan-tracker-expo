@@ -226,7 +226,7 @@ describe('OrnamentsScreen (add wizard)', () => {
     fireEvent.press(screen.getByText('← Back'));
     expect(screen.getByText('Basic Information')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('arrow-back'));
+    fireEvent.press(screen.getByLabelText('Go back a step'));
     expect(screen.getByText('Ornaments')).toBeTruthy(); // back on the list screen
   });
 

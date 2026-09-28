@@ -168,8 +168,8 @@ describe('OrnamentsScreen (details view)', () => {
 
     expect(screen.queryByText('No photos linked from Code.gs')).toBeNull();
     expect(screen.getByText('Add Photos')).toBeTruthy();
-    expect(screen.getByText('chevron-back')).toBeTruthy();
-    expect(screen.getByText('chevron-forward')).toBeTruthy();
+    expect(screen.getByLabelText('Previous photo')).toBeTruthy();
+    expect(screen.getByLabelText('Next photo')).toBeTruthy();
   });
 
   it('copies the ornament id and shows a toast', () => {
