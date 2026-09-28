@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
 import { ActivityIndicator, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { OrnamentIcon, UserIcon } from '@/components/Icon';
 import { getDriveImageUrl } from '../../services/api';
 import { User } from '../../types';
 import { sanitizeDecimalInput, sanitizeIntegerInput } from '../../utils/numericInput';
@@ -106,7 +107,7 @@ export function OrnamentWizardView({
       {/* Header */}
       <View style={[styles.detailHeader, { paddingTop: Platform.OS === 'android' ? 14 : 10 }]}>
         <TouchableOpacity onPress={onBackStep} style={styles.headerBackBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <OrnamentIcon name="arrow-left-long" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
           <Text style={styles.headerTitle}>{mode === 'edit' ? 'Edit Ornament' : 'Add ornaments'}</Text>
@@ -124,7 +125,7 @@ export function OrnamentWizardView({
             wizardStep > 1 && styles.stepCircleDone
           ]}>
             {wizardStep > 1 ? (
-              <Ionicons name="checkmark" size={14} color="#ffffff" />
+              <OrnamentIcon name="tick-01" size={14} color="#ffffff" />
             ) : (
               <Text style={[styles.stepNum, wizardStep === 1 && styles.stepNumActive]}>1</Text>
             )}
@@ -141,7 +142,7 @@ export function OrnamentWizardView({
             wizardStep > 2 && styles.stepCircleDone
           ]}>
             {wizardStep > 2 ? (
-              <Ionicons name="checkmark" size={14} color="#ffffff" />
+              <OrnamentIcon name="tick-01" size={14} color="#ffffff" />
             ) : (
               <Text style={[styles.stepNum, wizardStep === 2 && styles.stepNumActive]}>2</Text>
             )}
@@ -170,7 +171,7 @@ export function OrnamentWizardView({
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={styles.iconBox}>
-                    <Ionicons name="document-text-outline" size={18} color="#0284c7" />
+                    <OrnamentIcon name="notes" size={18} color="#0284c7" />
                   </View>
                   <View>
                     <Text style={styles.cardTitle}>Basic Information</Text>
@@ -190,7 +191,7 @@ export function OrnamentWizardView({
                   activeOpacity={0.7}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, paddingRight: 4 }}>
-                    <Ionicons name="person-outline" size={16} color={selectedUser ? '#0284c7' : '#94a3b8'} />
+                    <UserIcon name="user" size={16} color={selectedUser ? '#0284c7' : '#94a3b8'} />
                     <Text
                       style={[
                         styles.dropdownValue,
@@ -209,7 +210,7 @@ export function OrnamentWizardView({
                       <Ionicons name="close-circle" size={18} color="#94a3b8" />
                     </TouchableOpacity>
                   ) : (
-                    <Ionicons name="chevron-down" size={16} color="#64748b" />
+                    <OrnamentIcon name="arrow-down-s" size={16} color="#64748b" />
                   )}
                 </TouchableOpacity>
               </View>
@@ -233,7 +234,7 @@ export function OrnamentWizardView({
                     onPress={() => openDropdown('OrnamentType', 'Select Type', ['Traditional', 'Modern', 'Antique', 'Temple', 'Bridal', 'Casual'])}
                   >
                     <Text style={styles.dropdownValue}>{form.OrnamentType}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#64748b" />
+                    <OrnamentIcon name="arrow-down-s" size={16} color="#64748b" />
                   </TouchableOpacity>
                 </View>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
@@ -243,7 +244,7 @@ export function OrnamentWizardView({
                     onPress={() => openDropdown('OrnamentCategory', 'Select Category', ['Necklace', 'Bangles', 'Ring', 'Earrings', 'Chain', 'Bracelet', 'Coin', 'Pendant', 'Others'])}
                   >
                     <Text style={styles.dropdownValue}>{form.OrnamentCategory}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#64748b" />
+                    <OrnamentIcon name="arrow-down-s" size={16} color="#64748b" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -256,7 +257,7 @@ export function OrnamentWizardView({
                     onPress={() => openDropdown('Purity', 'Select Purity', ['22karate (91.6%)', '24karate (99.9%)', '18karate (75%)'])}
                   >
                     <Text style={styles.dropdownValue}>{form.Purity}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#64748b" />
+                    <OrnamentIcon name="arrow-down-s" size={16} color="#64748b" />
                   </TouchableOpacity>
                 </View>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
@@ -349,7 +350,7 @@ export function OrnamentWizardView({
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
                   <View style={styles.labelWithInfo}>
                     <Text style={styles.inputLabel}>Metal Weight (Net)</Text>
-                    <Ionicons name="information-circle-outline" size={13} color="#64748b" />
+                    <OrnamentIcon name="information" size={13} color="#64748b" />
                   </View>
                   <View style={[styles.unitInputBox, styles.readonlyInputBox]}>
                     <Text style={styles.readonlyInputText}>{net.toFixed(3)}</Text>
@@ -359,13 +360,13 @@ export function OrnamentWizardView({
                     <View style={styles.autoCalcBadge}>
                       <Text style={styles.autoCalcBadgeText}>Auto calculated</Text>
                     </View>
-                    <Ionicons name="lock-closed-outline" size={13} color={isDark ? '#94a3b8' : '#64748b'} />
+                    <OrnamentIcon name="lock" size={13} color={isDark ? '#94a3b8' : '#64748b'} />
                   </View>
                 </View>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
                   <View style={styles.labelWithInfo}>
                     <Text style={styles.inputLabel}>Net Weight</Text>
-                    <Ionicons name="information-circle-outline" size={13} color="#64748b" />
+                    <OrnamentIcon name="information" size={13} color="#64748b" />
                   </View>
                   <View style={[styles.unitInputBox, styles.readonlyInputBox]}>
                     <Text style={styles.readonlyInputText}>{net.toFixed(3)}</Text>
@@ -375,7 +376,7 @@ export function OrnamentWizardView({
                     <View style={styles.autoCalcBadge}>
                       <Text style={styles.autoCalcBadgeText}>Auto calculated</Text>
                     </View>
-                    <Ionicons name="lock-closed-outline" size={13} color={isDark ? '#94a3b8' : '#64748b'} />
+                    <OrnamentIcon name="lock" size={13} color={isDark ? '#94a3b8' : '#64748b'} />
                   </View>
                 </View>
               </View>
@@ -385,7 +386,7 @@ export function OrnamentWizardView({
               <View style={[styles.cardHeader, { alignItems: 'flex-start', gap: 10 }]}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={styles.iconBox}>
-                    <Ionicons name="bar-chart-outline" size={18} color="#0284c7" />
+                    <OrnamentIcon name="bar-chart-2" size={18} color="#0284c7" />
                   </View>
                   <View style={{ flex: 1, paddingRight: 4 }}>
                     <Text style={styles.cardTitle}>Valuation Details</Text>
@@ -435,7 +436,7 @@ export function OrnamentWizardView({
                 <View style={styles.calcTile}>
                   <View style={styles.calcTileTop}>
                     <Text style={styles.calcTileLabel}>Total Buying Value</Text>
-                    <Ionicons name="lock-closed" size={12} color="#94a3b8" />
+                    <OrnamentIcon name="lock" size={12} color="#94a3b8" />
                   </View>
                   <Text style={styles.calcTileValue}>₹ {totalBuyingValue.toLocaleString('en-IN')}</Text>
                   <Text style={styles.calcTileSub}>Auto calculated</Text>
@@ -443,7 +444,7 @@ export function OrnamentWizardView({
                 <View style={styles.calcTile}>
                   <View style={styles.calcTileTop}>
                     <Text style={styles.calcTileLabel}>Current Gold Value (Live)</Text>
-                    <Ionicons name="lock-closed" size={12} color="#94a3b8" />
+                    <OrnamentIcon name="lock" size={12} color="#94a3b8" />
                   </View>
                   <Text style={styles.calcTileValue}>₹ {currentGoldValueLive.toLocaleString('en-IN')}</Text>
                   <Text style={styles.calcTileSub}>Based on live gold rate</Text>
@@ -451,7 +452,7 @@ export function OrnamentWizardView({
                 <View style={styles.calcTile}>
                   <View style={styles.calcTileTop}>
                     <Text style={styles.calcTileLabel}>Market Value</Text>
-                    <Ionicons name="lock-closed" size={12} color="#94a3b8" />
+                    <OrnamentIcon name="lock" size={12} color="#94a3b8" />
                   </View>
                   <Text style={styles.calcTileValue}>₹ {marketValue.toLocaleString('en-IN')}</Text>
                   <Text style={styles.calcTileSub}>Auto calculated</Text>
@@ -459,7 +460,7 @@ export function OrnamentWizardView({
                 <View style={styles.calcTile}>
                   <View style={styles.calcTileTop}>
                     <Text style={styles.calcTileLabel}>Appreciation</Text>
-                    <Ionicons name="lock-closed" size={12} color="#94a3b8" />
+                    <OrnamentIcon name="lock" size={12} color="#94a3b8" />
                   </View>
                   <Text style={[styles.calcTileValue, styles.appreciationTileValue]}>
                     ↗ ₹ {Math.abs(appreciation).toLocaleString('en-IN')} (+{appreciationPct.toFixed(2)}%)
@@ -487,7 +488,7 @@ export function OrnamentWizardView({
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={styles.iconBox}>
-                    <Ionicons name="image-outline" size={18} color="#0284c7" />
+                    <UserIcon name="image" size={18} color="#0284c7" />
                   </View>
                   <View>
                     <Text style={styles.cardTitle}>Ornament Photos</Text>
@@ -509,13 +510,13 @@ export function OrnamentWizardView({
                   </View>
                 ))}
                 <TouchableOpacity style={styles.addPhotoBox} onPress={onPickImages}>
-                  <Ionicons name="camera-outline" size={24} color="#0284c7" />
+                  <OrnamentIcon name="camera" size={24} color="#0284c7" />
                   <Text style={styles.addPhotoBoxText}>Add Photo</Text>
                 </TouchableOpacity>
               </ScrollView>
 
               <View style={styles.calloutBox}>
-                <Ionicons name="information-circle-outline" size={18} color="#0284c7" style={{ marginRight: 6 }} />
+                <OrnamentIcon name="information" size={18} color="#0284c7" style={{ marginRight: 6 }} />
                 <Text style={styles.calloutText}>
                   Add clear and well-lit images. Photos help in verification.
                 </Text>
@@ -526,7 +527,7 @@ export function OrnamentWizardView({
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={styles.iconBox}>
-                    <Ionicons name="document-text-outline" size={18} color="#0284c7" />
+                    <OrnamentIcon name="notes" size={18} color="#0284c7" />
                   </View>
                   <View>
                     <Text style={styles.cardTitle}>Additional Information</Text>
@@ -572,7 +573,7 @@ export function OrnamentWizardView({
                   onPress={() => openDropdown('Status', 'Select Status', ['Available', 'Pledged'])}
                 >
                   <Text style={styles.dropdownValue}>{form.Status}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#64748b" />
+                  <OrnamentIcon name="arrow-down-s" size={16} color="#64748b" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -590,7 +591,7 @@ export function OrnamentWizardView({
                   <ActivityIndicator color="#ffffff" />
                 ) : (
                   <>
-                    <Ionicons name="checkmark" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+                    <OrnamentIcon name="tick-01" size={18} color="#ffffff" style={{ marginRight: 6 }} />
                     <Text style={styles.primaryBtnText}>Save Ornaments</Text>
                   </>
                 )}

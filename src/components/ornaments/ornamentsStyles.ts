@@ -319,12 +319,6 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
     fontWeight: '700',
     color: isDark ? '#cbd5e1' : '#334155',
   },
-  statPriceCurrency: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: isDark ? '#f8fafc' : '#0d172a',
-    marginRight: 2,
-  },
   statPriceText: {
     fontSize: 13,
     fontWeight: '800',

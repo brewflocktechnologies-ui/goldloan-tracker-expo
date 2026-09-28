@@ -1,8 +1,9 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
 import { RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { OrnamentIcon, UserIcon } from '@/components/Icon';
 import { getDriveImageUrl } from '../../services/api';
 import { Ornament } from '../../types';
 import { getOrnamentCardFigures, OrnamentStatusFilter } from '../../utils/userOrnamentCalculations';
@@ -104,8 +105,8 @@ export function OrnamentListView({
               onPress={() => setSortModalVisible(true)}
               accessibilityLabel="Sort and filter options"
             >
-              <MaterialIcons
-                name="filter-list"
+              <OrnamentIcon
+                name="filter-3"
                 size={24}
                 color={sortOption !== 'Newest First' ? '#0284c7' : (isDark ? '#cbd5e1' : '#475569')}
               />
@@ -199,17 +200,17 @@ export function OrnamentListView({
 
                   <View style={styles.specsRow}>
                     <Text style={styles.specsText}>{orn.Purity || '-'}  •  {orn.OrnamentType || '-'}  •  </Text>
-                    <Ionicons name="shield-checkmark" size={12} color="#0284c7" style={{ marginRight: 3 }} />
+                    <OrnamentIcon name="shield-check" size={12} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 3 }} />
                     <Text style={styles.specsText}>BIS Hallmark</Text>
                   </View>
 
                   <View style={styles.cardStatsRow}>
                     <View style={styles.statGroup}>
-                      <Ionicons name="scale-outline" size={14} color={isDark ? '#94a3b8' : '#475569'} style={{ marginRight: 4 }} />
+                      <OrnamentIcon name="moneybag" size={14} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 4 }} />
                       <Text style={styles.statWeightText}>{weightVal} g</Text>
                     </View>
                     <View style={styles.statGroup}>
-                      <Text style={styles.statPriceCurrency}>₹</Text>
+                      <OrnamentIcon name="rupee-circle" size={14} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 2 }} />
                       <Text style={styles.statPriceText}>{priceVal}</Text>
                     </View>
                   </View>
@@ -217,7 +218,7 @@ export function OrnamentListView({
 
                 {/* Right Chevron */}
                 <View style={styles.cardRightCol}>
-                  <Ionicons name="chevron-forward" size={18} color={isDark ? '#64748b' : '#94a3b8'} />
+                  <UserIcon name="arrow-right" size={18} color={isDark ? '#64748b' : '#94a3b8'} />
                 </View>
               </TouchableOpacity>
             );
@@ -240,7 +241,7 @@ export function OrnamentListView({
         activeOpacity={0.85}
         accessibilityLabel="Add ornament"
       >
-        <Ionicons name="add" size={28} color="#ffffff" />
+        <OrnamentIcon name="add" size={28} color="#ffffff" />
       </TouchableOpacity>
 
       <OptionPickerModal

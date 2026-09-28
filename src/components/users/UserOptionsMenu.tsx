@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { OrnamentIcon, UserIcon } from '@/components/Icon';
 
 export interface UserOptionsMenuHandle {
   close: () => void;
@@ -125,7 +126,7 @@ export const UserOptionsMenu = forwardRef<UserOptionsMenuHandle, UserOptionsMenu
               {onWhatsApp && (
                 <>
                   <TouchableOpacity style={styles.menuItem} onPress={() => runAction(onWhatsApp)}>
-                    <Ionicons name="logo-whatsapp" size={18} color="#16a34a" />
+                    <UserIcon name="whatsapp" size={18} />
                     <Text style={styles.menuItemText}>WhatsApp Customer</Text>
                   </TouchableOpacity>
                   <View style={styles.menuDivider} />
@@ -133,7 +134,7 @@ export const UserOptionsMenu = forwardRef<UserOptionsMenuHandle, UserOptionsMenu
               )}
 
               <TouchableOpacity style={styles.menuItem} onPress={() => runAction(onCopyId)}>
-                <Ionicons name="copy-outline" size={18} color={textPrimaryColor} />
+                <OrnamentIcon name="copy" size={18} color={textPrimaryColor} />
                 <Text style={styles.menuItemText}>Copy Customer Code</Text>
               </TouchableOpacity>
 

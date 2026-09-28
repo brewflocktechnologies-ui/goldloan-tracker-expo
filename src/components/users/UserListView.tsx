@@ -1,8 +1,9 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
 import { RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { OrnamentIcon, UserIcon } from '@/components/Icon';
 import { OptionPickerModal } from '../ornaments/OptionPickerModal';
 import { formatPhoneNumber, USER_SORT_OPTIONS } from '../../mock/userMockExtras';
 import { getDriveImageUrl } from '../../services/api';
@@ -110,8 +111,8 @@ export function UserListView({
               onPress={() => setSortModalVisible(true)}
               accessibilityLabel="Sort and filter options"
             >
-              <MaterialIcons
-                name="filter-list"
+              <UserIcon
+                name="filter"
                 size={24}
                 color={sortOption !== 'Newest First' ? '#0284c7' : isDark ? '#cbd5e1' : '#475569'}
               />
@@ -232,8 +233,8 @@ export function UserListView({
                   <View style={styles.cardBottomRightCol}>
                     <View style={styles.cardStatsCol}>
                       <View style={styles.cardStatRow}>
-                        <MaterialIcons
-                          name="chrome-reader-mode"
+                        <UserIcon
+                          name="notebook"
                           size={15}
                           color={isDark ? '#cbd5e1' : '#475467'}
                           style={styles.cardStatIcon}
@@ -265,7 +266,7 @@ export function UserListView({
 
           {filteredUsers.length === 0 && (
             <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={42} color="#94a3b8" />
+              <OrnamentIcon name="users-group" size={42} color="#94a3b8" />
               <Text style={styles.emptyTitle}>No customers found</Text>
               <Text style={styles.emptySubtitle}>Try adjusting your search query or status filter</Text>
             </View>
@@ -280,7 +281,7 @@ export function UserListView({
         activeOpacity={0.85}
         accessibilityLabel="Add customer"
       >
-        <Ionicons name="add" size={28} color="#ffffff" />
+        <UserIcon name="add" size={28} color="#ffffff" />
       </TouchableOpacity>
 
       {/* Sort Option Modal */}

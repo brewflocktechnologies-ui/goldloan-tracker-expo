@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { OrnamentIcon } from '@/components/Icon';
 import { User } from '../../types';
 
 interface CustomerPickerModalProps {
@@ -46,7 +47,7 @@ export function CustomerPickerModal({
         <View style={[styles.pickerBox, { maxHeight: '80%' }]}>
           <View style={styles.pickerHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="people-outline" size={20} color="#0284c7" />
+              <OrnamentIcon name="users-group" size={20} color="#0284c7" />
               <Text style={styles.pickerTitle}>Select Customer</Text>
             </View>
             <TouchableOpacity onPress={onClose}>
@@ -78,7 +79,7 @@ export function CustomerPickerModal({
               <Ionicons name="remove-circle-outline" size={18} color="#64748b" />
               <Text style={[styles.pickerItemText, { color: '#64748b', fontStyle: 'italic' }]}>None (No Customer)</Text>
             </View>
-            {!selectedUserId && <Ionicons name="checkmark" size={18} color="#0284c7" />}
+            {!selectedUserId && <OrnamentIcon name="tick-01" size={18} color="#0284c7" />}
           </TouchableOpacity>
 
           <ScrollView style={{ maxHeight: 260 }} keyboardShouldPersistTaps="handled">
@@ -101,7 +102,7 @@ export function CustomerPickerModal({
                       {u.City ? <Text style={styles.customerPickerMeta}>• {u.City}</Text> : null}
                     </View>
                   </View>
-                  {selectedUserId === u.UserId && <Ionicons name="checkmark" size={18} color="#0284c7" />}
+                  {selectedUserId === u.UserId && <OrnamentIcon name="tick-01" size={18} color="#0284c7" />}
                 </TouchableOpacity>
               ))
             )}

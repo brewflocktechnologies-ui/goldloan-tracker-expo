@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { OrnamentIcon } from '@/components/Icon';
 
 export interface OrnamentOptionsMenuHandle {
   close: () => void;
@@ -115,7 +116,7 @@ export const OrnamentOptionsMenu = forwardRef<OrnamentOptionsMenuHandle, Ornamen
                 </>
               )}
               <TouchableOpacity style={styles.menuItem} onPress={() => runAction(onCopyId)}>
-                <Ionicons name="copy-outline" size={18} color={textPrimaryColor} />
+                <OrnamentIcon name="copy" size={18} color={textPrimaryColor} />
                 <Text style={styles.menuItemText}>Copy Ornament ID</Text>
               </TouchableOpacity>
             </Animated.View>
