@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Platform, StyleSheet, useWindowDimensions } from 'react-native';
-import { ThemeColors } from '../../constants/theme';
+import { ThemeColors, Typography } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 
 export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompact: boolean = false) => StyleSheet.create({
@@ -22,7 +22,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 16,
     maxWidth: 680,
     width: '100%',
     alignSelf: 'center',
@@ -58,7 +58,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   cardsScrollContent: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    paddingBottom: 60,
+    paddingBottom: 80,
     maxWidth: 680,
     width: '100%',
     alignSelf: 'center',
@@ -603,8 +603,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
     justifyContent: 'center',
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    ...Typography.sectionTitle,
     color: isDark ? '#f8fafc' : '#0d172a',
   },
   cardSubtitle: {
@@ -632,7 +631,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 3,
+    paddingVertical: 4,
   },
   rowLabel: { fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' },
   rowValueBold: { fontSize: 13, fontWeight: '800', color: isDark ? '#f8fafc' : '#0d172a' },
@@ -641,11 +640,11 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   appreciationPctText: { fontSize: 12, fontWeight: '700', color: '#16a34a', marginTop: 1 },
 
   fieldGroup: { marginBottom: 12 },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: isDark ? '#cbd5e1' : '#334155', marginBottom: 6 },
+  inputLabel: { ...Typography.label, color: isDark ? '#cbd5e1' : '#334155', marginBottom: 6 },
   requiredStar: { color: '#ef4444' },
   textInput: {
     backgroundColor: isDark ? '#1e293b' : '#ffffff',
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: isDark ? '#334155' : '#e2e8f0',
     paddingHorizontal: 12,
@@ -853,10 +852,10 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#0284c7',
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 14,
   },
-  primaryBtnText: { fontSize: 14, fontWeight: '700', color: '#ffffff' },
+  primaryBtnText: { ...Typography.button, color: '#ffffff' },
   actionsRow: { flexDirection: 'row', gap: 12 },
   backButtonSecondary: {
     paddingHorizontal: 20,

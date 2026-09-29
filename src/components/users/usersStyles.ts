@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Platform, StyleSheet, useWindowDimensions } from 'react-native';
-import { ThemeColors } from '../../constants/theme';
+import { ThemeColors, Typography } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 
 export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: boolean = false, isCompact: boolean = false) =>
@@ -221,7 +221,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     cardsScrollContent: {
       paddingHorizontal: 16,
       paddingTop: 6,
-      paddingBottom: 16,
+      paddingBottom: 80,
       maxWidth: 680,
       width: '100%',
       alignSelf: 'center',
@@ -631,8 +631,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       justifyContent: 'center',
     },
     cardTitle: {
-      fontSize: 15,
-      fontWeight: '800',
+      ...Typography.sectionTitle,
       color: isDark ? '#f8fafc' : '#0d172a',
     },
     keyValList: {
@@ -642,7 +641,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 7,
+      paddingVertical: 4,
       borderBottomWidth: 1,
       borderBottomColor: isDark ? '#1e293b' : '#f8fafc',
     },
@@ -1031,8 +1030,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       marginBottom: 14,
     },
     inputLabel: {
-      fontSize: 12.5,
-      fontWeight: '700',
+      ...Typography.label,
       color: isDark ? '#cbd5e1' : '#334155',
       marginBottom: 6,
     },
@@ -1046,7 +1044,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       borderColor: isDark ? '#334155' : '#e2e8f0',
       paddingHorizontal: 12,
       paddingVertical: 10,
-      fontSize: 13.5,
+      fontSize: 13,
       color: isDark ? '#f8fafc' : '#0f172a',
     },
     inputWithIconContainer: {
@@ -1172,8 +1170,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       elevation: 4,
     },
     submitBtnText: {
-      fontSize: 15,
-      fontWeight: '800',
+      ...Typography.button,
       color: '#ffffff',
     },
 
@@ -1205,10 +1202,10 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       fontSize: 16,
       fontWeight: '700',
       color: isDark ? '#cbd5e1' : '#334155',
-      marginTop: 10,
+      marginTop: 12,
     },
     emptySubtitle: {
-      fontSize: 13,
+      fontSize: 12,
       color: isDark ? '#64748b' : '#94a3b8',
       marginTop: 4,
       textAlign: 'center',

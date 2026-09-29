@@ -182,3 +182,15 @@ export const BorderRadius = {
   lg: 16,
   full: 9999,
 };
+
+// Shared type scale. Page-level styles should use these instead of literals.
+export const Typography = {
+  pageTitle: { fontSize: 18, fontWeight: '800' as const },
+  pageSubtitle: { fontSize: 11, fontWeight: '400' as const },
+  sectionTitle: { fontSize: 15, fontWeight: '800' as const },
+  cardTitle: { fontSize: 14, fontWeight: '800' as const },
+  body: { fontSize: 13, fontWeight: '600' as const },
+  label: { fontSize: 12, fontWeight: '700' as const },
+  caption: { fontSize: 11, fontWeight: '600' as const },
+  button: { fontSize: 15, fontWeight: '800' as const },
+};
