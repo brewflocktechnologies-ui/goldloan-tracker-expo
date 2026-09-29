@@ -570,7 +570,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity 
             style={[isDesktop ? styles.actionCardDesktop : styles.actionCardMobile, isReadOnly && styles.actionCardDisabled]} 
-            onPress={() => handleActionPress('/customers/new')} 
+            onPress={() => handleActionPress({ pathname: '/(tabs)/users', params: { action: 'add' } })}
             activeOpacity={0.7}
           >
             <View style={[styles.actionIconBox, { backgroundColor: '#e0f2fe' }]}>

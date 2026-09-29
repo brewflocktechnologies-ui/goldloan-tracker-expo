@@ -1,3 +1,4 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, BackHandler } from 'react-native';
 import { UserDetailsTab, UserDetailsView } from '../../components/users/UserDetailsView';
@@ -20,6 +21,8 @@ import {
 export default function UsersScreen() {
   const store = useAppStore();
   const toast = useToast();
+  const router = useRouter();
+  const { action } = useLocalSearchParams<{ action?: string }>();
 
   // View mode: 'list' | 'details' | 'add' | 'edit'
   const [viewMode, setViewMode] = useState<'list' | 'details' | 'add' | 'edit'>('list');
@@ -170,6 +173,15 @@ export default function UsersScreen() {
     });
     setViewMode('add');
   };
+
+  // Entered via a deep link/quick-action (e.g. Home dashboard "Add Customer") requesting the add form directly.
+  useEffect(() => {
+    if (action === 'add') {
+      handleAddPress();
+      router.setParams({ action: undefined } as any);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action]);
 
   // Open Edit Screen
   const handleEditPress = (user: User) => {

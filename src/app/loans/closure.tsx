@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, Text, StyleSheet, TextInput, TouchableOpacity, 
-  ScrollView, Alert, ActivityIndicator, SafeAreaView 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  ScrollView, Alert, ActivityIndicator, BackHandler
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors, ThemeColors } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -41,6 +42,25 @@ export default function LoanClosureScreen() {
         setSelectedLoanId(lList[0].LoanId);
       }
   }, [store.loans, store.users, store.ornaments]);
+
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)' as any);
+    }
+  }, [router]);
+
+  // Hardware back button on Android should navigate back instead of exiting the app.
+  useEffect(() => {
+    const onBackPress = () => {
+      goBack();
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [goBack]);
 
   const currentLoan = activeLoans.find(l => l.LoanId === selectedLoanId);
   const borrowerName = currentLoan ? (users[currentLoan.UserId] || currentLoan.UserId) : '';
@@ -81,14 +101,14 @@ export default function LoanClosureScreen() {
 
   if (!isSuperAdmin) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Ionicons name="lock-closed" size={48} color={colors.warning} style={{ marginBottom: 16 }} />
           <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 8 }}>Read-Only Access</Text>
           <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginBottom: 20 }}>
             You are logged in with read-only permissions. Closing loans and releasing vault collateral requires SuperAdmin privileges.
           </Text>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.closeBtn, { alignSelf: 'center', paddingHorizontal: 24 }]}>
+          <TouchableOpacity onPress={goBack} style={[styles.closeBtn, { alignSelf: 'center', paddingHorizontal: 24 }]}>
             <Text style={styles.closeBtnText}>Return Back</Text>
           </TouchableOpacity>
         </View>
@@ -97,9 +117,9 @@ export default function LoanClosureScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.navHeader}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={goBack} style={styles.backBtn}>
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.navTitle}>Close & Release Gold Loan</Text>
@@ -244,6 +264,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 40,
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
   },
   card: {
     backgroundColor: colors.surface,
