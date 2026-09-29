@@ -54,6 +54,7 @@ describe('CustomerPickerModal clear button', () => {
       onClose: jest.fn(),
       isDark: true,
       secondaryTextColor: '#64748b',
+      placeholderColor: '#94a3b8',
     };
     const { rerender } = render(<CustomerPickerModal {...props} searchQuery="" />);
     expect(screen.queryByText('close-circle')).toBeNull();

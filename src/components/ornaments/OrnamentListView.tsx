@@ -2,7 +2,7 @@ import { OrnamentIcon, UserIcon } from '@/components/Icon';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
-import { RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDriveImageUrl } from '../../services/api';
 import { Ornament } from '../../types';
@@ -150,89 +150,89 @@ export function OrnamentListView({
       </View>
 
       {/* Ornaments Cards List (White below) */}
-      <ScrollView
+      <FlatList
         style={styles.cardsScrollContainer}
-        contentContainerStyle={styles.cardsScrollContent}
+        contentContainerStyle={[styles.cardsScrollContent, styles.cardsList]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284c7']} />}
-      >
-        <View style={styles.cardsList}>
-          {filteredOrnaments.map((orn) => {
-            const firstImg = orn.OrnamentImages ? orn.OrnamentImages.split(' | ').filter(Boolean)[0] : '';
-            const directUrl = firstImg ? getDriveImageUrl(firstImg) : '';
-            const isPledged = orn.Status === 'Pledged';
-            const loanNum = getLoanNumber(orn);
-            const { weightVal, priceVal } = getOrnamentCardFigures(orn);
+        data={filteredOrnaments}
+        keyExtractor={item => item.OrnamentId}
+        initialNumToRender={12}
+        windowSize={7}
+        removeClippedSubviews
+        renderItem={({ item: orn }) => {
+          const firstImg = orn.OrnamentImages ? orn.OrnamentImages.split(' | ').filter(Boolean)[0] : '';
+          const directUrl = firstImg ? getDriveImageUrl(firstImg) : '';
+          const isPledged = orn.Status === 'Pledged';
+          const loanNum = getLoanNumber(orn);
+          const { weightVal, priceVal } = getOrnamentCardFigures(orn);
 
-            return (
-              <TouchableOpacity
-                key={orn.OrnamentId}
-                style={styles.listCard}
-                onPress={() => onCardPress(orn)}
-                activeOpacity={0.7}
-              >
-                {/* Left Thumbnail */}
-                <View style={styles.cardLeftCol}>
-                  <View style={styles.thumbContainer}>
-                    {directUrl ? (
-                      <Image source={{ uri: directUrl }} style={styles.thumbImage} contentFit="cover" />
-                    ) : (
-                      <View style={styles.thumbPlaceholder}>
-                        <Ionicons name="diamond-outline" size={26} color={isDark ? '#fbbf24' : '#0284c7'} />
-                      </View>
-                    )}
-                  </View>
-                  {isPledged && loanNum && (
-                    <View style={styles.loanBox}>
-                      <Text style={styles.loanLabel}>Loan:</Text>
-                      <Text style={styles.loanVal}>{loanNum}</Text>
+          return (
+            <TouchableOpacity
+              style={styles.listCard}
+              onPress={() => onCardPress(orn)}
+              activeOpacity={0.7}
+            >
+              {/* Left Thumbnail */}
+              <View style={styles.cardLeftCol}>
+                <View style={styles.thumbContainer}>
+                  {directUrl ? (
+                    <Image source={{ uri: directUrl }} style={styles.thumbImage} contentFit="cover" />
+                  ) : (
+                    <View style={styles.thumbPlaceholder}>
+                      <Ionicons name="diamond-outline" size={26} color={isDark ? '#fbbf24' : '#0284c7'} />
                     </View>
                   )}
                 </View>
-
-                {/* Center Details */}
-                <View style={styles.cardCenterCol}>
-                  <View style={styles.cardHeaderRow}>
-                    <Text style={styles.listCardTitle} numberOfLines={1}>{orn.OrnamentName}</Text>
-                    <OrnamentStatusBadge status={orn.Status} isDark={isDark} variant="badge" />
+                {isPledged && loanNum && (
+                  <View style={styles.loanBox}>
+                    <Text style={styles.loanLabel}>Loan:</Text>
+                    <Text style={styles.loanVal}>{loanNum}</Text>
                   </View>
+                )}
+              </View>
 
-                  <Text style={styles.cardIdText}>{orn.OrnamentId}</Text>
-
-                  <View style={styles.specsRow}>
-                    <Text style={styles.specsText}>{orn.Purity || '-'}  •  {orn.OrnamentType || '-'}  •  </Text>
-                    <OrnamentIcon name="shield-check" size={12} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 3 }} />
-                    <Text style={styles.specsText}>BIS Hallmark</Text>
-                  </View>
-
-                  <View style={styles.cardStatsRow}>
-                    <View style={styles.statGroup}>
-                      <OrnamentIcon name="moneybag" size={14} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 4 }} />
-                      <Text style={styles.statWeightText}>{weightVal} g</Text>
-                    </View>
-                    <View style={styles.statGroup}>
-                      <OrnamentIcon name="rupee-circle" size={14} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 2 }} />
-                      <Text style={styles.statPriceText}>{priceVal}</Text>
-                    </View>
-                  </View>
+              {/* Center Details */}
+              <View style={styles.cardCenterCol}>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.listCardTitle} numberOfLines={1}>{orn.OrnamentName}</Text>
+                  <OrnamentStatusBadge status={orn.Status} isDark={isDark} variant="badge" />
                 </View>
 
-                {/* Right Chevron */}
-                <View style={styles.cardRightCol}>
-                  <UserIcon name="arrow-right" size={18} color={isDark ? '#64748b' : '#94a3b8'} />
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                <Text style={styles.cardIdText}>{orn.OrnamentId}</Text>
 
-          {filteredOrnaments.length === 0 && (
-            <View style={styles.emptyContainer}>
+                <View style={styles.specsRow}>
+                  <Text style={styles.specsText}>{orn.Purity || '-'}  •  {orn.OrnamentType || '-'}  •  </Text>
+                  <OrnamentIcon name="shield-check" size={12} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 3 }} />
+                  <Text style={styles.specsText}>BIS Hallmark</Text>
+                </View>
+
+                <View style={styles.cardStatsRow}>
+                  <View style={styles.statGroup}>
+                    <OrnamentIcon name="moneybag" size={14} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 4 }} />
+                    <Text style={styles.statWeightText}>{weightVal} g</Text>
+                  </View>
+                  <View style={styles.statGroup}>
+                    <OrnamentIcon name="rupee-circle" size={14} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 2 }} />
+                    <Text style={styles.statPriceText}>{priceVal}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Right Chevron */}
+              <View style={styles.cardRightCol}>
+                <UserIcon name="arrow-right" size={18} color={isDark ? '#64748b' : '#94a3b8'} />
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+        <View style={styles.emptyContainer}>
               <Ionicons name="diamond-outline" size={42} color="#94a3b8" />
               <Text style={styles.emptyTitle}>No ornaments found</Text>
               <Text style={styles.emptySubtitle}>Try adjusting your search query or status filter</Text>
             </View>
-          )}
-        </View>
-      </ScrollView>
+        }
+      />
 
       {/* Floating Action Button (+) */}
       <TouchableOpacity
