@@ -10,7 +10,7 @@ import {
   formatMaskedAadhaar,
   formatMaskedPAN,
   formatPhoneNumber,
-} from '../../mock/userMockExtras';
+} from '../../constants/userExtras';
 import { getDriveImageUrl } from '../../services/api';
 import { useAppStore } from '../../services/store';
 import { User } from '../../types';

@@ -80,8 +80,11 @@ export default function OrnamentsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await store.syncFromBackend(true);
-    setRefreshing(false);
+    try {
+      await store.syncFromBackend(true);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Filter counts
@@ -194,6 +197,10 @@ export default function OrnamentsScreen() {
     } else if (wizardStep === 2) {
       if (gross <= 0) {
         Alert.alert('Invalid Weight', 'Gross Weight must be greater than 0 grams.');
+        return;
+      }
+      if (stone >= gross) {
+        Alert.alert('Invalid Stone Weight', 'Stone Weight must be less than Gross Weight.');
         return;
       }
       setWizardStep(3);

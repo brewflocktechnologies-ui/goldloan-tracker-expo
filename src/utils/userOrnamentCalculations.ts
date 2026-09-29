@@ -4,7 +4,7 @@
  * raw sheet records into the figures the screens display. Pure functions only — no React,
  * no store, no I/O — so they are trivially unit-testable.
  */
-import type { ExtraUserBankAccount, ExtraUserLoan } from '../mock/userMockExtras';
+import type { ExtraUserBankAccount, ExtraUserLoan } from '../constants/userExtras';
 import type { BankAccount, Loan, Ornament, User } from '../types';
 import { calculateAvailableLimit, calculateDueBadge, calculateOutstandingAmount, calculateUtilizationPercentage } from './calculations';
 

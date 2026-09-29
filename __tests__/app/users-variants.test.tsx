@@ -135,12 +135,12 @@ describe.each(VARIANTS)('Users screens - %s', (_name, dark, dims) => {
     render(<UsersScreen />);
     fireEvent.press(screen.getByLabelText('Add customer'));
 
-    fireEvent.press(screen.getByText('Karnataka'));
+    fireEvent.press(screen.getByText('Select state'));
     expect(screen.getByText('Select State')).toBeTruthy();
     fireEvent.press(screen.getByText('close'));
     expect(screen.queryByText('Select State')).toBeNull();
 
-    fireEvent.press(screen.getByText('Teacher'));
+    fireEvent.press(screen.getByText('Select occupation'));
     expect(screen.getByText('Select Occupation')).toBeTruthy();
     fireEvent.press(screen.getByText('Business'));
     expect(screen.queryByText('Select Occupation')).toBeNull();

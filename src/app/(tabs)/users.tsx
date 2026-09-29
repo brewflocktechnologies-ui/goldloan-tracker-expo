@@ -9,6 +9,7 @@ import { useCustomerPhotoPicker } from '../../components/users/useCustomerPhotoP
 import { useToast } from '../../context/ToastContext';
 import { useAppStore } from '../../services/store';
 import { User } from '../../types';
+import { createEmptyUserForm, validateUserForm } from '../../utils/userForm';
 import {
   buildUserStatsMap,
   countUsersByStatus,
@@ -44,26 +45,7 @@ export default function UsersScreen() {
 
   // Add / Edit State
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState<UserFormState>({
-    FullName: '',
-    FatherHusbandName: '',
-    CustomerCode: '',
-    MobileNumber: '',
-    AlternateMobileNumber: '',
-    Email: '',
-    DateOfBirth: '',
-    Gender: 'Male' as 'Male' | 'Female' | 'Other',
-    Occupation: '',
-    AadhaarNumber: '',
-    PANNumber: '',
-    AddressLine1: '',
-    AddressLine2: '',
-    City: 'Bengaluru',
-    State: 'Karnataka',
-    Pincode: '560041',
-    CustomerPhoto: '',
-    Status: 'Active' as 'Active' | 'Inactive',
-  });
+  const [form, setForm] = useState<UserFormState>(createEmptyUserForm());
   const [filesPayload, setFilesPayload] = useState<any[]>([]);
 
   // Picker Modal State (for State, Occupation, Gender)
@@ -78,8 +60,11 @@ export default function UsersScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await store.syncFromBackend(true);
-    setRefreshing(false);
+    try {
+      await store.syncFromBackend(true);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Filter counts
@@ -151,26 +136,7 @@ export default function UsersScreen() {
     setSelectedUser(null);
     setFilesPayload([]);
     const generatedCode = generateCustomerCode(store.users.length);
-    setForm({
-      FullName: '',
-      FatherHusbandName: '',
-      CustomerCode: generatedCode,
-      MobileNumber: '',
-      AlternateMobileNumber: '',
-      Email: '',
-      DateOfBirth: '',
-      Gender: 'Male',
-      Occupation: 'Teacher',
-      AadhaarNumber: '',
-      PANNumber: '',
-      AddressLine1: '',
-      AddressLine2: '',
-      City: 'Bengaluru',
-      State: 'Karnataka',
-      Pincode: '560041',
-      CustomerPhoto: '',
-      Status: 'Active',
-    });
+    setForm(createEmptyUserForm(generatedCode));
     setViewMode('add');
   };
 
@@ -196,14 +162,14 @@ export default function UsersScreen() {
       Email: user.Email || '',
       DateOfBirth: formatInputDOB(user.DateOfBirth),
       Gender: (user.Gender as any) || 'Male',
-      Occupation: user.Occupation || 'Teacher',
+      Occupation: user.Occupation || '',
       AadhaarNumber: user.AadhaarNumber || '',
       PANNumber: user.PANNumber || '',
       AddressLine1: user.AddressLine1 || '',
       AddressLine2: user.AddressLine2 || '',
-      City: user.City || 'Bengaluru',
-      State: user.State || 'Karnataka',
-      Pincode: user.Pincode || '560041',
+      City: user.City || '',
+      State: user.State || '',
+      Pincode: user.Pincode || '',
       CustomerPhoto: user.CustomerPhoto || '',
       Status: user.Status === 'Inactive' ? 'Inactive' : 'Active',
     });
@@ -212,15 +178,12 @@ export default function UsersScreen() {
 
   // Save User
   const handleSaveForm = async () => {
-    if (!form.FullName.trim()) {
-      Alert.alert('Required Field', 'Please enter Full Name.');
+    const problem = validateUserForm(form);
+    if (problem) {
+      Alert.alert(problem.title, problem.message);
       return;
     }
     const cleanMobile = form.MobileNumber.replace(/[^\d]/g, '');
-    if (!cleanMobile || cleanMobile.length < 10) {
-      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit mobile number.');
-      return;
-    }
 
     setSubmitting(true);
     try {

@@ -50,7 +50,7 @@ export function CustomerPickerModal({
               <OrnamentIcon name="users-group" size={20} color="#0284c7" />
               <Text style={styles.pickerTitle}>Select Customer</Text>
             </View>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
               <Ionicons name="close" size={20} color={secondaryTextColor} />
             </TouchableOpacity>
           </View>
@@ -65,7 +65,7 @@ export function CustomerPickerModal({
               onChangeText={onSearchChange}
             />
             {searchQuery ? (
-              <TouchableOpacity onPress={() => onSearchChange('')}>
+              <TouchableOpacity onPress={() => onSearchChange('')} accessibilityRole="button" accessibilityLabel="Clear search">
                 <Ionicons name="close-circle" size={16} color="#94a3b8" />
               </TouchableOpacity>
             ) : null}

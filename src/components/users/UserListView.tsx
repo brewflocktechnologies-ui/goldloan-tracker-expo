@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
 import { FlatList, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { formatPhoneNumber, USER_SORT_OPTIONS } from '../../mock/userMockExtras';
+import { formatPhoneNumber, USER_SORT_OPTIONS } from '../../constants/userExtras';
 import { getDriveImageUrl } from '../../services/api';
 import { User } from '../../types';
 import { getUserLastActive, UserStats, UserStatusFilter } from '../../utils/userOrnamentCalculations';
@@ -89,6 +89,7 @@ export function UserListView({
               />
               <TextInput
                 style={styles.searchInput}
+                accessibilityLabel="Search customers"
                 placeholder="Search by name, mobile, or customer ID..."
                 placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                 value={searchQuery}
@@ -97,6 +98,8 @@ export function UserListView({
               {searchQuery ? (
                 <TouchableOpacity
                   onPress={() => setSearchQuery('')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
                   style={styles.clearBtn}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
@@ -128,6 +131,8 @@ export function UserListView({
             <TouchableOpacity
               style={[styles.filterPill, activeFilter === 'All' && styles.filterPillActive]}
               onPress={() => setActiveFilter('All')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === 'All' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'All' && styles.filterPillTextActive]}>
                 All ({totalCount})
@@ -137,6 +142,8 @@ export function UserListView({
             <TouchableOpacity
               style={[styles.filterPill, activeFilter === 'Active' && styles.filterPillActive]}
               onPress={() => setActiveFilter('Active')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === 'Active' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'Active' && styles.filterPillTextActive]}>
                 Active ({activeCount})
@@ -146,6 +153,8 @@ export function UserListView({
             <TouchableOpacity
               style={[styles.filterPill, activeFilter === 'Inactive' && styles.filterPillActive]}
               onPress={() => setActiveFilter('Inactive')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === 'Inactive' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'Inactive' && styles.filterPillTextActive]}>
                 Inactive ({inactiveCount})
@@ -162,9 +171,9 @@ export function UserListView({
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284c7']} />}
         data={filteredUsers}
         keyExtractor={item => item.UserId}
-        initialNumToRender={12}
-        windowSize={7}
-        removeClippedSubviews
+        initialNumToRender={20}
+        windowSize={11}
+        maxToRenderPerBatch={12}
         renderItem={({ item: user }) => {
           const directPhoto = user.CustomerPhoto ? getDriveImageUrl(user.CustomerPhoto) : '';
           const avatarTone = getAvatarColor(user.FullName);
@@ -176,6 +185,8 @@ export function UserListView({
             <TouchableOpacity
               style={styles.listCard}
               onPress={() => onCardPress(user)}
+                accessibilityRole="button"
+                accessibilityLabel={`Customer ${user.FullName}`}
               activeOpacity={0.7}
             >
               {/* Top Section: Left (Avatar + Name & Code) | Right (Status Pill) */}

@@ -31,13 +31,13 @@ export function OptionPickerModal({
         <View style={styles.pickerBox}>
           <View style={styles.pickerHeader}>
             <Text style={styles.pickerTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
               <Ionicons name="close" size={20} color={secondaryTextColor} />
             </TouchableOpacity>
           </View>
           <ScrollView style={{ maxHeight: 280 }}>
             {options.map(opt => (
-              <TouchableOpacity key={opt} style={styles.pickerItem} onPress={() => onSelect(opt)}>
+              <TouchableOpacity key={opt} style={styles.pickerItem} onPress={() => onSelect(opt)} accessibilityRole="button" accessibilityState={{ selected: selectedValue === opt }}>
                 <Text style={styles.pickerItemText}>{opt}</Text>
                 {selectedValue === opt && <OrnamentIcon name="tick-01" size={18} color="#0284c7" />}
               </TouchableOpacity>

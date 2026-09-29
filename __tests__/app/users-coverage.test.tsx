@@ -107,7 +107,7 @@ describe('User form — every field flows into the saved payload', () => {
     fireEvent.changeText(screen.getByPlaceholderText('Enter full name'), 'Full Person');
     fireEvent.changeText(screen.getByPlaceholderText('Enter name'), 'Parent Person');
     fireEvent.changeText(screen.getByPlaceholderText('Enter mobile number'), '9111122223');
-    fireEvent.changeText(screen.getByPlaceholderText('Enter Alternate mobile number'), '98-76 x54');
+    fireEvent.changeText(screen.getByPlaceholderText('Enter Alternate mobile number'), '98-76 x543211');
     fireEvent.changeText(screen.getByPlaceholderText('Enter email address'), 'a@b.com');
     fireEvent.changeText(screen.getByPlaceholderText('XXXX XXXX XXXX'), '123412341234');
     fireEvent.changeText(screen.getByPlaceholderText('Enter PAN number'), 'abcde1234f');
@@ -116,7 +116,7 @@ describe('User form — every field flows into the saved payload', () => {
     fireEvent.changeText(addr2, 'Line Two');
     fireEvent.changeText(screen.getByPlaceholderText('Enter city'), 'Mysuru');
     fireEvent.changeText(screen.getByPlaceholderText('Enter pincode'), '570001');
-    fireEvent.press(screen.getByText('Teacher'));
+    fireEvent.press(screen.getByText('Select occupation'));
     fireEvent.press(screen.getByText('Business'));
     fireEvent.press(screen.getByText('Other'));
 
@@ -126,7 +126,7 @@ describe('User form — every field flows into the saved payload', () => {
       FullName: 'Full Person',
       FatherHusbandName: 'Parent Person',
       MobileNumber: '9111122223',
-      AlternateMobileNumber: '987654',
+      AlternateMobileNumber: '9876543211',
       Email: 'a@b.com',
       AadhaarNumber: '123412341234',
       PANNumber: 'ABCDE1234F',

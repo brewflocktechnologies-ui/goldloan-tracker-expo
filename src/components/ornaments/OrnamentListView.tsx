@@ -87,13 +87,14 @@ export function OrnamentListView({
               <Ionicons name="search-outline" size={22} color={isDark ? '#94a3b8' : '#64748b'} style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
+                accessibilityLabel="Search ornaments"
                 placeholder="Search by name, type, hallmark or ID..."
                 placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
               {searchQuery ? (
-                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel="Clear search" style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Ionicons name="close-circle" size={16} color={isDark ? '#94a3b8' : '#64748b'} />
                 </TouchableOpacity>
               ) : null}
@@ -122,6 +123,8 @@ export function OrnamentListView({
             <TouchableOpacity
               style={[styles.filterPill, activeFilter === 'All' && styles.filterPillActive]}
               onPress={() => setActiveFilter('All')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === 'All' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'All' && styles.filterPillTextActive]}>
                 All ({totalCount})
@@ -131,6 +134,8 @@ export function OrnamentListView({
             <TouchableOpacity
               style={[styles.filterPill, activeFilter === 'Available' && styles.filterPillActive]}
               onPress={() => setActiveFilter('Available')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === 'Available' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'Available' && styles.filterPillTextActive]}>
                 Available ({availableCount})
@@ -140,6 +145,8 @@ export function OrnamentListView({
             <TouchableOpacity
               style={[styles.filterPill, activeFilter === 'Pledged' && styles.filterPillActive]}
               onPress={() => setActiveFilter('Pledged')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === 'Pledged' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'Pledged' && styles.filterPillTextActive]}>
                 Pledged ({pledgedCount})
@@ -156,9 +163,9 @@ export function OrnamentListView({
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284c7']} />}
         data={filteredOrnaments}
         keyExtractor={item => item.OrnamentId}
-        initialNumToRender={12}
-        windowSize={7}
-        removeClippedSubviews
+        initialNumToRender={20}
+        windowSize={11}
+        maxToRenderPerBatch={12}
         renderItem={({ item: orn }) => {
           const firstImg = orn.OrnamentImages ? orn.OrnamentImages.split(' | ').filter(Boolean)[0] : '';
           const directUrl = firstImg ? getDriveImageUrl(firstImg) : '';
@@ -170,6 +177,8 @@ export function OrnamentListView({
             <TouchableOpacity
               style={styles.listCard}
               onPress={() => onCardPress(orn)}
+                accessibilityRole="button"
+                accessibilityLabel={`Ornament ${orn.OrnamentName}`}
               activeOpacity={0.7}
             >
               {/* Left Thumbnail */}

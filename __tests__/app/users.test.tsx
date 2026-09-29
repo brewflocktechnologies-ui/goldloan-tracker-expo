@@ -387,9 +387,8 @@ describe('UsersScreen — add form', () => {
     expect(screen.getByText('KYC Information')).toBeTruthy();
     expect(screen.getAllByText('Occupation').length).toBeGreaterThan(0);
     expect(screen.getByText('Save User')).toBeTruthy();
-    expect(screen.getByDisplayValue('Bengaluru')).toBeTruthy();
-    expect(screen.getByText('Karnataka')).toBeTruthy();
-    expect(screen.getByText('Teacher')).toBeTruthy();
+    expect(screen.getByText('Select state')).toBeTruthy();
+    expect(screen.getByText('Select occupation')).toBeTruthy();
   });
 
   it('back returns to the list', () => {
@@ -439,7 +438,7 @@ describe('UsersScreen — add form', () => {
 
   it('picks a state from the picker modal', () => {
     openAdd();
-    fireEvent.press(screen.getByText('Karnataka'));
+    fireEvent.press(screen.getByText('Select state'));
     expect(screen.getByText('Select State')).toBeTruthy();
     fireEvent.press(screen.getByText('Maharashtra'));
     expect(screen.getByText('Maharashtra')).toBeTruthy();
@@ -447,7 +446,7 @@ describe('UsersScreen — add form', () => {
 
   it('picks an occupation from the picker modal', () => {
     openAdd();
-    fireEvent.press(screen.getByText('Teacher'));
+    fireEvent.press(screen.getByText('Select occupation'));
     expect(screen.getByText('Select Occupation')).toBeTruthy();
     fireEvent.press(screen.getByText('Business'));
     expect(screen.getByText('Business')).toBeTruthy();
@@ -471,8 +470,8 @@ describe('UsersScreen — add form', () => {
     expect(payload).toMatchObject({
       FullName: 'New Person',
       MobileNumber: '9111122223',
-      City: 'Bengaluru',
-      State: 'Karnataka',
+      City: '',
+      State: '',
       Status: 'Active',
       Gender: 'Male',
     });
@@ -661,7 +660,7 @@ describe('UsersScreen — hardware back button', () => {
   it('closes the open picker modal first, before leaving the form', () => {
     renderScreen();
     fireEvent.press(screen.getByLabelText('Add customer'));
-    fireEvent.press(screen.getByText('Karnataka'));
+    fireEvent.press(screen.getByText('Select state'));
     expect(screen.getByText('Select State')).toBeTruthy();
     expect(pressBack()).toBe(true);
     expect(screen.getByText('Add User')).toBeTruthy();
