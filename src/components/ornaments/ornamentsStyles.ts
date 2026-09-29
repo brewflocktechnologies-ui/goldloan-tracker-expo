@@ -31,19 +31,19 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   listTopSection: {
     backgroundColor: isDark ? '#0f172a' : '#d8edfa',
     paddingHorizontal: 16,
-    paddingTop: isCompact ? 4 : 10,
+    paddingTop: 10,
     paddingBottom: 2,
   },
   searchCardWrapper: {
     position: 'relative',
-    paddingTop: 4,
-    paddingBottom: 10,
+    paddingTop: 2,
+    paddingBottom: 6,
     paddingHorizontal: 16,
     backgroundColor: isDark ? '#0f172a' : '#d8edfa',
   },
   sheetBackground: {
     position: 'absolute',
-    top: isCompact ? 52 : 64,
+    top: isCompact ? 44 : 54,
     left: 0,
     right: 0,
     bottom: 0,
@@ -57,8 +57,8 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   },
   cardsScrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 80,
+    paddingTop: 6,
+    paddingBottom: 60,
     maxWidth: 680,
     width: '100%',
     alignSelf: 'center',
@@ -70,34 +70,34 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: isCompact ? 8 : 16,
-    paddingTop: 4,
+    marginBottom: isCompact ? 4 : 8,
+    paddingTop: 0,
   },
   headerLeft: {
     flex: 1,
   },
   screenTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
     color: isDark ? '#f8fafc' : '#0d172a',
     letterSpacing: -0.4,
   },
   screenSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: isDark ? '#94a3b8' : '#475569',
-    marginTop: 2,
+    marginTop: 1,
   },
   headerRight: {
     alignItems: 'flex-end',
     paddingLeft: 10,
   },
   totalLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: isDark ? '#94a3b8' : '#334155',
   },
   totalNumber: {
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: '800',
     color: '#0284c7',
     marginTop: -2,
@@ -135,7 +135,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   searchFilterCard: {
     backgroundColor: isDark ? '#1e293b' : '#ffffff',
     borderRadius: 20,
-    padding: isCompact ? 10 : 14,
+    padding: isCompact ? 8 : 10,
     maxWidth: 680,
     width: '100%',
     alignSelf: 'center',
@@ -150,7 +150,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: isCompact ? 8 : 12,
+    marginBottom: isCompact ? 6 : 8,
   },
   boxySearchBox: {
     flex: 1,
@@ -161,7 +161,7 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
     borderWidth: 1,
     borderColor: isDark ? '#334155' : '#e2e8f0',
     paddingHorizontal: 12,
-    height: isCompact ? 44 : 52,
+    height: isCompact ? 40 : 46,
   },
   searchIcon: {
     marginRight: 8,
@@ -195,8 +195,8 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
     paddingVertical: 2,
   },
   filterPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
     borderRadius: 20,
     backgroundColor: isDark ? '#0f172a' : '#ffffff',
     borderWidth: 1,
@@ -220,16 +220,16 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
 
   // Cards List
   cardsList: {
-    gap: isCompact ? 8 : 12,
+    gap: isCompact ? 6 : 8,
   },
   listCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: isDark ? '#0f172a' : '#ffffff',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: isDark ? '#1e293b' : '#f1f5f9',
-    padding: isCompact ? 10 : 12,
+    padding: isCompact ? 8 : 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: isDark ? 0.2 : 0.05,
@@ -238,12 +238,12 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   },
   cardLeftCol: {
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   thumbContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 14,
+    width: 60,
+    height: 60,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
   },
@@ -275,16 +275,16 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   cardCenterCol: {
     flex: 1,
     justifyContent: 'flex-start',
-    paddingTop: 2,
+    paddingTop: 1,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   listCardTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: isDark ? '#f8fafc' : '#0d172a',
     flex: 1,
@@ -292,35 +292,35 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
   },
 
   cardIdText: {
-    fontSize: 11,
+    fontSize: 10,
     color: isDark ? '#94a3b8' : '#64748b',
-    marginBottom: 8,
+    marginBottom: 5,
   },
   specsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   specsText: {
-    fontSize: 11,
+    fontSize: 10,
     color: isDark ? '#94a3b8' : '#475569',
   },
   cardStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 10,
   },
   statGroup: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   statWeightText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: isDark ? '#cbd5e1' : '#334155',
   },
   statPriceText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     color: isDark ? '#f8fafc' : '#0d172a',
   },

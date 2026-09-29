@@ -1,28 +1,37 @@
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  LayoutAnimation,
+  Platform,
+  ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  Image,
-  ActivityIndicator,
+  TouchableWithoutFeedback,
+  UIManager,
   useWindowDimensions,
-  Platform,
-  KeyboardAvoidingView,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Env } from '../config/env';
+import { ThemeColors } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Colors, ThemeColors } from '../constants/theme';
-import { ApiConfig } from '../config/api';
-import { Env } from '../config/env';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function LoginScreen() {
   const { colors, isDark } = useTheme();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isDesktop = width >= 768;
   const styles = getStyles(colors, isDark, isDesktop);
 
@@ -34,6 +43,35 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const usernameInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => {
+      if (Platform.OS !== 'web') {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      }
+      setIsKeyboardVisible(true);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      if (Platform.OS !== 'web') {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      }
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleLogin = async () => {
     setErrorMessage(null);
@@ -64,118 +102,245 @@ export default function LoginScreen() {
     }
   };
 
+  const isKeyboardOpenOnMobile = isKeyboardVisible && !isDesktop;
+
+  const handleUsernameFocus = () => {
+    if (!isDesktop) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      }, 100);
+    }
+  };
+
+  const handlePasswordFocus = () => {
+    if (!isDesktop) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 120);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       style={styles.root}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        ref={scrollViewRef}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isKeyboardOpenOnMobile && styles.scrollContentKeyboard,
+          {
+            paddingTop: isKeyboardOpenOnMobile
+              ? Math.max(insets.top + 8, 16)
+              : isDesktop
+              ? 32
+              : Math.max(insets.top + 16, 20),
+            paddingBottom: isKeyboardOpenOnMobile
+              ? Math.max(insets.bottom + 16, 24)
+              : isDesktop
+              ? 32
+              : Math.max(insets.bottom + 16, 20),
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <View style={styles.cardContainer}>
-          {/* Brand Header */}
-          <View style={styles.brandContainer}>
-            <Image
-              source={require('../../assets/Logo.png')}
-              style={styles.brandLogo}
-              resizeMode="contain"
-            />
-            <Text style={styles.appName}>{Env.APP_NAME}</Text>
-            <Text style={styles.appSub}>{Env.APP_SUBTITLE}</Text>
-
-            <View style={styles.modeBadge}>
-              <View style={styles.modeDot} />
-              <Text style={styles.modeText}>Live Cloud Server</Text>
-            </View>
-          </View>
-
-          {/* Form Card */}
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Sign In</Text>
-            <Text style={styles.formSubtitle}>Enter your credentials to access the portfolio</Text>
-
-            {/* Error Banner */}
-            {errorMessage ? (
-              <View style={styles.errorBanner}>
-                <Ionicons name="alert-circle" size={18} color="#dc2626" style={{ marginRight: 8 }} />
-                <Text style={styles.errorText}>{errorMessage}</Text>
-              </View>
-            ) : null}
-
-            {/* Username Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Username</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="person-outline" size={18} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter username"
-                  placeholderTextColor={colors.placeholder}
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!submitting}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.touchableWrapper}>
+            <View style={styles.cardContainer}>
+              {/* Brand Header */}
+              <View
+                style={[
+                  styles.brandContainer,
+                  isKeyboardOpenOnMobile && styles.brandContainerKeyboard,
+                ]}
+              >
+                <Image
+                  source={require('../../assets/Logo.png')}
+                  style={[
+                    styles.brandLogo,
+                    isKeyboardOpenOnMobile && styles.brandLogoKeyboard,
+                  ]}
+                  resizeMode="contain"
                 />
-              </View>
-            </View>
+                <Text
+                  style={[
+                    styles.appName,
+                    isKeyboardOpenOnMobile && styles.appNameKeyboard,
+                  ]}
+                >
+                  {Env.APP_NAME}
+                </Text>
 
-            {/* Password Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter password"
-                  placeholderTextColor={colors.placeholder}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  editable={!submitting}
-                  onSubmitEditing={handleLogin}
-                />
+                {!isKeyboardOpenOnMobile && (
+                  <>
+                    <Text style={styles.appSub}>{Env.APP_SUBTITLE}</Text>
+                    <View style={[styles.modeBadge, styles.modeBadgeLive]}>
+                      <View style={[styles.modeDot, styles.modeDotLive]} />
+                      <Text style={[styles.modeText, styles.modeTextLive]}>
+                        Live Cloud Server
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </View>
+
+              {/* Form Card */}
+              <View
+                style={[
+                  styles.formCard,
+                  isKeyboardOpenOnMobile && styles.formCardKeyboard,
+                ]}
+              >
+                <Text style={styles.formTitle}>Sign In</Text>
+                <Text
+                  style={[
+                    styles.formSubtitle,
+                    isKeyboardOpenOnMobile && styles.formSubtitleKeyboard,
+                  ]}
+                >
+                  Enter your credentials to access the portfolio
+                </Text>
+
+                {/* Error Banner */}
+                {errorMessage ? (
+                  <View style={styles.errorBanner}>
+                    <Ionicons
+                      name="alert-circle"
+                      size={18}
+                      color="#dc2626"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
+                {/* Username Input */}
+                <View
+                  style={[
+                    styles.inputGroup,
+                    isKeyboardOpenOnMobile && styles.inputGroupKeyboard,
+                  ]}
+                >
+                  <Text style={styles.inputLabel}>Username</Text>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons
+                      name="person-outline"
+                      size={18}
+                      color={colors.textSecondary}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      ref={usernameInputRef}
+                      style={styles.input}
+                      placeholder="Enter username"
+                      placeholderTextColor={colors.placeholder}
+                      value={username}
+                      onChangeText={setUsername}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!submitting}
+                      returnKeyType="next"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => passwordInputRef.current?.focus()}
+                      onFocus={handleUsernameFocus}
+                    />
+                  </View>
+                </View>
+
+                {/* Password Input */}
+                <View
+                  style={[
+                    styles.inputGroup,
+                    isKeyboardOpenOnMobile && styles.inputGroupKeyboard,
+                  ]}
+                >
+                  <Text style={styles.inputLabel}>Password</Text>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={18}
+                      color={colors.textSecondary}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      ref={passwordInputRef}
+                      style={styles.input}
+                      placeholder="Enter password"
+                      placeholderTextColor={colors.placeholder}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      editable={!submitting}
+                      returnKeyType="go"
+                      onSubmitEditing={handleLogin}
+                      onFocus={handlePasswordFocus}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={18}
+                        color={colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Submit Button */}
                 <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeBtn}
-                  activeOpacity={0.7}
+                  style={[
+                    styles.submitBtn,
+                    submitting && styles.submitBtnDisabled,
+                  ]}
+                  onPress={handleLogin}
+                  disabled={submitting}
+                  activeOpacity={0.8}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <View style={styles.submitBtnContent}>
+                      <Text style={styles.submitBtnText}>Sign In</Text>
+                      <Ionicons
+                        name="arrow-forward"
+                        size={18}
+                        color="#ffffff"
+                        style={{ marginLeft: 6 }}
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* Security Footer Note */}
+                <View
+                  style={[
+                    styles.securityNote,
+                    isKeyboardOpenOnMobile && styles.securityNoteKeyboard,
+                  ]}
                 >
                   <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={18}
-                    color={colors.textSecondary}
+                    name="shield-checkmark"
+                    size={14}
+                    color={colors.success}
+                    style={{ marginRight: 6 }}
                   />
-                </TouchableOpacity>
+                  <Text style={styles.securityNoteText}>
+                    256-Bit Encrypted Session Security
+                  </Text>
+                </View>
               </View>
             </View>
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
-              onPress={handleLogin}
-              disabled={submitting}
-              activeOpacity={0.8}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <View style={styles.submitBtnContent}>
-                  <Text style={styles.submitBtnText}>Sign In</Text>
-                  <Ionicons name="arrow-forward" size={18} color="#ffffff" style={{ marginLeft: 6 }} />
-                </View>
-              )}
-            </TouchableOpacity>
-
-
-            {/* Security Footer Note */}
-            <View style={styles.securityNote}>
-              <Ionicons name="shield-checkmark" size={14} color={colors.success} style={{ marginRight: 6 }} />
-              <Text style={styles.securityNoteText}>256-Bit Encrypted Session Security</Text>
-            </View>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -193,6 +358,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       alignItems: 'center',
       padding: isDesktop ? 32 : 20,
     },
+    scrollContentKeyboard: {
+      justifyContent: 'flex-start',
+    },
+    touchableWrapper: {
+      width: '100%',
+      alignItems: 'center',
+    },
     cardContainer: {
       width: '100%',
       maxWidth: isDesktop ? 440 : '100%',
@@ -202,16 +374,27 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       alignItems: 'center',
       marginBottom: 24,
     },
+    brandContainerKeyboard: {
+      marginBottom: 10,
+    },
     brandLogo: {
       width: 72,
       height: 72,
       marginBottom: 12,
+    },
+    brandLogoKeyboard: {
+      width: 44,
+      height: 44,
+      marginBottom: 6,
     },
     appName: {
       fontSize: 26,
       fontWeight: '800',
       color: colors.textPrimary,
       letterSpacing: 0.5,
+    },
+    appNameKeyboard: {
+      fontSize: 20,
     },
     appSub: {
       fontSize: 13,
@@ -232,11 +415,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       borderWidth: 1,
       borderColor: isDark ? '#059669' : '#a7f3d0',
     },
-    modeBadgeDemo: {
-      backgroundColor: isDark ? '#451a03' : '#fffbeb',
-      borderWidth: 1,
-      borderColor: isDark ? '#d97706' : '#fde68a',
-    },
     modeDot: {
       width: 6,
       height: 6,
@@ -245,18 +423,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
     modeDotLive: {
       backgroundColor: '#10b981',
     },
-    modeDotDemo: {
-      backgroundColor: '#f59e0b',
-    },
     modeText: {
       fontSize: 11,
       fontWeight: '600',
     },
     modeTextLive: {
       color: isDark ? '#a7f3d0' : '#047857',
-    },
-    modeTextDemo: {
-      color: isDark ? '#fde68a' : '#b45309',
     },
     formCard: {
       width: '100%',
@@ -271,6 +443,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       shadowRadius: 16,
       elevation: 6,
     },
+    formCardKeyboard: {
+      padding: isDesktop ? 32 : 18,
+    },
     formTitle: {
       fontSize: 20,
       fontWeight: '700',
@@ -281,6 +456,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       fontSize: 12,
       color: colors.textSecondary,
       marginBottom: 20,
+    },
+    formSubtitleKeyboard: {
+      marginBottom: 10,
     },
     errorBanner: {
       flexDirection: 'row',
@@ -301,6 +479,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
     },
     inputGroup: {
       marginBottom: 16,
+    },
+    inputGroupKeyboard: {
+      marginBottom: 12,
     },
     inputLabel: {
       fontSize: 12,
@@ -356,19 +537,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       fontWeight: '700',
       color: '#ffffff',
     },
-    demoHelper: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 16,
-      padding: 8,
-      borderRadius: 8,
-      backgroundColor: colors.surfaceSubtle,
-    },
-    demoHelperText: {
-      fontSize: 11,
-      color: colors.textSecondary,
-    },
     securityNote: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -377,6 +545,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       paddingTop: 16,
       borderTopWidth: 1,
       borderTopColor: colors.border,
+    },
+    securityNoteKeyboard: {
+      marginTop: 10,
+      paddingTop: 8,
     },
     securityNoteText: {
       fontSize: 11,

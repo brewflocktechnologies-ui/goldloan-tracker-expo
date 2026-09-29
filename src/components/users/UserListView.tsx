@@ -1,17 +1,17 @@
+import { OrnamentIcon, UserIcon } from '@/components/Icon';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
 import { RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { OrnamentIcon, UserIcon } from '@/components/Icon';
-import { OptionPickerModal } from '../ornaments/OptionPickerModal';
 import { formatPhoneNumber, USER_SORT_OPTIONS } from '../../mock/userMockExtras';
 import { getDriveImageUrl } from '../../services/api';
 import { User } from '../../types';
 import { getUserLastActive, UserStats, UserStatusFilter } from '../../utils/userOrnamentCalculations';
+import { OptionPickerModal } from '../ornaments/OptionPickerModal';
 import { getAvatarColor, getInitials } from './userAvatar';
-import { UserStatusBadge } from './UserStatusBadge';
 import { useUsersStyles } from './usersStyles';
+import { UserStatusBadge } from './UserStatusBadge';
 
 export type { UserStatusFilter };
 
@@ -57,7 +57,7 @@ export function UserListView({
   const { styles, colors, isDark } = useUsersStyles();
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+    <SafeAreaView edges={['left', 'right']} style={styles.safeArea}>
       {/* Top Header Section (Light Blue) matching PDF */}
       <View style={styles.listTopSection}>
         <View style={styles.headerRow}>

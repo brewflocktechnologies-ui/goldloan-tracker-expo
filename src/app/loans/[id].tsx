@@ -1,14 +1,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  ActivityIndicator, TextInput, Alert, SafeAreaView 
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  ActivityIndicator, TextInput, Alert, BackHandler, Platform
 } from 'react-native';
+import { Image } from 'expo-image';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, ThemeColors } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import { useAppStore } from '../../services/store';
+import { getDriveImageUrl } from '../../services/api';
 import { Loan, User, Ornament, Payment } from '../../types';
 import { Badge } from '../../components/Badge';
+import { ImageViewModal } from '../../components/ImageViewModal';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function LoanDetailScreen() {
@@ -29,6 +33,10 @@ export default function LoanDetailScreen() {
   const [payType, setPayType] = useState<'Interest' | 'Principal' | 'Part_Payment'>('Interest');
   const [payMethod, setPayMethod] = useState<'UPI' | 'Net Banking' | 'Cash'>('UPI');
   const [submittingPay, setSubmittingPay] = useState(false);
+
+  // Full-screen ornament photo preview
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState<string | undefined>(undefined);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -54,6 +62,29 @@ export default function LoanDetailScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)' as any);
+    }
+  }, [router]);
+
+  // Hardware back button: close the inline repayment form first, then leave the screen.
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showPayModal) {
+        setShowPayModal(false);
+        return true;
+      }
+      goBack();
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [showPayModal, goBack]);
 
   const handleRecordPayment = async () => {
     const amt = parseFloat(payAmount) || 0;
@@ -94,10 +125,10 @@ export default function LoanDetailScreen() {
 
   if (!loan) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
         <View style={styles.centerBox}>
           <Text style={styles.errorText}>Loan contract not found</Text>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={goBack}>
             <Text style={styles.linkText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -106,18 +137,21 @@ export default function LoanDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+        <TouchableOpacity onPress={goBack} style={styles.iconBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{loan.LoanNumber}</Text>
+        <View style={styles.headerTitles}>
+          <Text style={styles.headerTitle}>{loan.LoanNumber}</Text>
+          <Text style={styles.headerSubtitle}>View and manage loan contract</Text>
+        </View>
         <View style={{ width: 32 }} />
       </View>
 
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {/* Main Contract Card */}
-        <View style={styles.card}>
+        {/* Main Contract Card (blue accent, matches Customer Details hero) */}
+        <View style={styles.heroCard}>
           <View style={styles.topRow}>
             <View>
               <Text style={styles.loanNumber}>{loan.LoanNumber}</Text>
@@ -166,11 +200,11 @@ export default function LoanDetailScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.actionBtn, styles.actionBtnOutline]} 
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnOutline]}
             onPress={() => router.push('/loans/closure')}
           >
-            <Ionicons name="checkmark-done" size={18} color={isDark ? '#fbbf24' : colors.primaryDark} />
+            <Ionicons name="checkmark-done" size={18} color="#0284c7" />
             <Text style={styles.actionBtnOutlineText}>Close & Release</Text>
           </TouchableOpacity>
         </View>
@@ -233,24 +267,58 @@ export default function LoanDetailScreen() {
 
         {/* Pledged Ornaments */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Pledged Gold Items ({ornaments.length})</Text>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.cardHeaderIconBox}>
+              <Ionicons name="diamond-outline" size={16} color="#0284c7" />
+            </View>
+            <Text style={styles.cardTitle}>Pledged Gold Items ({ornaments.length})</Text>
+          </View>
           {ornaments.length === 0 ? (
             <Text style={styles.emptyNotice}>No ornaments mapped directly to this contract.</Text>
           ) : (
-            ornaments.map((o, idx) => (
-              <View key={o.OrnamentId || idx} style={styles.ornRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.ornTitle}>{o.OrnamentName}</Text>
-                  <Text style={styles.ornSub}>
-                    {o.Purity} • Net Wt: {Number(o.NetWeight || 0).toFixed(2)}g • Val: ₹{(o.MarketValue || 0).toLocaleString()}
-                  </Text>
+            ornaments.map((o, idx) => {
+              const firstImg = o.OrnamentImages ? o.OrnamentImages.split(' | ').filter(Boolean)[0] : '';
+              const directUrl = firstImg ? getDriveImageUrl(firstImg) : '';
+              return (
+                <View key={o.OrnamentId || idx} style={styles.ornRow}>
+                  <TouchableOpacity
+                    style={styles.ornThumb}
+                    activeOpacity={directUrl ? 0.8 : 1}
+                    disabled={!directUrl}
+                    onPress={() => {
+                      setPreviewImage(firstImg);
+                      setPreviewTitle(o.OrnamentName);
+                    }}
+                    accessibilityLabel={`View photo of ${o.OrnamentName}`}
+                  >
+                    {directUrl ? (
+                      <Image source={{ uri: directUrl }} style={styles.ornThumbImage} contentFit="cover" />
+                    ) : (
+                      <View style={styles.ornThumbPlaceholder}>
+                        <Ionicons name="diamond-outline" size={20} color={isDark ? '#fbbf24' : '#0284c7'} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.ornTitle}>{o.OrnamentName}</Text>
+                    <Text style={styles.ornSub}>
+                      {o.Purity} • Net Wt: {Number(o.NetWeight || 0).toFixed(2)}g • Val: ₹{(o.MarketValue || 0).toLocaleString()}
+                    </Text>
+                  </View>
+                  <Badge label="Pledged" variant="warning" size="sm" />
                 </View>
-                <Badge label="Pledged" variant="warning" size="sm" />
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       </ScrollView>
+
+      <ImageViewModal
+        visible={!!previewImage}
+        imageUrl={previewImage}
+        title={previewTitle}
+        onClose={() => setPreviewImage(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -263,19 +331,30 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: Platform.OS === 'android' ? 14 : 10,
+    paddingBottom: 12,
+    backgroundColor: isDark ? '#0f172a' : '#d8edfa',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: isDark ? '#1e293b' : '#bfe0f2',
   },
   iconBtn: {
-    padding: 4,
+    padding: 6,
+    marginRight: 6,
+  },
+  headerTitles: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    color: isDark ? '#f8fafc' : '#0d172a',
+    letterSpacing: -0.2,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: isDark ? '#94a3b8' : '#64748b',
+    marginTop: 1,
   },
   container: {
     flex: 1,
@@ -284,6 +363,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 40,
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
   centerBox: {
     flex: 1,
@@ -306,6 +388,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     marginBottom: 14,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  heroCard: {
+    backgroundColor: isDark ? '#0f172a' : '#e0f2fe',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: isDark ? '#1e293b' : '#bae6fd',
   },
   topRow: {
     flexDirection: 'row',
@@ -345,7 +435,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   metaValPrimary: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.primaryDark,
+    color: '#0284c7',
   },
   btnRow: {
     flexDirection: 'row',
@@ -362,7 +452,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     gap: 6,
   },
   actionBtnPrimary: {
-    backgroundColor: colors.primaryDark,
+    backgroundColor: '#0284c7',
   },
   actionBtnPrimaryText: {
     color: '#ffffff',
@@ -372,10 +462,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   actionBtnOutline: {
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: '#0284c7',
   },
   actionBtnOutlineText: {
-    color: colors.primaryDark,
+    color: '#0284c7',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -408,8 +498,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     borderColor: colors.border,
   },
   payTypeBtnActive: {
-    backgroundColor: '#fef08a',
-    borderColor: '#ca8a04',
+    backgroundColor: '#0284c7',
+    borderColor: '#0284c7',
   },
   payTypeBtnText: {
     fontSize: 11,
@@ -417,7 +507,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: colors.textSecondary,
   },
   payTypeBtnTextActive: {
-    color: '#854d0e',
+    color: '#ffffff',
     fontWeight: '700',
   },
   payInput: {
@@ -444,13 +534,26 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  cardHeaderIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: colors.textPrimary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 10,
   },
   emptyNotice: {
     fontSize: 13,
@@ -458,11 +561,29 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   ornRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  ornThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+  },
+  ornThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  ornThumbPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: isDark ? '#1e293b' : '#f0f9ff',
   },
   ornTitle: {
     fontSize: 13,
