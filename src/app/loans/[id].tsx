@@ -21,6 +21,7 @@ import {
   formatLoanPhone,
   getLoanStatusInfo,
 } from '../../components/loans/loanUtils';
+import { LoanCloseModal } from '../../components/LoanCloseModal';
 import { ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -38,6 +39,7 @@ export default function LoanDetailScreen() {
 
   const [activeTab, setActiveTab] = useState<'Summary' | 'Payments'>('Summary');
   const [refreshing, setRefreshing] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
 
   // Repayment form modal state
   const [showPayModal, setShowPayModal] = useState(false);
@@ -132,13 +134,18 @@ export default function LoanDetailScreen() {
     }
   };
 
-  // Navigate to Loan Settlement / Closure
+  // Open the Close & Release popup
   const handleCloseAndRelease = () => {
     if (!loan) return;
-    router.push({
-      pathname: '/(tabs)/closure',
-      params: { loanId: loan.LoanId },
-    } as any);
+    if (!isSuperAdmin) {
+      toast.danger('Closing a loan requires SuperAdmin access');
+      return;
+    }
+    if (loan.LoanStatus === 'Closed') {
+      toast.danger('This loan is already closed');
+      return;
+    }
+    setShowCloseModal(true);
   };
 
   if (!loan) {
@@ -597,6 +604,7 @@ export default function LoanDetailScreen() {
         </ScrollView>
 
         {/* ─── 4. STICKY BOTTOM ACTION BAR (Both tabs) ─── */}
+        {loan.LoanStatus !== 'Closed' && (
         <View style={styles.bottomBar}>
           <TouchableOpacity
             style={styles.closeReleaseBtn}
@@ -622,6 +630,14 @@ export default function LoanDetailScreen() {
             <Text style={styles.recordPayText}>Record payment</Text>
           </TouchableOpacity>
         </View>
+        )}
+
+        {/* ─── CLOSE & RELEASE POPUP ─── */}
+        <LoanCloseModal
+          visible={showCloseModal}
+          loan={loan}
+          onClose={() => setShowCloseModal(false)}
+        />
 
         {/* ─── 5. RECORD PAYMENT MODAL ─── */}
         <Modal visible={showPayModal} animationType="slide" transparent>
