@@ -23,7 +23,7 @@ export default function UsersScreen() {
   const store = useAppStore();
   const toast = useToast();
   const router = useRouter();
-  const { action } = useLocalSearchParams<{ action?: string }>();
+  const { action, userId } = useLocalSearchParams<{ action?: string; userId?: string }>();
 
   // View mode: 'list' | 'details' | 'add' | 'edit'
   const [viewMode, setViewMode] = useState<'list' | 'details' | 'add' | 'edit'>('list');
@@ -148,6 +148,20 @@ export default function UsersScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [action]);
+
+  // Entered via a link to a specific customer (e.g. from Loan Details): open that customer's details.
+  useEffect(() => {
+    if (!userId) return;
+    const target = store.users.find(
+      (u) =>
+        String(u.UserId) === String(userId) ||
+        (u.CustomerCode && String(u.CustomerCode).toLowerCase() === String(userId).toLowerCase())
+    );
+    if (!target) return; // users may still be loading; effect re-runs when they arrive
+    handleCardPress(target);
+    router.setParams({ userId: undefined } as any);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, store.users]);
 
   // Open Edit Screen
   const handleEditPress = (user: User) => {

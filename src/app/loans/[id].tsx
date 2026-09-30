@@ -341,7 +341,7 @@ export default function LoanDetailScreen() {
             onPress={() => {
               const targetId = borrower?.UserId || loan.UserId;
               if (targetId) {
-                router.push('/(tabs)/users' as any);
+                router.push({ pathname: '/(tabs)/users', params: { userId: String(targetId) } } as any);
               }
             }}
             activeOpacity={0.8}
