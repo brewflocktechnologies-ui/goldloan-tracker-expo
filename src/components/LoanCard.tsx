@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
-import { ExtraUserLoan } from '../mock/userMockExtras';
+import { ExtraUserLoan } from '../constants/userExtras';
 import { getDriveImageUrl } from '../services/api';
 
 export interface LoanCardProps {

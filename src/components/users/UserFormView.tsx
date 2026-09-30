@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
 import { ActivityIndicator, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { INDIAN_STATES, OCCUPATION_OPTIONS } from '../../mock/userMockExtras';
+import { INDIAN_STATES, OCCUPATION_OPTIONS } from '../../constants/userExtras';
 import { getDriveImageUrl } from '../../services/api';
 import { DatePickerModal } from '../DatePickerModal';
 import { OptionPickerModal } from '../ornaments/OptionPickerModal';
@@ -412,7 +412,7 @@ export function UserFormView({
                 })
               }
             >
-              <Text style={styles.dropdownValue}>{form.Occupation || 'Select Occupation'}</Text>
+              <Text style={styles.dropdownValue}>{form.Occupation || 'Select occupation'}</Text>
               <OrnamentIcon name="arrow-down-s" size={16} color="#64748b" />
             </TouchableOpacity>
           </View>

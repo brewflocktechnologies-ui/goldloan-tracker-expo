@@ -2,9 +2,9 @@ import { OrnamentIcon, UserIcon } from '@/components/Icon';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Dispatch, SetStateAction } from 'react';
-import { RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { formatPhoneNumber, USER_SORT_OPTIONS } from '../../mock/userMockExtras';
+import { formatPhoneNumber, USER_SORT_OPTIONS } from '../../constants/userExtras';
 import { getDriveImageUrl } from '../../services/api';
 import { User } from '../../types';
 import { getUserLastActive, UserStats, UserStatusFilter } from '../../utils/userOrnamentCalculations';
@@ -89,6 +89,7 @@ export function UserListView({
               />
               <TextInput
                 style={styles.searchInput}
+                accessibilityLabel="Search customers"
                 placeholder="Search by name, mobile, or customer ID..."
                 placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                 value={searchQuery}
@@ -97,6 +98,8 @@ export function UserListView({
               {searchQuery ? (
                 <TouchableOpacity
                   onPress={() => setSearchQuery('')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
                   style={styles.clearBtn}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
@@ -128,6 +131,8 @@ export function UserListView({
             <TouchableOpacity
               style={[styles.filterPill, activeFilter === 'All' && styles.filterPillActive]}
               onPress={() => setActiveFilter('All')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === 'All' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'All' && styles.filterPillTextActive]}>
                 All ({totalCount})
@@ -137,6 +142,8 @@ export function UserListView({
             <TouchableOpacity
               style={[styles.filterPill, activeFilter === 'Active' && styles.filterPillActive]}
               onPress={() => setActiveFilter('Active')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === 'Active' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'Active' && styles.filterPillTextActive]}>
                 Active ({activeCount})
@@ -146,6 +153,8 @@ export function UserListView({
             <TouchableOpacity
               style={[styles.filterPill, activeFilter === 'Inactive' && styles.filterPillActive]}
               onPress={() => setActiveFilter('Inactive')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === 'Inactive' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'Inactive' && styles.filterPillTextActive]}>
                 Inactive ({inactiveCount})
@@ -156,123 +165,125 @@ export function UserListView({
       </View>
 
       {/* Customer Cards List */}
-      <ScrollView
+      <FlatList
         style={styles.cardsScrollContainer}
-        contentContainerStyle={styles.cardsScrollContent}
+        contentContainerStyle={[styles.cardsScrollContent, styles.cardsList]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284c7']} />}
-      >
-        <View style={styles.cardsList}>
-          {filteredUsers.map(user => {
-            const directPhoto = user.CustomerPhoto ? getDriveImageUrl(user.CustomerPhoto) : '';
-            const avatarTone = getAvatarColor(user.FullName);
-            const initials = getInitials(user.FullName);
-            const stats = userStatsMap.get(user.UserId) || { loanCount: 0, goldWeight: 0 };
-            const lastActive = getUserLastActive(user);
+        data={filteredUsers}
+        keyExtractor={item => item.UserId}
+        initialNumToRender={20}
+        windowSize={11}
+        maxToRenderPerBatch={12}
+        renderItem={({ item: user }) => {
+          const directPhoto = user.CustomerPhoto ? getDriveImageUrl(user.CustomerPhoto) : '';
+          const avatarTone = getAvatarColor(user.FullName);
+          const initials = getInitials(user.FullName);
+          const stats = userStatsMap.get(user.UserId) || { loanCount: 0, goldWeight: 0 };
+          const lastActive = getUserLastActive(user);
 
-            return (
-              <TouchableOpacity
-                key={user.UserId}
-                style={styles.listCard}
-                onPress={() => onCardPress(user)}
-                activeOpacity={0.7}
-              >
-                {/* Top Section: Left (Avatar + Name & Code) | Right (Status Pill) */}
-                <View style={styles.cardTopRow}>
-                  <View style={styles.cardTopLeft}>
-                    <View style={styles.avatarContainer}>
-                      {directPhoto || user.CustomerPhoto ? (
-                        <Image
-                          source={{ uri: directPhoto || user.CustomerPhoto }}
-                          style={styles.avatarImage}
-                          contentFit="cover"
-                        />
-                      ) : (
-                        <View style={[styles.avatarInitialsBox, { backgroundColor: avatarTone.bg }]}>
-                          <Text style={[styles.avatarInitialsText, { color: avatarTone.text }]}>{initials}</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.cardIdentityCol}>
-                      <Text style={styles.listCardTitle} numberOfLines={1}>{user.FullName}</Text>
-                      <Text style={styles.cardIdText}>{user.CustomerCode || user.UserId}</Text>
-                    </View>
+          return (
+            <TouchableOpacity
+              style={styles.listCard}
+              onPress={() => onCardPress(user)}
+                accessibilityRole="button"
+                accessibilityLabel={`Customer ${user.FullName}`}
+              activeOpacity={0.7}
+            >
+              {/* Top Section: Left (Avatar + Name & Code) | Right (Status Pill) */}
+              <View style={styles.cardTopRow}>
+                <View style={styles.cardTopLeft}>
+                  <View style={styles.avatarContainer}>
+                    {directPhoto || user.CustomerPhoto ? (
+                      <Image
+                        source={{ uri: directPhoto || user.CustomerPhoto }}
+                        style={styles.avatarImage}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View style={[styles.avatarInitialsBox, { backgroundColor: avatarTone.bg }]}>
+                        <Text style={[styles.avatarInitialsText, { color: avatarTone.text }]}>{initials}</Text>
+                      </View>
+                    )}
                   </View>
 
-                  <View style={styles.cardTopRight}>
-                    <UserStatusBadge status={user.Status} isDark={isDark} variant="badge" showDot={false} />
+                  <View style={styles.cardIdentityCol}>
+                    <Text style={styles.listCardTitle} numberOfLines={1}>{user.FullName}</Text>
+                    <Text style={styles.cardIdText}>{user.CustomerCode || user.UserId}</Text>
                   </View>
                 </View>
 
-                {/* Bottom Section: Left (Phone & Last Active) | Right (Loans & Gold Weight + Chevron) */}
-                <View style={styles.cardBottomRow}>
-                  <View style={styles.cardBottomLeftCol}>
-                    <View style={styles.cardInfoRow}>
-                      <Ionicons
-                        name="call-outline"
-                        size={15}
-                        color={isDark ? '#cbd5e1' : '#334155'}
-                        style={styles.cardInfoIcon}
-                      />
-                      <Text style={styles.cardPhoneText}>{formatPhoneNumber(user.MobileNumber)}</Text>
-                    </View>
+                <View style={styles.cardTopRight}>
+                  <UserStatusBadge status={user.Status} isDark={isDark} variant="badge" showDot={false} />
+                </View>
+              </View>
 
-                    <View style={styles.cardInfoRow}>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={15}
-                        color={isDark ? '#94a3b8' : '#64748b'}
-                        style={styles.cardInfoIcon}
-                      />
-                      <Text style={styles.cardLastActiveText}>
-                        {lastActive || 'Last active: —'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.cardBottomRightCol}>
-                    <View style={styles.cardStatsCol}>
-                      <View style={styles.cardStatRow}>
-                        <UserIcon
-                          name="notebook"
-                          size={15}
-                          color={isDark ? '#cbd5e1' : '#475467'}
-                          style={styles.cardStatIcon}
-                        />
-                        <Text style={styles.cardStatText}>{stats.loanCount} Loans</Text>
-                      </View>
-
-                      <View style={styles.cardStatRow}>
-                        <Image
-                          source={require('../../../assets/images/gold_bars.png')}
-                          style={styles.goldBarIcon}
-                          contentFit="contain"
-                        />
-                        <Text style={styles.cardStatText}>{stats.goldWeight.toFixed(1)} g</Text>
-                      </View>
-                    </View>
-
+              {/* Bottom Section: Left (Phone & Last Active) | Right (Loans & Gold Weight + Chevron) */}
+              <View style={styles.cardBottomRow}>
+                <View style={styles.cardBottomLeftCol}>
+                  <View style={styles.cardInfoRow}>
                     <Ionicons
-                      name="chevron-forward"
-                      size={18}
-                      color={isDark ? '#f8fafc' : '#0f172a'}
-                      style={styles.cardChevronIcon}
+                      name="call-outline"
+                      size={15}
+                      color={isDark ? '#cbd5e1' : '#334155'}
+                      style={styles.cardInfoIcon}
                     />
+                    <Text style={styles.cardPhoneText}>{formatPhoneNumber(user.MobileNumber)}</Text>
+                  </View>
+
+                  <View style={styles.cardInfoRow}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={15}
+                      color={isDark ? '#94a3b8' : '#64748b'}
+                      style={styles.cardInfoIcon}
+                    />
+                    <Text style={styles.cardLastActiveText}>
+                      {lastActive || 'Last active: —'}
+                    </Text>
                   </View>
                 </View>
-              </TouchableOpacity>
-            );
-          })}
 
-          {filteredUsers.length === 0 && (
-            <View style={styles.emptyContainer}>
+                <View style={styles.cardBottomRightCol}>
+                  <View style={styles.cardStatsCol}>
+                    <View style={styles.cardStatRow}>
+                      <UserIcon
+                        name="notebook"
+                        size={15}
+                        color={isDark ? '#cbd5e1' : '#475467'}
+                        style={styles.cardStatIcon}
+                      />
+                      <Text style={styles.cardStatText}>{stats.loanCount} Loans</Text>
+                    </View>
+
+                    <View style={styles.cardStatRow}>
+                      <Image
+                        source={require('../../../assets/images/gold_bars.png')}
+                        style={styles.goldBarIcon}
+                        contentFit="contain"
+                      />
+                      <Text style={styles.cardStatText}>{stats.goldWeight.toFixed(1)} g</Text>
+                    </View>
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={isDark ? '#f8fafc' : '#0f172a'}
+                    style={styles.cardChevronIcon}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+        <View style={styles.emptyContainer}>
               <OrnamentIcon name="users-group" size={42} color="#94a3b8" />
               <Text style={styles.emptyTitle}>No customers found</Text>
               <Text style={styles.emptySubtitle}>Try adjusting your search query or status filter</Text>
             </View>
-          )}
-        </View>
-      </ScrollView>
+        }
+      />
 
       {/* Floating Action Button (+) */}
       <TouchableOpacity

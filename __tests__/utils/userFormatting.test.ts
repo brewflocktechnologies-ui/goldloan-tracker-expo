@@ -2,7 +2,7 @@ import {
   formatMaskedAadhaar,
   formatMaskedPAN,
   formatPhoneNumber,
-} from '../../src/mock/userMockExtras';
+} from '../../src/constants/userExtras';
 import {
   buildUserStatsMap,
   calculateAge,

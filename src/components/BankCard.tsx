@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
-import { ExtraUserBankAccount } from '../mock/userMockExtras';
+import { ExtraUserBankAccount } from '../constants/userExtras';
 import { getDriveImageUrl } from '../services/api';
 import { BankAccount } from '../types';
 
