@@ -148,7 +148,8 @@ export const MobileMenuModal: React.FC<MobileMenuModalProps> = ({
 
           {/* Navigation Items */}
           <View style={styles.menuList}>
-            {/* Bank Accounts */}
+            {/* TEMPORARILY DISABLED: Bank Accounts & Loan Settlement menu items. Remove this comment wrapper to restore.
+            Bank Accounts
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => navigateTo('/(tabs)/bank-accounts')}
@@ -190,7 +191,7 @@ export const MobileMenuModal: React.FC<MobileMenuModalProps> = ({
               />
             </TouchableOpacity>
 
-            {/* Settlements / Closure */}
+            Settlements / Closure
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => navigateTo('/(tabs)/closure')}
@@ -231,6 +232,7 @@ export const MobileMenuModal: React.FC<MobileMenuModalProps> = ({
                 color={isDark ? '#475569' : '#94a3b8'}
               />
             </TouchableOpacity>
+            */}
 
             {/* Admin Users */}
             {isSuperAdmin && (
