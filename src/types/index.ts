@@ -109,7 +109,7 @@ export interface Payment {
   PaymentId: string;
   LoanId: string;
   PaymentDate: string;
-  PaymentType: "Interest" | "Principal" | "Full_Settlement" | "Part_Payment";
+  PaymentType: "Interest" | "Principal" | "Full_Settlement" | "Part_Payment" | "Penalty";
   PrincipalAmount: number;
   InterestAmount: number;
   PenaltyAmount: number;
