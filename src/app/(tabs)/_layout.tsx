@@ -14,6 +14,7 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MobileMenuModal } from '../../components/MobileMenuModal';
 import { ProfileModal } from '../../components/ProfileModal';
 import { SidebarTrigger } from '../../components/SidebarTrigger';
 import { ThemeToggleBtn } from '../../components/ThemeToggleBtn';
@@ -87,6 +88,50 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+const MOBILE_NAV_ITEMS: NavItem[] = [
+  {
+    name: 'index',
+    route: '/(tabs)',
+    title: 'Dashboard',
+    shortTitle: 'Home',
+    icon: 'home-outline',
+    activeIcon: 'home',
+  },
+  {
+    name: 'users',
+    route: '/(tabs)/users',
+    title: 'Users',
+    shortTitle: 'Users',
+    icon: 'people-outline',
+    activeIcon: 'people',
+  },
+  {
+    name: 'ornaments',
+    route: '/(tabs)/ornaments',
+    title: 'Ornaments',
+    shortTitle: 'Ornaments',
+    icon: 'ring',
+    activeIcon: 'ring',
+    iconSet: 'MaterialCommunityIcons',
+  },
+  {
+    name: 'loans',
+    route: '/(tabs)/loans',
+    title: 'Active Loans',
+    shortTitle: 'Loans',
+    icon: 'document-text-outline',
+    activeIcon: 'document-text',
+  },
+  {
+    name: 'menu',
+    route: 'menu',
+    title: 'Menu',
+    shortTitle: 'Menu',
+    icon: 'menu-outline',
+    activeIcon: 'menu',
+  },
+];
+
 const TAB_METADATA: Record<string, { title: string; subtitle: string }> = {
   index: {
     title: 'Financial Overview',
@@ -133,6 +178,7 @@ function TabLayoutInner() {
   const { width } = useWindowDimensions();
   const { user, isSuperAdmin } = useAuth();
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
 
   const desktopNavItems = React.useMemo(() => {
     return [
@@ -333,7 +379,8 @@ function TabLayoutInner() {
         {/* ─── TAB SCREENS CONTENT ─── */}
         <View style={styles.screensWrapper}>
           {/* ─── GLOBAL SHARED TOP NAVIGATION BAR ─── */}
-          <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
+          {!isDesktop && currentTabKey === 'loans' ? null : (
+            <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
             {isDesktop ? (
               /* Desktop: Sidebar Trigger + Page Title & Subtitle */
               <View style={styles.topBarTitleGroup}>
@@ -412,6 +459,7 @@ function TabLayoutInner() {
               </TouchableOpacity>
             </View>
           </View>
+          )}
 
           {/* Screen Content Tabs */}
           <View style={{ flex: 1 }}>
@@ -431,15 +479,22 @@ function TabLayoutInner() {
             </Tabs>
           </View>
 
-          {/* ─── MOBILE BOTTOM NAVIGATION BAR (WhatsApp / YouTube style) ─── */}
+          {/* ─── MOBILE BOTTOM NAVIGATION BAR (WhatsApp / YouTube style matching mockup) ─── */}
           {!isDesktop && (
             <View style={[styles.mobileBottomNav, { paddingBottom: Math.max(bottomInset, 8) }]}>
-              {NAV_ITEMS.map((item) => {
-                const active = isRouteActive(item);
+              {MOBILE_NAV_ITEMS.map((item) => {
+                const active = item.name === 'menu' ? false : isRouteActive(item);
+                const activeColor = item.name === 'loans' ? (isDark ? '#38bdf8' : '#0284c7') : (isDark ? '#fbbf24' : colors.primaryDark);
                 return (
                   <TouchableOpacity
                     key={item.name}
-                    onPress={() => navigateTo(item)}
+                    onPress={() => {
+                      if (item.name === 'menu') {
+                        setMobileMenuVisible(true);
+                      } else {
+                        navigateTo(item);
+                      }
+                    }}
                     style={styles.bottomNavItem}
                     activeOpacity={0.7}
                   >
@@ -448,26 +503,26 @@ function TabLayoutInner() {
                         <MaterialCommunityIcons
                           name={(active ? item.activeIcon : item.icon) as any}
                           size={22}
-                          color={active ? (isDark ? '#fbbf24' : colors.primaryDark) : colors.textSecondary}
+                          color={active ? activeColor : colors.textSecondary}
                         />
                       ) : (
                         <Ionicons
                           name={(active ? item.activeIcon : item.icon) as any}
                           size={21}
-                          color={active ? (isDark ? '#fbbf24' : colors.primaryDark) : colors.textSecondary}
+                          color={active ? activeColor : colors.textSecondary}
                         />
                       )}
                     </View>
                     <Text 
                       style={[
                         styles.bottomNavText, 
-                        active && styles.bottomNavTextActive
+                        active && [styles.bottomNavTextActive, { color: activeColor }]
                       ]}
                       numberOfLines={1}
                     >
                       {item.shortTitle}
                     </Text>
-                    <View style={[styles.activeTabUnderline, !active && styles.inactiveTabUnderline]} />
+                    <View style={[styles.activeTabUnderline, active ? { backgroundColor: activeColor } : styles.inactiveTabUnderline]} />
                   </TouchableOpacity>
                 );
               })}
@@ -480,6 +535,13 @@ function TabLayoutInner() {
       <ProfileModal
         visible={profileModalVisible}
         onClose={() => setProfileModalVisible(false)}
+      />
+
+      {/* Mobile Menu Sheet */}
+      <MobileMenuModal
+        visible={mobileMenuVisible}
+        onClose={() => setMobileMenuVisible(false)}
+        onOpenProfile={() => setProfileModalVisible(true)}
       />
     </View>
   );
