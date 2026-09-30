@@ -2,22 +2,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
-  Alert,
   Modal,
   Platform, RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
 import { Badge } from '../../components/Badge';
+import { BankAccountFormModal } from '../../components/BankAccountFormModal';
 import { BankCard } from '../../components/BankCard';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Column, DataTable } from '../../components/DataTable';
-import { FilePayload, ImagePickerField } from '../../components/ImagePickerField';
 import { ImageViewModal } from '../../components/ImageViewModal';
 import { ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -39,9 +37,7 @@ export default function BankAccountsScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<BankAccount | null>(null);
   const [selectedAcc, setSelectedAcc] = useState<BankAccount | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [filesPayload, setFilesPayload] = useState<FilePayload[]>([]);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const onRefresh = async () => {
@@ -50,68 +46,13 @@ export default function BankAccountsScreen() {
     setRefreshing(false);
   };
 
-  // Form State
-  const [form, setForm] = useState({
-    UserId: '',
-    AccountHolderName: '',
-    AccountNumber: '',
-    BankName: 'State Bank of India',
-    BranchName: '',
-    City: 'Bengaluru',
-    IFSCCode: '',
-    AccountType: 'Savings',
-    UPI_ID: '',
-    MaxLoanAmount: '500000',
-    UtilizedLoanAmount: '0',
-    PassbookImage: '',
-    Status: 'Active' as 'Active' | 'Inactive',
-  });
-
-  const maxNum = parseFloat(form.MaxLoanAmount) || 0;
-  const utilNum = parseFloat(form.UtilizedLoanAmount) || 0;
-  const availableCalc = Math.max(0, maxNum - utilNum);
-
   const openAddModal = () => {
-    setIsEditing(false);
     setSelectedAcc(null);
-    setFilesPayload([]);
-    setForm({
-      UserId: store.users[0]?.UserId || 'U001',
-      AccountHolderName: store.users[0]?.FullName || '',
-      AccountNumber: '',
-      BankName: 'State Bank of India',
-      BranchName: '',
-      City: 'Bengaluru',
-      IFSCCode: '',
-      AccountType: 'Savings',
-      UPI_ID: '',
-      MaxLoanAmount: '500000',
-      UtilizedLoanAmount: '0',
-      PassbookImage: '',
-      Status: 'Active',
-    });
     setModalVisible(true);
   };
 
   const openEditModal = (acc: BankAccount) => {
-    setIsEditing(true);
     setSelectedAcc(acc);
-    setFilesPayload([]);
-    setForm({
-      UserId: acc.UserId || '',
-      AccountHolderName: acc.AccountHolderName || '',
-      AccountNumber: acc.AccountNumber || '',
-      BankName: acc.BankName || '',
-      BranchName: acc.BranchName || '',
-      City: acc.City || 'Bengaluru',
-      IFSCCode: acc.IFSCCode || '',
-      AccountType: acc.AccountType || 'Savings',
-      UPI_ID: acc.UPI_ID || '',
-      MaxLoanAmount: String(acc.MaxLoanAmount || 0),
-      UtilizedLoanAmount: String(acc.UtilizedLoanAmount || 0),
-      PassbookImage: acc.PassbookImage || '',
-      Status: acc.Status === 'Inactive' ? 'Inactive' : 'Active',
-    });
     setModalVisible(true);
   };
 
@@ -132,36 +73,6 @@ export default function BankAccountsScreen() {
     setDeleteModalVisible(false);
     setAccountToDelete(null);
     toast.danger(`Bank account "${name}" deleted successfully`);
-  };
-
-  const handleSave = () => {
-    if (!form.AccountHolderName.trim()) {
-      Alert.alert('Validation Error', 'Account Holder Name is required.');
-      return;
-    }
-    if (!form.AccountNumber.trim()) {
-      Alert.alert('Validation Error', 'Account Number is required.');
-      return;
-    }
-
-    if (isEditing && selectedAcc) {
-      store.updateBankAccount(selectedAcc.BankAccountId, {
-        ...form,
-        MaxLoanAmount: maxNum,
-        UtilizedLoanAmount: utilNum,
-        files: filesPayload,
-      });
-      toast.success(`Bank account "${form.BankName}" updated successfully`);
-    } else {
-      store.addBankAccount({
-        ...form,
-        MaxLoanAmount: maxNum,
-        UtilizedLoanAmount: utilNum,
-        files: filesPayload,
-      });
-      toast.success(`Bank account "${form.BankName}" added successfully`);
-    }
-    setModalVisible(false);
   };
 
   // Table Columns exactly matching bankAccountsTable in index.html:
@@ -348,207 +259,11 @@ export default function BankAccountsScreen() {
       </ScrollView>
 
       {/* ADD / EDIT BANK ACCOUNT MODAL */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isEditing ? 'Edit Bank Account' : 'Add Bank Account'}
-              </Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              {/* Borrower Select */}
-              <View style={styles.field}>
-                <Text style={styles.label}>Select Borrower *</Text>
-                {store.users.length === 0 ? (
-                  <View style={{ backgroundColor: colors.warningBg, padding: 10, borderRadius: 8, marginTop: 4 }}>
-                    <Text style={{ fontSize: 13, color: colors.warning, fontWeight: '500' }}>
-                      ⚠️ No borrowers registered yet. Please add a customer in the Users tab first.
-                    </Text>
-                  </View>
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
-                    {store.users.map(u => (
-                      <TouchableOpacity
-                        key={u.UserId}
-                        style={[styles.userChip, form.UserId === u.UserId && styles.userChipActive]}
-                        onPress={() => setForm(p => ({ ...p, UserId: u.UserId, AccountHolderName: u.FullName }))}
-                      >
-                        <Text style={[styles.userChipText, form.UserId === u.UserId && styles.userChipTextActive]}>
-                          {u.FullName}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Account Holder Name *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={form.AccountHolderName}
-                  onChangeText={v => setForm(p => ({ ...p, AccountHolderName: v }))}
-                />
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Bank Name *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. HDFC Bank"
-                    value={form.BankName}
-                    onChangeText={v => setForm(p => ({ ...p, BankName: v }))}
-                  />
-                </View>
-
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Account Number *</Text>
-                  <TextInput
-                    style={styles.input}
-                    keyboardType="number-pad"
-                    value={form.AccountNumber}
-                    onChangeText={v => setForm(p => ({ ...p, AccountNumber: v }))}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Branch Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={form.BranchName}
-                    onChangeText={v => setForm(p => ({ ...p, BranchName: v }))}
-                  />
-                </View>
-
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>IFSC Code</Text>
-                  <TextInput
-                    style={styles.input}
-                    autoCapitalize="characters"
-                    value={form.IFSCCode}
-                    onChangeText={v => setForm(p => ({ ...p, IFSCCode: v }))}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>City</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={form.City}
-                    onChangeText={v => setForm(p => ({ ...p, City: v }))}
-                  />
-                </View>
-
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>UPI ID</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. name@okaxis"
-                    autoCapitalize="none"
-                    value={form.UPI_ID}
-                    onChangeText={v => setForm(p => ({ ...p, UPI_ID: v }))}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Account Type</Text>
-                  <View style={styles.statusToggleRow}>
-                    {(['Savings', 'Current'] as const).map(t => (
-                      <TouchableOpacity
-                        key={t}
-                        style={[styles.statusBtn, form.AccountType === t && styles.statusBtnActive]}
-                        onPress={() => setForm(p => ({ ...p, AccountType: t }))}
-                      >
-                        <Text style={[styles.statusBtnText, form.AccountType === t && styles.statusBtnTextActive]}>{t}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Status</Text>
-                  <View style={styles.statusToggleRow}>
-                    {(['Active', 'Inactive'] as const).map(s => (
-                      <TouchableOpacity
-                        key={s}
-                        style={[styles.statusBtn, form.Status === s && styles.statusBtnActive]}
-                        onPress={() => setForm(p => ({ ...p, Status: s }))}
-                      >
-                        <Text style={[styles.statusBtnText, form.Status === s && styles.statusBtnTextActive]}>{s}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-
-              {/* Limit Calculations Box */}
-              <View style={styles.calcBox}>
-                <Text style={styles.calcBoxTitle}>Loan Limit Calculations</Text>
-                
-                <View style={styles.formRow}>
-                  <View style={[styles.field, { flex: 1 }]}>
-                    <Text style={styles.label}>Max Loan Limit (₹) *</Text>
-                    <TextInput
-                      style={styles.input}
-                      keyboardType="number-pad"
-                      value={form.MaxLoanAmount}
-                      onChangeText={v => setForm(p => ({ ...p, MaxLoanAmount: v }))}
-                    />
-                  </View>
-
-                  <View style={[styles.field, { flex: 1 }]}>
-                    <Text style={styles.label}>Utilized Loan (₹)</Text>
-                    <TextInput
-                      style={styles.input}
-                      keyboardType="number-pad"
-                      value={form.UtilizedLoanAmount}
-                      onChangeText={v => setForm(p => ({ ...p, UtilizedLoanAmount: v }))}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.calcResultRow}>
-                  <Text style={styles.calcResultLabel}>Calculated Available Loan Amount:</Text>
-                  <Text style={styles.calcResultVal}>₹{availableCalc.toLocaleString()}</Text>
-                </View>
-              </View>
-
-              {/* Passbook / Cheque Leaf Image */}
-              <ImagePickerField
-                type="card"
-                label="Passbook / Cheque Leaf Photo"
-                helperText="Upload photo of bank passbook or cancelled cheque"
-                value={form.PassbookImage}
-                onChange={(url, files) => {
-                  setForm(p => ({ ...p, PassbookImage: url }));
-                  setFilesPayload(files);
-                }}
-              />
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                <Text style={styles.saveBtnText}>{isEditing ? 'Save Changes' : 'Add Bank'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <BankAccountFormModal
+        visible={modalVisible}
+        account={selectedAcc}
+        onClose={() => setModalVisible(false)}
+      />
 
       {/* DETAIL MODAL */}
       <Modal visible={detailModalVisible} animationType="fade" transparent>

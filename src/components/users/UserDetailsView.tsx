@@ -2,7 +2,7 @@ import { OrnamentIcon, UserIcon } from '@/components/Icon';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Dispatch, RefObject, SetStateAction } from 'react';
+import { Dispatch, RefObject, SetStateAction, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -20,6 +20,7 @@ import {
   calculateAge,
   formatDisplayDOB,
 } from '../../utils/userOrnamentCalculations';
+import { BankAccountFormModal } from '../BankAccountFormModal';
 import { BankCard } from '../BankCard';
 import { ConfirmModal } from '../ConfirmModal';
 import { LoanCard } from '../LoanCard';
@@ -61,6 +62,7 @@ export function UserDetailsView({
   onEdit,
 }: UserDetailsViewProps) {
   const router = useRouter();
+  const [bankFormVisible, setBankFormVisible] = useState(false);
   const { styles, colors, isDark } = useUsersStyles();
   const store = useAppStore();
   const toast = useToast();
@@ -512,12 +514,24 @@ export function UserDetailsView({
         )}
       </ScrollView>
 
-      {/* Add icon for the Bank Accounts tab (visual only — no action wired yet) */}
+      {/* Add a bank account for this customer */}
       {activeTab === 'Bank Accounts' && (
-        <View style={styles.loanFabBtn} accessibilityLabel="Add Bank Account">
+        <TouchableOpacity
+          style={styles.loanFabBtn}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Add Bank Account"
+          onPress={() => setBankFormVisible(true)}
+        >
           <UserIcon name="add" size={28} color="#ffffff" />
-        </View>
+        </TouchableOpacity>
       )}
+
+      <BankAccountFormModal
+        visible={bankFormVisible}
+        onClose={() => setBankFormVisible(false)}
+        presetUserId={String(selectedUser.UserId)}
+      />
 
       {/* Add loan for this customer — opens the loan form with the customer already chosen */}
       {activeTab === 'Loans' && (
