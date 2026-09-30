@@ -352,7 +352,7 @@ export default function LoansScreen() {
         refreshing={refreshing}
         onRefresh={onRefresh}
         onLoanPress={openDetailModal}
-        onAddPress={isSuperAdmin ? openAddModal : undefined}
+        onAddPress={isSuperAdmin ? () => router.push('/loans/new' as any) : undefined}
         onEditPress={isSuperAdmin ? openEditModal : undefined}
         onPayPress={isSuperAdmin ? openPayModal : undefined}
       />
