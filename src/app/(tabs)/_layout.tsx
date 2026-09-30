@@ -379,7 +379,7 @@ function TabLayoutInner() {
         {/* ─── TAB SCREENS CONTENT ─── */}
         <View style={styles.screensWrapper}>
           {/* ─── GLOBAL SHARED TOP NAVIGATION BAR ─── */}
-          {!isDesktop && currentTabKey === 'loans' ? null : (
+          {!isDesktop && ['loans', 'users', 'ornaments'].includes(currentTabKey) ? null : (
             <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
             {isDesktop ? (
               /* Desktop: Sidebar Trigger + Page Title & Subtitle */

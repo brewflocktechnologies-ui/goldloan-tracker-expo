@@ -1,4 +1,4 @@
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../constants/theme';
 
 export const getLoansStyles = (
@@ -21,30 +21,29 @@ export const getLoansStyles = (
     heroSection: {
       backgroundColor: isDark ? '#0f172a' : '#d8edfa',
       paddingHorizontal: 16,
-      paddingTop: Platform.OS === 'android' ? 12 : 8,
-      paddingBottom: 4,
+      paddingTop: 10,
+      paddingBottom: 2,
     },
     heroRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      marginBottom: 8,
+      marginBottom: isCompact ? 4 : 8,
     },
     heroLeft: {
       flex: 1,
       paddingRight: 12,
     },
     heroTitle: {
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: '800',
       color: isDark ? '#f8fafc' : '#0d172a',
       letterSpacing: -0.4,
     },
     heroSubtitle: {
-      fontSize: 12.5,
-      color: isDark ? '#94a3b8' : '#334155',
-      marginTop: 2,
-      fontWeight: '500',
+      fontSize: 12,
+      color: isDark ? '#94a3b8' : '#475569',
+      marginTop: 1,
     },
     heroRight: {
       alignItems: 'flex-end',
@@ -56,11 +55,10 @@ export const getLoansStyles = (
       color: isDark ? '#94a3b8' : '#1e293b',
     },
     totalNumber: {
-      fontSize: 26,
+      fontSize: 24,
       fontWeight: '800',
       color: '#0284c7',
-      marginTop: -1,
-      letterSpacing: -0.5,
+      marginTop: -2,
     },
 
     // ─── SEARCH & FILTER CARD WITH CURVED TRANSITION ───
@@ -84,7 +82,7 @@ export const getLoansStyles = (
     searchFilterCard: {
       backgroundColor: isDark ? '#1e293b' : '#ffffff',
       borderRadius: 20,
-      padding: 10,
+      padding: isCompact ? 8 : 10,
       maxWidth: 680,
       width: '100%',
       alignSelf: 'center',
@@ -104,7 +102,7 @@ export const getLoansStyles = (
       borderWidth: 1,
       borderColor: isDark ? '#334155' : '#e2e8f0',
       paddingHorizontal: 12,
-      height: 44,
+      height: isCompact ? 40 : 46,
     },
     searchIcon: {
       marginRight: 8,
@@ -123,25 +121,30 @@ export const getLoansStyles = (
     filterPillsContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: 10,
+      marginTop: isCompact ? 6 : 8,
       gap: 8,
+      flexGrow: 1,
+      paddingVertical: 2,
     },
     filterPill: {
-      paddingVertical: 6,
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 5,
       paddingHorizontal: 14,
       borderRadius: 20,
       borderWidth: 1,
       borderColor: isDark ? '#334155' : '#e2e8f0',
-      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+      backgroundColor: isDark ? '#0f172a' : '#ffffff',
     },
     filterPillActive: {
       backgroundColor: '#0284c7',
       borderColor: '#0284c7',
     },
     filterPillText: {
-      fontSize: 12,
+      fontSize: 12.5,
       fontWeight: '600',
-      color: isDark ? '#94a3b8' : '#475569',
+      color: isDark ? '#cbd5e1' : '#334155',
     },
     filterPillTextActive: {
       color: '#ffffff',
@@ -151,7 +154,7 @@ export const getLoansStyles = (
     // ─── CARD LIST ───
     listContent: {
       paddingHorizontal: 16,
-      paddingTop: 10,
+      paddingTop: 6,
       paddingBottom: 90,
       maxWidth: 680,
       width: '100%',

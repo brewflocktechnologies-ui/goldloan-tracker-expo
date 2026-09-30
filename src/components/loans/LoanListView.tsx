@@ -133,7 +133,6 @@ export function LoanListView({
     { label: 'All', value: 'All', count: allCount },
     { label: 'Active', value: 'Active', count: activeCount },
     { label: 'Overdue', value: 'Overdue', count: overdueCount },
-    ...(closedCount > 0 ? [{ label: 'Closed', value: 'Closed' as LoanFilterType, count: closedCount }] : []),
   ];
 
   const borrowerForMenu = menuLoan ? userMap.get(menuLoan.UserId) : null;
