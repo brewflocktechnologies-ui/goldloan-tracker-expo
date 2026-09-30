@@ -512,14 +512,29 @@ export function UserDetailsView({
         )}
       </ScrollView>
 
-      {/* Add icon for the Bank Accounts and Loans tabs (visual only — no action wired yet) */}
-      {(activeTab === 'Bank Accounts' || activeTab === 'Loans') && (
-        <View
-          style={styles.loanFabBtn}
-          accessibilityLabel={activeTab === 'Loans' ? 'Add New Loan' : 'Add Bank Account'}
-        >
+      {/* Add icon for the Bank Accounts tab (visual only — no action wired yet) */}
+      {activeTab === 'Bank Accounts' && (
+        <View style={styles.loanFabBtn} accessibilityLabel="Add Bank Account">
           <UserIcon name="add" size={28} color="#ffffff" />
         </View>
+      )}
+
+      {/* Add loan for this customer — opens the loan form with the customer already chosen */}
+      {activeTab === 'Loans' && (
+        <TouchableOpacity
+          style={styles.loanFabBtn}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Add New Loan"
+          onPress={() =>
+            router.push({
+              pathname: '/loans/new',
+              params: { userId: String(selectedUser.UserId) },
+            } as any)
+          }
+        >
+          <UserIcon name="add" size={28} color="#ffffff" />
+        </TouchableOpacity>
       )}
 
       {/* Delete Confirmation Modal */}

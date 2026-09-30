@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -65,12 +65,22 @@ export default function NewLoanScreen() {
   const toast = useToast();
   const { isSuperAdmin } = useAuth();
 
+  // When opened from a customer's page, the customer is already known: skip the customer step.
+  const { userId: presetUserId } = useLocalSearchParams<{ userId?: string }>();
+  const presetCustomer = useMemo(
+    () => (presetUserId ? store.users.find((u) => String(u.UserId) === String(presetUserId)) : undefined),
+    [presetUserId, store.users]
+  );
+  const firstStep: 1 | 2 = presetCustomer ? 2 : 1;
+
   // ─── Current Step State (1 to 5) ───
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(firstStep);
 
   // ─── Form State ───
   // Step 1: Customer
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
+    presetCustomer ? String(presetCustomer.UserId) : ''
+  );
   const [customerSearch, setCustomerSearch] = useState<string>('');
 
   // Step 2: Bank Account
@@ -118,6 +128,15 @@ export default function NewLoanScreen() {
   const [newGrossWeight, setNewGrossWeight] = useState<string>('');
   const [newNetWeight, setNewNetWeight] = useState<string>('');
 
+  // Preset customer: pre-select their first active bank account (mirrors handleContinueStep1)
+  useEffect(() => {
+    if (!presetCustomer || selectedBankAccountId) return;
+    const banks = store.bankAccounts.filter(
+      (b) => String(b.UserId) === String(presetCustomer.UserId) && b.Status === 'Active'
+    );
+    if (banks.length > 0) setSelectedBankAccountId(banks[0].BankAccountId);
+  }, [presetCustomer, store.bankAccounts, selectedBankAccountId]);
+
   // ─── Auto Recalculate Due Date when Period or Loan Date Changes ───
   useEffect(() => {
     try {
@@ -149,7 +168,7 @@ export default function NewLoanScreen() {
       return;
     }
 
-    if (currentStep > 1) {
+    if (currentStep > firstStep) {
       setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3 | 4 | 5);
     } else {
       if (router.canGoBack()) {
@@ -158,7 +177,7 @@ export default function NewLoanScreen() {
         router.replace('/(tabs)/loans' as any);
       }
     }
-  }, [currentStep, showAddCustomerModal, showAddBankModal, showAddOrnamentModal, router]);
+  }, [currentStep, firstStep, showAddCustomerModal, showAddBankModal, showAddOrnamentModal, router]);
 
   useEffect(() => {
     const onBackPress = () => {
