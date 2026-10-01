@@ -27,7 +27,7 @@ export function ThemeToggleBtn({ showLabel = false, size = 18 }: ThemeToggleBtnP
       <Ionicons
         name={isDark ? 'sunny' : 'moon'}
         size={size}
-        color={isDark ? '#facc15' : colors.primaryDark}
+        color={isDark ? '#38bdf8' : colors.primaryDark}
       />
       {showLabel && (
         <Text style={[styles.label, { color: isDark ? '#f8fafc' : colors.primaryDark }]}>

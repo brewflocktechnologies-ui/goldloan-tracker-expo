@@ -67,7 +67,7 @@ export function LoanCloseModal({ visible, loan, onClose, onClosed }: LoanCloseMo
         <View style={styles.modalHeader}>
           <View style={styles.modalTitleContainer}>
             <View style={styles.modalIconWrapper}>
-              <Ionicons name="lock-closed" size={20} color={isDark ? '#fbbf24' : colors.primaryDark} />
+              <Ionicons name="lock-closed" size={20} color={isDark ? '#38bdf8' : colors.primaryDark} />
             </View>
             <View>
               <Text style={styles.modalTitle}>Close Loan & Release</Text>
@@ -95,7 +95,7 @@ export function LoanCloseModal({ visible, loan, onClose, onClosed }: LoanCloseMo
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Principal Amount</Text>
-              <Text style={[styles.summaryValue, { color: isDark ? '#fbbf24' : colors.primaryDark, fontWeight: '700' }]}>
+              <Text style={[styles.summaryValue, { color: isDark ? '#38bdf8' : colors.primaryDark, fontWeight: '700' }]}>
                 ₹{loan?.LoanAmount.toLocaleString('en-IN')}
               </Text>
             </View>
@@ -236,7 +236,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   modalSubtitle: {
     fontSize: 12,
-    color: isDark ? '#fbbf24' : colors.primaryDark,
+    color: isDark ? '#38bdf8' : colors.primaryDark,
     fontWeight: '600',
   },
   modalCloseBtn: {

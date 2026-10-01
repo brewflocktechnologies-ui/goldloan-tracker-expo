@@ -905,7 +905,7 @@ export default function LoansScreen() {
                 <TouchableOpacity
                   style={[
                     styles.saveBtn,
-                    { backgroundColor: '#d97706', flexDirection: 'row', alignItems: 'center', gap: 6 },
+                    { backgroundColor: '#0284c7', flexDirection: 'row', alignItems: 'center', gap: 6 },
                   ]}
                   onPress={() => {
                     const l = selectedLoan;

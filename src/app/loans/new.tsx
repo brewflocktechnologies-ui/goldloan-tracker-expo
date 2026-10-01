@@ -755,7 +755,7 @@ export default function NewLoanScreen() {
 
                       {/* Diamond Icon */}
                       <View style={styles.diamondIconBox}>
-                        <Ionicons name="diamond-outline" size={17} color="#d97706" />
+                        <Ionicons name="diamond-outline" size={17} color="#0284c7" />
                       </View>
 
                       {/* Info */}
@@ -767,7 +767,7 @@ export default function NewLoanScreen() {
                         </Text>
                         {owner && (
                           <View style={styles.ownerNoticeRow}>
-                            <Ionicons name="information-circle-outline" size={12} color="#d97706" />
+                            <Ionicons name="information-circle-outline" size={12} color="#0284c7" />
                             <Text style={styles.ownerNoticeText}>Owner: {owner.FullName}</Text>
                           </View>
                         )}
@@ -1781,7 +1781,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       width: 34,
       height: 34,
       borderRadius: 8,
-      backgroundColor: isDark ? 'rgba(217, 119, 6, 0.2)' : '#fef3c7',
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.2)' : '#e0f2fe',
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 10,
@@ -1807,7 +1807,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     },
     ownerNoticeText: {
       fontSize: 10.5,
-      color: '#d97706',
+      color: '#0284c7',
     },
 
     // Step 4 Form

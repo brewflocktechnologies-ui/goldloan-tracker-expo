@@ -9,7 +9,7 @@ export default function RootIndex() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#d97706" />
+        <ActivityIndicator size="large" color="#0284c7" />
       </View>
     );
   }

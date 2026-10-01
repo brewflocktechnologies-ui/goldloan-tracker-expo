@@ -177,13 +177,13 @@ export function LoanOptionsMenu({
                 <Ionicons
                   name="pencil-outline"
                   size={18}
-                  color={isDark ? '#fbbf24' : '#d97706'}
+                  color={isDark ? '#38bdf8' : '#0284c7'}
                   style={styles.actionIcon}
                 />
                 <Text
                   style={[
                     styles.actionLabel,
-                    { color: isDark ? '#fbbf24' : '#d97706' },
+                    { color: isDark ? '#38bdf8' : '#0284c7' },
                   ]}
                 >
                   Edit Loan Contract

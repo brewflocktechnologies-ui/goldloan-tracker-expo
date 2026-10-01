@@ -137,7 +137,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) 
                     <Ionicons
                       name={isSuperAdmin ? 'shield-checkmark' : 'eye'}
                       size={11}
-                      color={isSuperAdmin ? (isDark ? '#34d399' : '#059669') : (isDark ? '#fbbf24' : '#b45309')}
+                      color={isSuperAdmin ? (isDark ? '#34d399' : '#059669') : (isDark ? '#38bdf8' : '#0369a1')}
                     />
                     <Text style={[styles.roleText, isSuperAdmin ? styles.roleTextSuper : styles.roleTextUser]}>
                       {isSuperAdmin ? 'SuperAdmin (Full Access)' : 'User (Read-Only)'}
@@ -350,7 +350,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) 
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ paddingVertical: 8, paddingHorizontal: 18, borderRadius: 10, backgroundColor: isDark ? '#fbbf24' : colors.primaryDark }}
+                style={{ paddingVertical: 8, paddingHorizontal: 18, borderRadius: 10, backgroundColor: isDark ? '#38bdf8' : colors.primaryDark }}
                 onPress={handleSubmitPasswordChange}
                 disabled={passSubmitting}
               >
@@ -421,16 +421,16 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: isDark ? '#b45309' : '#fef08a',
+      backgroundColor: isDark ? '#0369a1' : '#e0f2fe',
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 2,
-      borderColor: isDark ? '#d97706' : '#eab308',
+      borderColor: isDark ? '#0284c7' : '#0ea5e9',
     },
     avatarText: {
       fontSize: 16,
       fontWeight: '800',
-      color: isDark ? '#fef3c7' : '#854d0e',
+      color: isDark ? '#e0f2fe' : '#0369a1',
     },
     userMeta: {
       flex: 1,
@@ -456,8 +456,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       borderWidth: 1,
     },
     roleBadgeUser: {
-      backgroundColor: isDark ? 'rgba(217, 119, 6, 0.2)' : '#fffbeb',
-      borderColor: isDark ? '#d97706' : '#fde68a',
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.2)' : '#f0f9ff',
+      borderColor: isDark ? '#0284c7' : '#bae6fd',
       borderWidth: 1,
     },
     roleText: {
@@ -468,7 +468,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       color: isDark ? '#34d399' : '#059669',
     },
     roleTextUser: {
-      color: isDark ? '#fbbf24' : '#b45309',
+      color: isDark ? '#38bdf8' : '#0369a1',
     },
     closeBtn: {
       padding: 6,

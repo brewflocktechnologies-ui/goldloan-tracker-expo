@@ -878,7 +878,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       width: 32,
       height: 32,
       borderRadius: 8,
-      backgroundColor: isDark ? '#0f172a' : '#fef3c7',
+      backgroundColor: isDark ? '#0f172a' : '#e0f2fe',
       alignItems: 'center',
       justifyContent: 'center',
       position: 'relative',
@@ -905,7 +905,7 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
     ornWeightText: {
       fontSize: 12.5,
       fontWeight: '700',
-      color: '#d97706',
+      color: '#0284c7',
     },
     interestRateTag: {
       paddingHorizontal: 8,

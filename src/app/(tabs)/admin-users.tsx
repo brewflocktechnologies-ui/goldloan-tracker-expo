@@ -246,7 +246,7 @@ export default function AdminUsersTabScreen() {
             <Ionicons
               name={isSuper ? 'shield-checkmark' : 'eye'}
               size={12}
-              color={isSuper ? (isDark ? '#34d399' : '#059669') : (isDark ? '#fbbf24' : '#b45309')}
+              color={isSuper ? (isDark ? '#34d399' : '#059669') : (isDark ? '#38bdf8' : '#0369a1')}
             />
             <Text style={[styles.roleCellText, isSuper ? styles.roleTextSuper : styles.roleTextUser]}>
               {item.Role}
@@ -336,7 +336,7 @@ export default function AdminUsersTabScreen() {
             title={isDesktop ? "Total Admin Accounts" : "Total Admins"}
             value={totalCount}
             iconName="people"
-            accentColor={isDark ? '#fbbf24' : colors.primaryDark}
+            accentColor={isDark ? '#38bdf8' : colors.primaryDark}
           />
           <StatCard
             title={isDesktop ? "SuperAdmin (Full Access)" : "SuperAdmin"}
@@ -355,7 +355,7 @@ export default function AdminUsersTabScreen() {
         {/* Notice for staff users */}
         {!isSuperAdmin && (
           <View style={styles.readOnlyBanner}>
-            <Ionicons name="information-circle-outline" size={18} color={isDark ? '#fbbf24' : '#b45309'} style={{ marginRight: 8 }} />
+            <Ionicons name="information-circle-outline" size={18} color={isDark ? '#38bdf8' : '#0369a1'} style={{ marginRight: 8 }} />
             <Text style={styles.readOnlyBannerText}>
               Staff Directory: You are viewing staff accounts. You can edit and update your own account password by clicking the edit icon on your row. Adding new users or changing roles requires SuperAdmin privileges.
             </Text>
@@ -531,7 +531,7 @@ export default function AdminUsersTabScreen() {
                         <Ionicons
                           name="eye"
                           size={18}
-                          color={formRole === 'User' ? (isDark ? '#fbbf24' : '#b45309') : colors.textMuted}
+                          color={formRole === 'User' ? (isDark ? '#38bdf8' : '#0369a1') : colors.textMuted}
                         />
                         <Text style={[styles.choiceTitle, formRole === 'User' && styles.choiceTitleSelected]}>
                           User
@@ -573,7 +573,7 @@ export default function AdminUsersTabScreen() {
                     <Ionicons
                       name={formRole === 'SuperAdmin' ? 'shield-checkmark' : 'eye'}
                       size={12}
-                      color={formRole === 'SuperAdmin' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#fbbf24' : '#b45309')}
+                      color={formRole === 'SuperAdmin' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#38bdf8' : '#0369a1')}
                     />
                     <Text style={[styles.roleCellText, formRole === 'SuperAdmin' ? styles.roleTextSuper : styles.roleTextUser]}>
                       {formRole} (Role changes must be made by a SuperAdmin)
@@ -661,9 +661,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
     readOnlyBanner: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb',
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : '#f0f9ff',
       borderWidth: 1,
-      borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#fef08a',
+      borderColor: isDark ? 'rgba(56, 189, 248, 0.3)' : '#e0f2fe',
       borderRadius: 12,
       paddingHorizontal: 14,
       paddingVertical: 10,
@@ -671,7 +671,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
     },
     readOnlyBannerText: {
       fontSize: 12.5,
-      color: isDark ? '#fbbf24' : '#92400e',
+      color: isDark ? '#38bdf8' : '#0369a1',
       flex: 1,
       lineHeight: 17,
     },
@@ -694,14 +694,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       width: 26,
       height: 26,
       borderRadius: 13,
-      backgroundColor: isDark ? '#b45309' : '#fef08a',
+      backgroundColor: isDark ? '#0369a1' : '#e0f2fe',
       justifyContent: 'center',
       alignItems: 'center',
     },
     avatarMiniText: {
       fontSize: 11,
       fontWeight: '700',
-      color: isDark ? '#fef3c7' : '#854d0e',
+      color: isDark ? '#e0f2fe' : '#0369a1',
     },
     usernameText: {
       fontSize: 13,
@@ -734,8 +734,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       borderWidth: 1,
     },
     roleCellUser: {
-      backgroundColor: isDark ? 'rgba(217, 119, 6, 0.2)' : '#fffbeb',
-      borderColor: isDark ? '#d97706' : '#fde68a',
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.2)' : '#f0f9ff',
+      borderColor: isDark ? '#0284c7' : '#bae6fd',
       borderWidth: 1,
     },
     roleCellText: {
@@ -746,7 +746,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       color: isDark ? '#34d399' : '#059669',
     },
     roleTextUser: {
-      color: isDark ? '#fbbf24' : '#b45309',
+      color: isDark ? '#38bdf8' : '#0369a1',
     },
     permText: {
       fontSize: 12,
@@ -756,7 +756,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       color: isDark ? '#34d399' : '#059669',
     },
     permUser: {
-      color: isDark ? '#fbbf24' : '#b45309',
+      color: isDark ? '#38bdf8' : '#0369a1',
     },
     actionBtnRow: {
       flexDirection: 'row',
@@ -780,9 +780,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       borderColor: isDark ? '#059669' : '#10b981',
     },
     cardAvatarUser: {
-      backgroundColor: isDark ? 'rgba(217, 119, 6, 0.25)' : '#fffbeb',
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.25)' : '#f0f9ff',
       borderWidth: 1.5,
-      borderColor: isDark ? '#d97706' : '#f59e0b',
+      borderColor: isDark ? '#0284c7' : '#0ea5e9',
     },
     cardAvatarText: {
       fontSize: 13,
@@ -792,7 +792,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       color: isDark ? '#34d399' : '#059669',
     },
     cardAvatarTextUser: {
-      color: isDark ? '#fbbf24' : '#b45309',
+      color: isDark ? '#38bdf8' : '#0369a1',
     },
     modalOverlay: {
       flex: 1,
@@ -892,8 +892,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       backgroundColor: colors.surfaceSubtle,
     },
     roleChoiceCardSelected: {
-      borderColor: isDark ? '#fbbf24' : colors.primaryDark,
-      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.1)' : '#fffbeb',
+      borderColor: isDark ? '#38bdf8' : colors.primaryDark,
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.1)' : '#f0f9ff',
     },
     choiceHeader: {
       flexDirection: 'row',
@@ -907,7 +907,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       color: colors.textPrimary,
     },
     choiceTitleSelected: {
-      color: isDark ? '#fbbf24' : colors.primaryDark,
+      color: isDark ? '#38bdf8' : colors.primaryDark,
     },
     choiceDesc: {
       fontSize: 11,
@@ -961,7 +961,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean, isDesktop: boolean) =>
       color: colors.textSecondary,
     },
     submitBtn: {
-      backgroundColor: isDark ? '#d97706' : colors.primaryDark,
+      backgroundColor: isDark ? '#0284c7' : colors.primaryDark,
       paddingHorizontal: 18,
       paddingVertical: 9,
       borderRadius: 10,

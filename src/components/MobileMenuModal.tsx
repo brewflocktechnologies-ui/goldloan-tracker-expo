@@ -85,15 +85,15 @@ export const MobileMenuModal: React.FC<MobileMenuModalProps> = ({
                       ? 'rgba(5, 150, 105, 0.25)'
                       : '#ecfdf5'
                     : isDark
-                    ? 'rgba(217, 119, 6, 0.25)'
-                    : '#fffbeb',
+                    ? 'rgba(56, 189, 248, 0.25)'
+                    : '#f0f9ff',
                   borderColor: isSuperAdmin
                     ? isDark
                       ? '#059669'
                       : '#10b981'
                     : isDark
-                    ? '#d97706'
-                    : '#f59e0b',
+                    ? '#0284c7'
+                    : '#0ea5e9',
                 },
               ]}
             >
@@ -106,8 +106,8 @@ export const MobileMenuModal: React.FC<MobileMenuModalProps> = ({
                         ? '#34d399'
                         : '#059669'
                       : isDark
-                      ? '#fbbf24'
-                      : '#b45309',
+                      ? '#38bdf8'
+                      : '#0369a1',
                   },
                 ]}
               >
@@ -134,8 +134,8 @@ export const MobileMenuModal: React.FC<MobileMenuModalProps> = ({
                         ? '#34d399'
                         : '#059669'
                       : isDark
-                      ? '#fbbf24'
-                      : '#b45309',
+                      ? '#38bdf8'
+                      : '#0369a1',
                   },
                 ]}
               >
@@ -249,7 +249,7 @@ export const MobileMenuModal: React.FC<MobileMenuModalProps> = ({
                   <Ionicons
                     name="shield-checkmark-outline"
                     size={20}
-                    color={isDark ? '#fbbf24' : '#d97706'}
+                    color={isDark ? '#38bdf8' : '#0284c7'}
                   />
                 </View>
                 <View style={styles.itemTextCol}>

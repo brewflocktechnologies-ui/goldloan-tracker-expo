@@ -270,7 +270,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   uploadBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: isDark ? '#fbbf24' : colors.primaryDark,
+    color: isDark ? '#38bdf8' : colors.primaryDark,
   },
   removeBtn: {
     flexDirection: 'row',
@@ -296,7 +296,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   uploadCardBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: isDark ? '#fbbf24' : colors.primaryDark,
+    color: isDark ? '#38bdf8' : colors.primaryDark,
   },
   emptyCard: {
     borderWidth: 1.5,
