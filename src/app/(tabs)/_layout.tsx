@@ -86,6 +86,14 @@ const NAV_ITEMS: NavItem[] = [
     icon: 'checkmark-done-circle-outline',
     activeIcon: 'checkmark-done-circle',
   },
+  {
+    name: 'menu',
+    route: '/(tabs)/menu',
+    title: 'Menu & Settings',
+    shortTitle: 'Menu',
+    icon: 'menu-outline',
+    activeIcon: 'menu',
+  },
 ];
 
 const MOBILE_NAV_ITEMS: NavItem[] = [
@@ -124,7 +132,7 @@ const MOBILE_NAV_ITEMS: NavItem[] = [
   },
   {
     name: 'menu',
-    route: 'menu',
+    route: '/(tabs)/menu',
     title: 'Menu',
     shortTitle: 'Menu',
     icon: 'menu-outline',
@@ -156,6 +164,10 @@ const TAB_METADATA: Record<string, { title: string; subtitle: string }> = {
   closure: {
     title: 'Loan Closure & Settlements',
     subtitle: 'Settle active loans & release vault collateral',
+  },
+  menu: {
+    title: 'Menu',
+    subtitle: 'Quick access to all features',
   },
   'admin-users': {
     title: 'Staff & Admin Accounts',
@@ -198,7 +210,7 @@ function TabLayoutInner() {
     if (pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/') return 'index';
     const cleanPath = pathname.replace(/^\/+|\/+$/g, '');
     const segments = cleanPath.split('/');
-    for (const key of ['admin-users', 'bank-accounts', 'ornaments', 'loans', 'closure', 'users']) {
+    for (const key of ['admin-users', 'bank-accounts', 'ornaments', 'loans', 'closure', 'users', 'menu']) {
       if (segments.includes(key) || pathname.includes(`/${key}`)) return key;
     }
     return 'index';
@@ -307,13 +319,13 @@ function TabLayoutInner() {
                         <MaterialCommunityIcons
                           name={(active ? item.activeIcon : item.icon) as any}
                           size={20}
-                          color={active ? (isDark ? '#38bdf8' : colors.primaryDark) : colors.textSecondary}
+                          color={active ? (isDark ? '#fbbf24' : colors.primaryDark) : colors.textSecondary}
                         />
                       ) : (
                         <Ionicons
                           name={(active ? item.activeIcon : item.icon) as any}
                           size={20}
-                          color={active ? (isDark ? '#38bdf8' : colors.primaryDark) : colors.textSecondary}
+                          color={active ? (isDark ? '#fbbf24' : colors.primaryDark) : colors.textSecondary}
                         />
                       )}
                     </View>
@@ -367,8 +379,8 @@ function TabLayoutInner() {
                   accessibilityLabel="Expand sidebar"
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="chevron-forward" size={16} color={isDark ? '#38bdf8' : colors.primaryDark} />
-                    <Ionicons name="chevron-forward" size={16} color={isDark ? '#38bdf8' : colors.primaryDark} style={{ marginLeft: -8 }} />
+                    <Ionicons name="chevron-forward" size={16} color={isDark ? '#fbbf24' : colors.primaryDark} />
+                    <Ionicons name="chevron-forward" size={16} color={isDark ? '#fbbf24' : colors.primaryDark} style={{ marginLeft: -8 }} />
                   </View>
                 </TouchableOpacity>
               </>
@@ -379,7 +391,7 @@ function TabLayoutInner() {
         {/* ─── TAB SCREENS CONTENT ─── */}
         <View style={styles.screensWrapper}>
           {/* ─── GLOBAL SHARED TOP NAVIGATION BAR ─── */}
-          {!isDesktop && ['loans', 'users', 'ornaments'].includes(currentTabKey) ? null : (
+          {!isDesktop && ['loans', 'users', 'ornaments', 'menu'].includes(currentTabKey) ? null : (
             <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
             {isDesktop ? (
               /* Desktop: Sidebar Trigger + Page Title & Subtitle */
@@ -422,9 +434,9 @@ function TabLayoutInner() {
                     disabled={store.isSyncing}
                   >
                     {store.isSyncing ? (
-                      <ActivityIndicator size="small" color={isDark ? '#38bdf8' : colors.primaryDark} />
+                      <ActivityIndicator size="small" color={isDark ? '#fbbf24' : colors.primaryDark} />
                     ) : (
-                      <Ionicons name="refresh" size={15} color={isDark ? '#38bdf8' : colors.primaryDark} />
+                      <Ionicons name="refresh" size={15} color={isDark ? '#fbbf24' : colors.primaryDark} />
                     )}
                     <Text style={styles.refreshActionText}>
                       {store.isSyncing ? 'Syncing...' : 'Sync Rates & Data'}
@@ -476,6 +488,7 @@ function TabLayoutInner() {
               <Tabs.Screen name="loans" options={{ title: 'Loans' }} />
               <Tabs.Screen name="closure" options={{ title: 'Closure' }} />
               <Tabs.Screen name="admin-users" options={{ title: 'Admins' }} />
+              <Tabs.Screen name="menu" options={{ title: 'Menu' }} />
             </Tabs>
           </View>
 
@@ -483,18 +496,12 @@ function TabLayoutInner() {
           {!isDesktop && (
             <View style={[styles.mobileBottomNav, { paddingBottom: Math.max(bottomInset, 8) }]}>
               {MOBILE_NAV_ITEMS.map((item) => {
-                const active = item.name === 'menu' ? false : isRouteActive(item);
-                const activeColor = item.name === 'loans' ? (isDark ? '#38bdf8' : '#0284c7') : (isDark ? '#38bdf8' : colors.primaryDark);
+                const active = isRouteActive(item);
+                const activeColor = (item.name === 'loans' || item.name === 'menu') ? (isDark ? '#38bdf8' : '#0284c7') : (isDark ? '#fbbf24' : colors.primaryDark);
                 return (
                   <TouchableOpacity
                     key={item.name}
-                    onPress={() => {
-                      if (item.name === 'menu') {
-                        setMobileMenuVisible(true);
-                      } else {
-                        navigateTo(item);
-                      }
-                    }}
+                    onPress={() => navigateTo(item)}
                     style={styles.bottomNavItem}
                     activeOpacity={0.7}
                   >
@@ -644,13 +651,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     borderRadius: 8,
     backgroundColor: isDark ? '#1e293b' : colors.primarySubtle,
     borderWidth: 1,
-    borderColor: isDark ? '#334155' : '#bae6fd',
+    borderColor: isDark ? '#334155' : '#fde68a',
     flexShrink: 0,
   },
   refreshActionText: {
     fontSize: 12,
     fontWeight: '700',
-    color: isDark ? '#38bdf8' : colors.primaryDark,
+    color: isDark ? '#fbbf24' : colors.primaryDark,
   },
   profileActionBtn: {
     flexDirection: 'row',
@@ -676,9 +683,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     borderColor: isDark ? '#059669' : '#10b981',
   },
   profileAvatarUser: {
-    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.25)' : '#f0f9ff',
+    backgroundColor: isDark ? 'rgba(217, 119, 6, 0.25)' : '#fffbeb',
     borderWidth: 1,
-    borderColor: isDark ? '#0284c7' : '#0ea5e9',
+    borderColor: isDark ? '#d97706' : '#f59e0b',
   },
   profileAvatarText: {
     fontSize: 12,
@@ -688,7 +695,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: isDark ? '#34d399' : '#059669',
   },
   profileAvatarTextUser: {
-    color: isDark ? '#38bdf8' : '#0369a1',
+    color: isDark ? '#fbbf24' : '#b45309',
   },
   profileTextWrapper: {
     marginRight: 4,
@@ -706,7 +713,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: isDark ? '#34d399' : '#059669',
   },
   roleUserText: {
-    color: isDark ? '#38bdf8' : '#0369a1',
+    color: isDark ? '#fbbf24' : '#b45309',
   },
 
   // ─── DESKTOP SIDEBAR ───
@@ -786,10 +793,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     gap: 4,
   },
   desktopNavItemActive: {
-    backgroundColor: isDark ? '#082f49' : colors.primarySubtle,
+    backgroundColor: isDark ? '#261a02' : colors.primarySubtle,
   },
   navItemActive: {
-    backgroundColor: isDark ? '#082f49' : colors.primarySubtle,
+    backgroundColor: isDark ? '#261a02' : colors.primarySubtle,
   },
   activePillIndicator: {
     position: 'absolute',
@@ -798,7 +805,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     bottom: 8,
     width: 3,
     borderRadius: 2,
-    backgroundColor: isDark ? '#0284c7' : colors.primaryDark,
+    backgroundColor: isDark ? '#f59e0b' : colors.primaryDark,
   },
   navText: {
     fontSize: 13,
@@ -806,7 +813,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: colors.textSecondary,
   },
   navTextActive: {
-    color: isDark ? '#38bdf8' : colors.primaryDark,
+    color: isDark ? '#fbbf24' : colors.primaryDark,
     fontWeight: '800',
   },
 
@@ -822,13 +829,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     borderWidth: 1,
-    borderColor: isDark ? '#334155' : '#e0f2fe',
+    borderColor: isDark ? '#334155' : '#fef08a',
     marginBottom: 10,
   },
   tickerTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: isDark ? '#38bdf8' : colors.primaryDark,
+    color: isDark ? '#fbbf24' : colors.primaryDark,
   },
   tickerRate: {
     fontSize: 14,
@@ -902,13 +909,13 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   bottomNavTextActive: {
     fontWeight: '800',
-    color: isDark ? '#38bdf8' : colors.primaryDark,
+    color: isDark ? '#fbbf24' : colors.primaryDark,
   },
   activeTabUnderline: {
     width: 28,
     height: 2.5,
     borderRadius: 2,
-    backgroundColor: isDark ? '#38bdf8' : colors.primaryDark,
+    backgroundColor: isDark ? '#fbbf24' : colors.primaryDark,
     marginTop: 3,
   },
   inactiveTabUnderline: {
