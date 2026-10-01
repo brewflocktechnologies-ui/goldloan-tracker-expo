@@ -192,9 +192,11 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexGrow: 1,
     paddingVertical: 2,
   },
   filterPill: {
+    flex: 1,
     paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 20,

@@ -4,10 +4,12 @@ import { Alert, Linking, View } from 'react-native';
 import { User } from '../../src/types';
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), setParams: jest.fn() };
+// Mutable so individual tests can simulate arriving with route params (e.g. ?userId=...).
+const mockParams: { action?: string; userId?: string } = {};
 
 jest.mock('expo-router', () => ({
   useRouter: () => mockRouter,
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockParams,
 }));
 
 jest.mock('../../src/context/ThemeContext', () => ({
@@ -98,6 +100,8 @@ const mockStore: any = {
   addUser: jest.fn((u: Partial<User>) => ({ UserId: 'USR004', Status: 'Active', ...u })),
   updateUser: jest.fn(),
   deleteUser: jest.fn(),
+  addBankAccount: jest.fn(),
+  updateBankAccount: jest.fn(),
 };
 
 jest.mock('../../src/services/store', () => ({
@@ -112,6 +116,8 @@ const openDetails = (name: string) => fireEvent.press(screen.getByText(name));
 
 beforeEach(() => {
   jest.clearAllMocks();
+  delete mockParams.action;
+  delete mockParams.userId;
   // The options menu positions itself from the trigger's measured layout; the test renderer has none.
   jest.spyOn(View.prototype, 'measureInWindow').mockImplementation(function (
     this: unknown,
@@ -277,21 +283,76 @@ describe('UsersScreen — details view', () => {
     expect(screen.getByText('No bank accounts on file')).toBeTruthy();
   });
 
-  it('shows an add icon on the Bank Accounts and Loans tabs only, without navigating anywhere', () => {
+  it('shows the add buttons on the Bank Accounts and Loans tabs only', () => {
     renderScreen();
     openDetails('Ravi Kumar');
     expect(screen.queryByLabelText('Add New Loan')).toBeNull();
     expect(screen.queryByLabelText('Add Bank Account')).toBeNull();
 
     fireEvent.press(screen.getByText('Bank Accounts'));
-    fireEvent.press(screen.getByLabelText('Add Bank Account'));
+    expect(screen.getByLabelText('Add Bank Account')).toBeTruthy();
+    expect(screen.queryByLabelText('Add New Loan')).toBeNull();
 
     fireEvent.press(screen.getByText('Loans'));
     expect(screen.getByText('Loans (2)')).toBeTruthy();
     expect(screen.queryByLabelText('Add Bank Account')).toBeNull();
+    expect(screen.getByLabelText('Add New Loan')).toBeTruthy();
+  });
+
+  it('opens the new-loan form for this customer from the Loans tab add button', () => {
+    renderScreen();
+    openDetails('Ravi Kumar');
+    fireEvent.press(screen.getByText('Loans'));
     fireEvent.press(screen.getByLabelText('Add New Loan'));
 
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/loans/new',
+      params: { userId: 'USR001' },
+    });
+  });
+
+  it('opens the Add Bank Account form with this customer fixed, without navigating', () => {
+    renderScreen();
+    openDetails('Ravi Kumar');
+    fireEvent.press(screen.getByText('Bank Accounts'));
+    expect(screen.queryByText('Add Bank Account')).toBeNull();
+
+    fireEvent.press(screen.getByLabelText('Add Bank Account'));
+
+    expect(screen.getByText('Add Bank Account')).toBeTruthy();
+    // Customer is preset: no borrower picker chips for the other customers, holder pre-filled.
+    expect(screen.queryByText('Select Borrower *')).toBeNull();
+    expect(screen.queryByText('Anita Sharma')).toBeNull();
+    expect(screen.getByDisplayValue('Ravi Kumar')).toBeTruthy();
     expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+
+  it('saves a new bank account for this customer and closes the form', () => {
+    renderScreen();
+    openDetails('Ravi Kumar');
+    fireEvent.press(screen.getByText('Bank Accounts'));
+    fireEvent.press(screen.getByLabelText('Add Bank Account'));
+
+    fireEvent.changeText(screen.getAllByDisplayValue('')[0], '9988776655');
+    fireEvent.press(screen.getByText('Add Bank'));
+
+    expect(mockStore.addBankAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ UserId: 'USR001', AccountHolderName: 'Ravi Kumar' })
+    );
+    expect(mockToast.success).toHaveBeenCalled();
+    expect(screen.queryByText('Add Bank')).toBeNull();
+  });
+
+  it('does not save a bank account without an account number', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    renderScreen();
+    openDetails('Ravi Kumar');
+    fireEvent.press(screen.getByText('Bank Accounts'));
+    fireEvent.press(screen.getByLabelText('Add Bank Account'));
+    fireEvent.press(screen.getByText('Add Bank'));
+
+    expect(alertSpy).toHaveBeenCalledWith('Validation Error', 'Account Number is required.');
+    expect(mockStore.addBankAccount).not.toHaveBeenCalled();
   });
 
   it('shows an empty message on the Loans tab when there are none', () => {
@@ -664,5 +725,33 @@ describe('UsersScreen — hardware back button', () => {
     expect(screen.getByText('Select State')).toBeTruthy();
     expect(pressBack()).toBe(true);
     expect(screen.getByText('Add User')).toBeTruthy();
+  });
+});
+
+describe('UsersScreen — opening a specific customer via the userId param', () => {
+  it("opens that customer's details directly and clears the param", () => {
+    mockParams.userId = 'USR003';
+    renderScreen();
+
+    expect(screen.getByText('Customer Details')).toBeTruthy();
+    expect(screen.getAllByText('Zoya Khan').length).toBeGreaterThan(0);
+    expect(mockRouter.setParams).toHaveBeenCalledWith({ userId: undefined });
+  });
+
+  it('also resolves the customer by customer code', () => {
+    mockParams.userId = 'CUST-102';
+    renderScreen();
+
+    expect(screen.getByText('Customer Details')).toBeTruthy();
+    expect(screen.getAllByText('Anita Sharma').length).toBeGreaterThan(0);
+  });
+
+  it('stays on the list when the customer does not exist', () => {
+    mockParams.userId = 'NOPE';
+    renderScreen();
+
+    expect(screen.queryByText('Customer Details')).toBeNull();
+    expect(screen.getByText('Total Customers')).toBeTruthy();
+    expect(mockRouter.setParams).not.toHaveBeenCalled();
   });
 });
