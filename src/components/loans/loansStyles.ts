@@ -71,7 +71,7 @@ export const getLoansStyles = (
     },
     sheetBackground: {
       position: 'absolute',
-      top: 54,
+      top: isCompact ? 44 : 54,
       left: 0,
       right: 0,
       bottom: 0,

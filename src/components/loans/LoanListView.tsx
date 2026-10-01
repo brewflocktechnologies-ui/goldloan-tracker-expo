@@ -7,6 +7,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,7 +54,8 @@ export function LoanListView({
   onPayPress,
 }: LoanListViewProps) {
   const { colors, isDark } = useTheme();
-  const styles = getLoansStyles(colors, isDark);
+  const { height } = useWindowDimensions();
+  const styles = getLoansStyles(colors, isDark, false, height < 700);
 
   const [menuLoan, setMenuLoan] = useState<Loan | null>(null);
 
