@@ -301,6 +301,13 @@ export default function LoansScreen() {
         TotalCharges: totalCharges,
         NetDisbursementAmount: netDisbursement,
         ornamentIds: selectedOrnIds,
+      }, {
+        onSuccess: (saved) => {
+          if (saved.LoanNumber !== form.LoanNumber) {
+            toast.info(`Loan number ${form.LoanNumber} was taken; saved as ${saved.LoanNumber}`);
+          }
+        },
+        onError: (message) => toast.danger(`Loan ${form.LoanNumber} was not saved: ${message}`),
       });
 
       Alert.alert('Success', 'Loan contract created and ornaments pledged!');

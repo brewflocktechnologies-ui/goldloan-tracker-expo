@@ -1367,12 +1367,43 @@ function monthsBetweenDates_(startStr, endStr) {
   return Math.max(1, Math.round(diffDays / 30.4375));
 }
 
+const LOAN_NUMBER_PREFIX = "CMP";
+
+function getNextLoanNumber_(loans) {
+  const pattern = new RegExp("^" + LOAN_NUMBER_PREFIX + "([0-9]+)$", "i");
+  let max = 0;
+  loans.forEach(l => {
+    const m = pattern.exec(String(l.LoanNumber == null ? "" : l.LoanNumber).trim());
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return LOAN_NUMBER_PREFIX + String(max + 1).padStart(3, "0");
+}
+
 function addLoan_(loanData) {
+  // Serialise loan creation so concurrent saves can't get the same number or LoanId.
+  const lock = LockService.getScriptLock();
   try {
-    const existing = getSheetData_("Loans").find(l =>
-      String(l.LoanNumber) === String(loanData.LoanNumber) && l.LoanStatus !== "Cancelled"
+    lock.waitLock(30000);
+  } catch (e) {
+    return { success: false, error: "Server is busy, please try again" };
+  }
+  try {
+    return addLoanLocked_(loanData);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function addLoanLocked_(loanData) {
+  try {
+    // The sheet is the source of truth: use the requested number only if it is free,
+    // otherwise assign the next free CMP number.
+    const allLoans = getSheetData_("Loans");
+    const requested = String(loanData.LoanNumber == null ? "" : loanData.LoanNumber).trim();
+    const taken = requested && allLoans.some(l =>
+      String(l.LoanNumber).trim().toLowerCase() === requested.toLowerCase() && l.LoanStatus !== "Cancelled"
     );
-    if (existing) return { success: false, error: "Loan number already exists" };
+    const loanNumber = (!requested || taken) ? getNextLoanNumber_(allLoans) : requested;
 
     const bankAccounts = getSheetData_("BankAccounts");
     const bankAccount = bankAccounts.find(acc => String(acc.BankAccountId) === String(loanData.BankAccountId));
@@ -1437,7 +1468,7 @@ function addLoan_(loanData) {
 
     const record = {
       LoanId: loanId,
-      LoanNumber: loanData.LoanNumber,
+      LoanNumber: loanNumber,
       UserId: loanData.UserId || "",
       BankAccountId: loanData.BankAccountId || "",
       BankName: bankName,

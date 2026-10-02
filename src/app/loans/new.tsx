@@ -392,7 +392,14 @@ export default function NewLoanScreen() {
         ornamentIds: selectedOrnamentIds,
       };
 
-      store.addLoan(loanPayload);
+      store.addLoan(loanPayload, {
+        onSuccess: (saved) => {
+          if (saved.LoanNumber !== loanPayload.LoanNumber) {
+            toast.info(`Loan number ${loanPayload.LoanNumber} was taken; saved as ${saved.LoanNumber}`);
+          }
+        },
+        onError: (message) => toast.danger(`Loan ${loanPayload.LoanNumber} was not saved: ${message}`),
+      });
       toast.success(`Loan contract ${loanPayload.LoanNumber} created successfully!`);
 
       // Return to loans list

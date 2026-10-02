@@ -553,7 +553,11 @@ export function useAppStore() {
 
   // --- CRUD: Loans ---
 
-  const addLoan = (loanData: any) => {
+  const addLoan = (
+    loanData: any,
+    callbacks?: { onSuccess?: (loan: Loan) => void; onError?: (message: string) => void }
+  ) => {
+    const prevOrnaments = ornamentsState;
     const tempId = nextId('L', loansState, 'LoanId');
     const amount = Number(loanData.LoanAmount) || 0;
     const procFee = Number(loanData.ProcessingFee) || 0;
@@ -613,13 +617,39 @@ export function useAppStore() {
     cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
     notify();
 
+    const rollback = (message: string) => {
+      loansState = loansState.filter(l => l.LoanId !== tempId);
+      const pledgedIds: string[] = loanData.ornamentIds || [];
+      ornamentsState = ornamentsState.map(o => {
+        if (!pledgedIds.includes(o.OrnamentId)) return o;
+        const before = prevOrnaments.find(p => p.OrnamentId === o.OrnamentId);
+        return before ? { ...o, Status: before.Status } : o;
+      });
+      bankAccountsState = bankAccountsState.map(b => {
+        const utilized = calculateUserBankUtilization(b.UserId, b.BankAccountId);
+        return { ...b, UtilizedLoanAmount: utilized, AvailableLoanAmount: Math.max(0, b.MaxLoanAmount - utilized) };
+      });
+      cache.set('loans_all', loansState, CacheTTL.LISTS);
+      cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
+      cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+      notify();
+      callbacks?.onError?.(message);
+    };
+
     api.addLoan(loanData).then(res => {
       if (res.success && res.data) {
-        loansState = loansState.map(l => l.LoanId === tempId ? { ...l, ...normalizeLoan(res.data as Loan) } : l);
+        const saved = { ...newLoan, ...normalizeLoan(res.data as Loan) };
+        loansState = loansState.map(l => l.LoanId === tempId ? saved : l);
         cache.set('loans_all', loansState, CacheTTL.LISTS);
         notify();
+        callbacks?.onSuccess?.(saved);
+      } else {
+        rollback(res.error || 'Unable to save the loan');
       }
-    }).catch(err => console.warn('[Store] addLoan error:', err));
+    }).catch(err => {
+      console.warn('[Store] addLoan error:', err);
+      rollback(err?.message || 'Unable to save the loan');
+    });
 
     return newLoan;
   };
