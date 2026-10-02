@@ -649,7 +649,7 @@ export default function NewLoanScreen() {
                   const maxLimit = Number(b.MaxLoanAmount) || 0;
                   const uti = Number(b.UtilizedLoanAmount) || 0;
                   const avail = Math.max(0, maxLimit - uti);
-                  const last4 = b.AccountNumber ? b.AccountNumber.slice(-4) : '****';
+                  const last4 = b.AccountNumber ? String(b.AccountNumber).slice(-4) : '****';
 
                   return (
                     <TouchableOpacity
@@ -1021,7 +1021,7 @@ export default function NewLoanScreen() {
                   <Text style={styles.reviewLabel}>Bank account</Text>
                   <Text style={styles.reviewVal}>
                     {selectedBankAccount?.BankName || 'Bank'} · ****{' '}
-                    {selectedBankAccount?.AccountNumber ? selectedBankAccount.AccountNumber.slice(-4) : '****'}
+                    {selectedBankAccount?.AccountNumber ? String(selectedBankAccount.AccountNumber).slice(-4) : '****'}
                   </Text>
                 </View>
                 <View style={styles.calcSummaryDivider} />

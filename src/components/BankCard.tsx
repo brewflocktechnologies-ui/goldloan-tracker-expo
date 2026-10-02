@@ -52,7 +52,7 @@ export function BankCard({
   // Normalizing account values
   const bankName = account.BankName || 'Bank';
   const accountHolder = account.AccountHolderName || '—';
-  const accountNumber = account.AccountNumber || '';
+  const accountNumber = account.AccountNumber ? String(account.AccountNumber) : '';
   const ifscCode = account.IFSCCode || '—';
   const upiId = account.UPI_ID || '—';
   const status = account.Status || 'Active';
