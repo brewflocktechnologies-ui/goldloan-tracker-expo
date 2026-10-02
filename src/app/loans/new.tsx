@@ -1,6 +1,7 @@
+import { getNextLoanNumber } from '../../utils/loanNumber';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -91,14 +92,13 @@ export default function NewLoanScreen() {
 
   // Step 4: Terms & Calculation
   const today = useMemo(() => new Date(), []);
-  const initialLoanNumber = useMemo(() => {
-    const yr = today.getFullYear();
-    const mo = String(today.getMonth() + 1).padStart(2, '0');
-    const seq = String(store.loans.length + 1).padStart(3, '0');
-    return `LN-${yr}${mo}-${seq}`;
-  }, [store.loans.length, today]);
+  const initialLoanNumber = useMemo(() => getNextLoanNumber(store.loans), [store.loans]);
+  const loanNumberEdited = useRef(false);
 
   const [loanNumber, setLoanNumber] = useState<string>(initialLoanNumber);
+  useEffect(() => {
+    if (!loanNumberEdited.current) setLoanNumber(initialLoanNumber);
+  }, [initialLoanNumber]);
   const [loanDateDMY, setLoanDateDMY] = useState<string>(formatDateDMY(today));
   const [loanPeriodMonths, setLoanPeriodMonths] = useState<number>(6);
   const [dueDateDMY, setDueDateDMY] = useState<string>(formatDateDMY(addMonths(today, 6)));
@@ -803,7 +803,10 @@ export default function NewLoanScreen() {
                   <TextInput
                     style={styles.textInput}
                     value={loanNumber}
-                    onChangeText={setLoanNumber}
+                    onChangeText={(v) => {
+                      loanNumberEdited.current = true;
+                      setLoanNumber(v);
+                    }}
                   />
                 </View>
 

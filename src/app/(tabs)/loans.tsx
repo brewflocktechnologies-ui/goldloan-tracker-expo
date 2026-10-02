@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
+import { getNextLoanNumber } from '../../utils/loanNumber';
 import {
   Alert,
   Modal,
@@ -161,7 +162,7 @@ export default function LoansScreen() {
     dueDate.setMonth(dueDate.getMonth() + 12);
 
     setForm({
-      LoanNumber: `LN-${new Date().getFullYear()}-${String(store.loans.length + 1).padStart(3, '0')}`,
+      LoanNumber: getNextLoanNumber(store.loans),
       UserId: initialUser,
       BankAccountId: initialBank,
       LoanDate: date.toISOString().split('T')[0],

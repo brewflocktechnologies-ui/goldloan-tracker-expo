@@ -3,6 +3,8 @@ import { BankAccount, DashboardData, GoldRateData, InitialSyncData, Loan, Orname
 import { api } from './api';
 import { calculateOrnamentFigures, generateCustomerCode } from '../utils/userOrnamentCalculations';
 import { cache, CacheTTL } from './cache';
+import { getNextLoanNumber } from '../utils/loanNumber';
+import { normalizeBankAccount, normalizeLoan, normalizePayment, normalizeBankAccounts, normalizeLoans, normalizeOrnament, normalizeOrnaments, normalizePayments, normalizeUser, normalizeUsers } from './normalize';
 
 const defaultGoldRates: GoldRateData = {
   location: "Bangalore",
@@ -48,23 +50,23 @@ export async function hydrateFromCache() {
     if (syncSnapshot.data) {
       const d = syncSnapshot.data;
       if (Array.isArray(d.users) && d.users.length > 0) {
-        usersState = d.users;
+        usersState = normalizeUsers(d.users);
         updated = true;
       }
       if (Array.isArray(d.bankAccounts) && d.bankAccounts.length > 0) {
-        bankAccountsState = d.bankAccounts;
+        bankAccountsState = normalizeBankAccounts(d.bankAccounts);
         updated = true;
       }
       if (Array.isArray(d.ornaments) && d.ornaments.length > 0) {
-        ornamentsState = d.ornaments;
+        ornamentsState = normalizeOrnaments(d.ornaments);
         updated = true;
       }
       if (Array.isArray(d.loans) && d.loans.length > 0) {
-        loansState = d.loans;
+        loansState = normalizeLoans(d.loans);
         updated = true;
       }
       if (Array.isArray(d.payments) && d.payments.length > 0) {
-        paymentsState = d.payments;
+        paymentsState = normalizePayments(d.payments);
         updated = true;
       }
       if (d.goldRates) {
@@ -84,23 +86,23 @@ export async function hydrateFromCache() {
     ]);
 
     if (cachedUsers.data && cachedUsers.data.length > 0) {
-      usersState = cachedUsers.data;
+      usersState = normalizeUsers(cachedUsers.data);
       updated = true;
     }
     if (cachedBanks.data && cachedBanks.data.length > 0) {
-      bankAccountsState = cachedBanks.data;
+      bankAccountsState = normalizeBankAccounts(cachedBanks.data);
       updated = true;
     }
     if (cachedOrns.data && cachedOrns.data.length > 0) {
-      ornamentsState = cachedOrns.data;
+      ornamentsState = normalizeOrnaments(cachedOrns.data);
       updated = true;
     }
     if (cachedLoans.data && cachedLoans.data.length > 0) {
-      loansState = cachedLoans.data;
+      loansState = normalizeLoans(cachedLoans.data);
       updated = true;
     }
     if (cachedPayments.data && cachedPayments.data.length > 0) {
-      paymentsState = cachedPayments.data;
+      paymentsState = normalizePayments(cachedPayments.data);
       updated = true;
     }
     if (cachedRates.data) {
@@ -167,11 +169,11 @@ export async function syncFromBackend(force: boolean = false) {
     const syncRes = await api.getInitialSyncData(force);
     if (syncRes.success && syncRes.data) {
       const data = syncRes.data;
-      if (Array.isArray(data.users)) usersState = data.users;
-      if (Array.isArray(data.bankAccounts)) bankAccountsState = data.bankAccounts;
-      if (Array.isArray(data.ornaments)) ornamentsState = data.ornaments;
-      if (Array.isArray(data.loans)) loansState = data.loans;
-      if (Array.isArray(data.payments)) paymentsState = data.payments;
+      if (Array.isArray(data.users)) usersState = normalizeUsers(data.users);
+      if (Array.isArray(data.bankAccounts)) bankAccountsState = normalizeBankAccounts(data.bankAccounts);
+      if (Array.isArray(data.ornaments)) ornamentsState = normalizeOrnaments(data.ornaments);
+      if (Array.isArray(data.loans)) loansState = normalizeLoans(data.loans);
+      if (Array.isArray(data.payments)) paymentsState = normalizePayments(data.payments);
       if (data.goldRates) goldRatesState = data.goldRates;
 
       lastSyncedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -192,19 +194,19 @@ export async function syncFromBackend(force: boolean = false) {
     ]);
 
     if (usersRes.status === 'fulfilled' && Array.isArray(usersRes.value)) {
-      usersState = usersRes.value;
+      usersState = normalizeUsers(usersRes.value);
     }
     if (banksRes.status === 'fulfilled' && Array.isArray(banksRes.value)) {
-      bankAccountsState = banksRes.value;
+      bankAccountsState = normalizeBankAccounts(banksRes.value);
     }
     if (ornsRes.status === 'fulfilled' && Array.isArray(ornsRes.value)) {
-      ornamentsState = ornsRes.value;
+      ornamentsState = normalizeOrnaments(ornsRes.value);
     }
     if (loansRes.status === 'fulfilled' && Array.isArray(loansRes.value)) {
-      loansState = loansRes.value;
+      loansState = normalizeLoans(loansRes.value);
     }
     if (paymentsRes.status === 'fulfilled' && Array.isArray(paymentsRes.value)) {
-      paymentsState = paymentsRes.value;
+      paymentsState = normalizePayments(paymentsRes.value);
     }
     if (ratesRes.status === 'fulfilled' && ratesRes.value.data) {
       goldRatesState = ratesRes.value.data;
@@ -375,7 +377,7 @@ export function useAppStore() {
 
     api.addUser(userData).then(res => {
       if (res.success && res.data) {
-        usersState = usersState.map(u => u.UserId === tempId ? { ...u, ...res.data } : u);
+        usersState = usersState.map(u => u.UserId === tempId ? { ...u, ...normalizeUser(res.data as User) } : u);
         cache.set('users_list', usersState, CacheTTL.LISTS);
         notify();
       }
@@ -430,7 +432,7 @@ export function useAppStore() {
 
     api.addBankAccount(accData).then(res => {
       if (res.success && res.data) {
-        bankAccountsState = bankAccountsState.map(b => b.BankAccountId === tempId ? { ...b, ...res.data } : b);
+        bankAccountsState = bankAccountsState.map(b => b.BankAccountId === tempId ? { ...b, ...normalizeBankAccount(res.data as BankAccount) } : b);
         cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
         notify();
       }
@@ -504,7 +506,7 @@ export function useAppStore() {
 
     api.addOrnament(ornData).then(res => {
       if (res.success && res.data) {
-        ornamentsState = ornamentsState.map(o => o.OrnamentId === tempId ? { ...o, ...res.data } : o);
+        ornamentsState = ornamentsState.map(o => o.OrnamentId === tempId ? { ...o, ...normalizeOrnament(res.data as Ornament) } : o);
         cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
         notify();
       }
@@ -572,7 +574,7 @@ export function useAppStore() {
 
     const newLoan: Loan = {
       LoanId: tempId,
-      LoanNumber: loanData.LoanNumber || `LN-${new Date().getFullYear()}-${tempId}`,
+      LoanNumber: loanData.LoanNumber || getNextLoanNumber(loansState),
       UserId: loanData.UserId,
       BankAccountId: loanData.BankAccountId,
       BankName: loanData.BankName || 'Bank',
@@ -613,7 +615,7 @@ export function useAppStore() {
 
     api.addLoan(loanData).then(res => {
       if (res.success && res.data) {
-        loansState = loansState.map(l => l.LoanId === tempId ? { ...l, ...res.data } : l);
+        loansState = loansState.map(l => l.LoanId === tempId ? { ...l, ...normalizeLoan(res.data as Loan) } : l);
         cache.set('loans_all', loansState, CacheTTL.LISTS);
         notify();
       }
@@ -659,7 +661,7 @@ export function useAppStore() {
 
     api.updateLoan(loanId, updated).then(res => {
       if (res.success && res.data) {
-        loansState = loansState.map(l => l.LoanId === loanId ? { ...l, ...res.data } : l);
+        loansState = loansState.map(l => l.LoanId === loanId ? { ...l, ...normalizeLoan(res.data as Loan) } : l);
         cache.set('loans_all', loansState, CacheTTL.LISTS);
         notify();
       }
@@ -725,7 +727,7 @@ export function useAppStore() {
 
     api.addPayment(payData).then(res => {
       if (res.success && res.data) {
-        paymentsState = paymentsState.map(p => p.PaymentId === tempId ? { ...p, ...res.data } : p);
+        paymentsState = paymentsState.map(p => p.PaymentId === tempId ? { ...p, ...normalizePayment(res.data as Payment) } : p);
         cache.set('payments_all', paymentsState, CacheTTL.LISTS);
         notify();
       }
