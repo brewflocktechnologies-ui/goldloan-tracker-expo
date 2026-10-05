@@ -1,6 +1,7 @@
+import { getNextLoanNumber } from '../../utils/loanNumber';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -91,14 +92,13 @@ export default function NewLoanScreen() {
 
   // Step 4: Terms & Calculation
   const today = useMemo(() => new Date(), []);
-  const initialLoanNumber = useMemo(() => {
-    const yr = today.getFullYear();
-    const mo = String(today.getMonth() + 1).padStart(2, '0');
-    const seq = String(store.loans.length + 1).padStart(3, '0');
-    return `LN-${yr}${mo}-${seq}`;
-  }, [store.loans.length, today]);
+  const initialLoanNumber = useMemo(() => getNextLoanNumber(store.loans), [store.loans]);
+  const loanNumberEdited = useRef(false);
 
   const [loanNumber, setLoanNumber] = useState<string>(initialLoanNumber);
+  useEffect(() => {
+    if (!loanNumberEdited.current) setLoanNumber(initialLoanNumber);
+  }, [initialLoanNumber]);
   const [loanDateDMY, setLoanDateDMY] = useState<string>(formatDateDMY(today));
   const [loanPeriodMonths, setLoanPeriodMonths] = useState<number>(6);
   const [dueDateDMY, setDueDateDMY] = useState<string>(formatDateDMY(addMonths(today, 6)));
@@ -392,7 +392,14 @@ export default function NewLoanScreen() {
         ornamentIds: selectedOrnamentIds,
       };
 
-      store.addLoan(loanPayload);
+      store.addLoan(loanPayload, {
+        onSuccess: (saved) => {
+          if (saved.LoanNumber !== loanPayload.LoanNumber) {
+            toast.info(`Loan number ${loanPayload.LoanNumber} was taken; saved as ${saved.LoanNumber}`);
+          }
+        },
+        onError: (message) => toast.danger(`Loan ${loanPayload.LoanNumber} was not saved: ${message}`),
+      });
       toast.success(`Loan contract ${loanPayload.LoanNumber} created successfully!`);
 
       // Return to loans list
@@ -649,7 +656,7 @@ export default function NewLoanScreen() {
                   const maxLimit = Number(b.MaxLoanAmount) || 0;
                   const uti = Number(b.UtilizedLoanAmount) || 0;
                   const avail = Math.max(0, maxLimit - uti);
-                  const last4 = b.AccountNumber ? b.AccountNumber.slice(-4) : '****';
+                  const last4 = b.AccountNumber ? String(b.AccountNumber).slice(-4) : '****';
 
                   return (
                     <TouchableOpacity
@@ -755,7 +762,7 @@ export default function NewLoanScreen() {
 
                       {/* Diamond Icon */}
                       <View style={styles.diamondIconBox}>
-                        <Ionicons name="diamond-outline" size={17} color="#d97706" />
+                        <Ionicons name="diamond-outline" size={17} color="#0284c7" />
                       </View>
 
                       {/* Info */}
@@ -767,7 +774,7 @@ export default function NewLoanScreen() {
                         </Text>
                         {owner && (
                           <View style={styles.ownerNoticeRow}>
-                            <Ionicons name="information-circle-outline" size={12} color="#d97706" />
+                            <Ionicons name="information-circle-outline" size={12} color="#0284c7" />
                             <Text style={styles.ownerNoticeText}>Owner: {owner.FullName}</Text>
                           </View>
                         )}
@@ -803,7 +810,10 @@ export default function NewLoanScreen() {
                   <TextInput
                     style={styles.textInput}
                     value={loanNumber}
-                    onChangeText={setLoanNumber}
+                    onChangeText={(v) => {
+                      loanNumberEdited.current = true;
+                      setLoanNumber(v);
+                    }}
                   />
                 </View>
 
@@ -1021,7 +1031,7 @@ export default function NewLoanScreen() {
                   <Text style={styles.reviewLabel}>Bank account</Text>
                   <Text style={styles.reviewVal}>
                     {selectedBankAccount?.BankName || 'Bank'} · ****{' '}
-                    {selectedBankAccount?.AccountNumber ? selectedBankAccount.AccountNumber.slice(-4) : '****'}
+                    {selectedBankAccount?.AccountNumber ? String(selectedBankAccount.AccountNumber).slice(-4) : '****'}
                   </Text>
                 </View>
                 <View style={styles.calcSummaryDivider} />
@@ -1781,7 +1791,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       width: 34,
       height: 34,
       borderRadius: 8,
-      backgroundColor: isDark ? 'rgba(217, 119, 6, 0.2)' : '#fef3c7',
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.2)' : '#e0f2fe',
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 10,
@@ -1807,7 +1817,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
     },
     ownerNoticeText: {
       fontSize: 10.5,
-      color: '#d97706',
+      color: '#0284c7',
     },
 
     // Step 4 Form

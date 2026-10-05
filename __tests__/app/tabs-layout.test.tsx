@@ -60,6 +60,7 @@ describe('Tabs layout — mobile top bar', () => {
     ['/loans', 'Loans'],
     ['/users', 'Users'],
     ['/ornaments', 'Ornaments'],
+    ['/menu', 'Menu'],
   ])('hides the top bar on the %s tab (%s)', (pathname) => {
     renderAt(pathname);
     expect(hasTopBar()).toBe(false);
@@ -106,10 +107,10 @@ describe('Tabs layout — mobile bottom navigation', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)');
   });
 
-  it('opens the menu sheet instead of navigating for Menu', () => {
+  it('navigates to the menu screen when Menu is pressed', () => {
     renderAt('/');
     fireEvent.press(screen.getByText('Menu'));
-    expect(mockRouter.push).not.toHaveBeenCalled();
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/menu');
   });
 });
 
@@ -133,6 +134,6 @@ describe('Tabs layout — desktop', () => {
     renderAt('/loans');
     expect(screen.getByText('Bank Accounts')).toBeTruthy();
     expect(screen.getByText('Settlements')).toBeTruthy();
-    expect(screen.queryByText('Menu')).toBeNull();
+    expect(screen.getByText('Menu & Settings')).toBeTruthy();
   });
 });

@@ -311,48 +311,16 @@ describe('UsersScreen — details view', () => {
     });
   });
 
-  it('opens the Add Bank Account form with this customer fixed, without navigating', () => {
-    renderScreen();
-    openDetails('Ravi Kumar');
-    fireEvent.press(screen.getByText('Bank Accounts'));
-    expect(screen.queryByText('Add Bank Account')).toBeNull();
-
-    fireEvent.press(screen.getByLabelText('Add Bank Account'));
-
-    expect(screen.getByText('Add Bank Account')).toBeTruthy();
-    // Customer is preset: no borrower picker chips for the other customers, holder pre-filled.
-    expect(screen.queryByText('Select Borrower *')).toBeNull();
-    expect(screen.queryByText('Anita Sharma')).toBeNull();
-    expect(screen.getByDisplayValue('Ravi Kumar')).toBeTruthy();
-    expect(mockRouter.push).not.toHaveBeenCalled();
-  });
-
-  it('saves a new bank account for this customer and closes the form', () => {
+  it('opens the Add Bank Account page with this customer preset', () => {
     renderScreen();
     openDetails('Ravi Kumar');
     fireEvent.press(screen.getByText('Bank Accounts'));
     fireEvent.press(screen.getByLabelText('Add Bank Account'));
 
-    fireEvent.changeText(screen.getAllByDisplayValue('')[0], '9988776655');
-    fireEvent.press(screen.getByText('Add Bank'));
-
-    expect(mockStore.addBankAccount).toHaveBeenCalledWith(
-      expect.objectContaining({ UserId: 'USR001', AccountHolderName: 'Ravi Kumar' })
-    );
-    expect(mockToast.success).toHaveBeenCalled();
-    expect(screen.queryByText('Add Bank')).toBeNull();
-  });
-
-  it('does not save a bank account without an account number', () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    renderScreen();
-    openDetails('Ravi Kumar');
-    fireEvent.press(screen.getByText('Bank Accounts'));
-    fireEvent.press(screen.getByLabelText('Add Bank Account'));
-    fireEvent.press(screen.getByText('Add Bank'));
-
-    expect(alertSpy).toHaveBeenCalledWith('Validation Error', 'Account Number is required.');
-    expect(mockStore.addBankAccount).not.toHaveBeenCalled();
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/bank-accounts/form',
+      params: { userId: 'USR001' },
+    });
   });
 
   it('shows an empty message on the Loans tab when there are none', () => {

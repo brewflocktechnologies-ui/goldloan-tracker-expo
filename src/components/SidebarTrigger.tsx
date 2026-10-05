@@ -11,7 +11,7 @@ export function SidebarTrigger() {
   // If desktop: open when !collapsed, closed when collapsed
   // If mobile: open when mobileDrawerOpen, closed when !mobileDrawerOpen
   const isOpen = isDesktop ? !collapsed : mobileDrawerOpen;
-  const iconColor = isDark ? '#fbbf24' : colors.primaryDark;
+  const iconColor = isDark ? '#38bdf8' : colors.primaryDark;
 
   return (
     <TouchableOpacity
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     borderColor: '#fde68a',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#ca8a04',
+    shadowColor: '#0284c7',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,

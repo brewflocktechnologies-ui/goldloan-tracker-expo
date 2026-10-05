@@ -1,22 +1,25 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Modal,
-  Platform, RefreshControl,
+  Platform,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
+import { SafeAreaView as EdgeSafeAreaView } from 'react-native-safe-area-context';
 import { Badge } from '../../components/Badge';
-import { BankAccountFormModal } from '../../components/BankAccountFormModal';
 import { BankCard } from '../../components/BankCard';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Column, DataTable } from '../../components/DataTable';
 import { ImageViewModal } from '../../components/ImageViewModal';
+import { formatAmountLakh, formatLoanDate } from '../../components/loans/loanUtils';
 import { ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -25,6 +28,7 @@ import { getDriveImageUrl } from '../../services/api';
 import { useAppStore } from '../../services/store';
 import { BankAccount } from '../../types';
 
+
 export default function BankAccountsScreen() {
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors, isDark);
@@ -32,13 +36,14 @@ export default function BankAccountsScreen() {
   const toast = useToast();
   const { isSuperAdmin } = useAuth();
 
-  const [modalVisible, setModalVisible] = useState(false);
+  const router = useRouter();
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<BankAccount | null>(null);
   const [selectedAcc, setSelectedAcc] = useState<BankAccount | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [isDetailMasked, setIsDetailMasked] = useState(true);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -47,17 +52,16 @@ export default function BankAccountsScreen() {
   };
 
   const openAddModal = () => {
-    setSelectedAcc(null);
-    setModalVisible(true);
+    router.push('/bank-accounts/form' as any);
   };
 
   const openEditModal = (acc: BankAccount) => {
-    setSelectedAcc(acc);
-    setModalVisible(true);
+    router.push({ pathname: '/bank-accounts/form', params: { accountId: acc.BankAccountId } } as any);
   };
 
   const openDetailModal = (acc: BankAccount) => {
     setSelectedAcc(acc);
+    setIsDetailMasked(true);
     setDetailModalVisible(true);
   };
 
@@ -258,79 +262,253 @@ export default function BankAccountsScreen() {
         />
       </ScrollView>
 
-      {/* ADD / EDIT BANK ACCOUNT MODAL */}
-      <BankAccountFormModal
-        visible={modalVisible}
-        account={selectedAcc}
-        onClose={() => setModalVisible(false)}
-      />
-
-      {/* DETAIL MODAL */}
-      <Modal visible={detailModalVisible} animationType="fade" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Bank Account Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+      {/* DETAIL MODAL (Matching Image 5) */}
+      <Modal
+        visible={detailModalVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setDetailModalVisible(false)}
+      >
+        <EdgeSafeAreaView style={styles.detailSafeArea} edges={['top', 'left', 'right']}>
+          <View style={styles.detailContainer}>
+            {/* Top Light Blue Banner */}
+            <View style={styles.detailHeaderBanner}>
+              <TouchableOpacity
+                onPress={() => setDetailModalVisible(false)}
+                style={styles.detailBackBtn}
+                accessibilityLabel="Back"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="arrow-back" size={24} color="#0f172a" />
               </TouchableOpacity>
+              <View style={styles.detailHeaderTitleCol}>
+                <Text style={styles.detailHeaderTitle}>Bank account</Text>
+                <Text style={styles.detailHeaderSubtitle}>Details of bank account</Text>
+              </View>
             </View>
 
-            {selectedAcc ? (
-              <ScrollView style={styles.modalBody}>
-                <View style={styles.detailCard}>
-                  <Text style={styles.detailName}>{selectedAcc.BankName}</Text>
-                  <Text style={styles.detailCode}>Acc: {selectedAcc.AccountNumber} • IFSC: {selectedAcc.IFSCCode || 'N/A'}</Text>
-                  <View style={{ marginTop: 6 }}>
-                    <Badge label={selectedAcc.Status} variant={selectedAcc.Status === 'Active' ? 'success' : 'default'} />
-                  </View>
-                </View>
+            {selectedAcc && (() => {
+              const selectedCustomer = store.users.find(
+                (u) => String(u.UserId) === String(selectedAcc.UserId)
+              );
+              const customerInitials = (selectedCustomer?.FullName || selectedAcc.AccountHolderName || 'BA')
+                .split(' ')
+                .map((p) => p[0])
+                .filter(Boolean)
+                .join('')
+                .slice(0, 2)
+                .toUpperCase();
+              const accountLoans = store.loans.filter(
+                (l) =>
+                  (String(l.BankAccountId) === String(selectedAcc.BankAccountId) ||
+                    String(l.UserId) === String(selectedAcc.UserId)) &&
+                  l.LoanStatus !== 'Closed'
+              );
+              const maxLimit = selectedAcc.MaxLoanAmount || 0;
+              const utilLimit = selectedAcc.UtilizedLoanAmount || 0;
+              const availLimit =
+                selectedAcc.AvailableLoanAmount !== undefined
+                  ? selectedAcc.AvailableLoanAmount
+                  : Math.max(0, maxLimit - utilLimit);
+              const utilPercent =
+                maxLimit > 0 ? Math.min(100, Math.round((utilLimit / maxLimit) * 100)) : 0;
+              const cleanAccNo = String(selectedAcc.AccountNumber || '').replace(/\s+/g, '');
+              const maskedAccDisplay = cleanAccNo.length > 4 ? `•••• ${cleanAccNo.slice(-4)}` : cleanAccNo;
 
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSecTitle}>Account Information</Text>
-                  <Text style={styles.detailRowText}><Text style={styles.bold}>Holder:</Text> {selectedAcc.AccountHolderName}</Text>
-                  <Text style={styles.detailRowText}><Text style={styles.bold}>Branch:</Text> {selectedAcc.BranchName || 'Main'}, {selectedAcc.City}</Text>
-                  <Text style={styles.detailRowText}><Text style={styles.bold}>Account Type:</Text> {selectedAcc.AccountType}</Text>
-                  {selectedAcc.UPI_ID ? <Text style={styles.detailRowText}><Text style={styles.bold}>UPI:</Text> {selectedAcc.UPI_ID}</Text> : null}
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSecTitle}>Limit Utilization</Text>
-                  <Text style={styles.detailRowText}><Text style={styles.bold}>Max Limit:</Text> ₹{(selectedAcc.MaxLoanAmount || 0).toLocaleString()}</Text>
-                  <Text style={styles.detailRowText}><Text style={styles.bold}>Utilized:</Text> ₹{(selectedAcc.UtilizedLoanAmount || 0).toLocaleString()}</Text>
-                  <Text style={[styles.detailRowText, { color: colors.success, fontWeight: '700' }]}>
-                    Available: ₹{(selectedAcc.AvailableLoanAmount || Math.max(0, (selectedAcc.MaxLoanAmount || 0) - (selectedAcc.UtilizedLoanAmount || 0))).toLocaleString()}
-                  </Text>
-                </View>
-
-                {selectedAcc.PassbookImage ? (
-                  <View style={styles.detailSection}>
-                    <Text style={styles.detailSecTitle}>Passbook / Cheque Leaf Document</Text>
-                    <TouchableOpacity
-                      onPress={() => selectedAcc.PassbookImage && setPreviewImageUrl(selectedAcc.PassbookImage)}
-                      style={{ borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: isDark ? '#1e293b' : '#f1f5f9', marginTop: 4 }}
-                    >
-                      <Image
-                        source={{ uri: getDriveImageUrl(selectedAcc.PassbookImage) }}
-                        style={{ width: '100%', height: 160 }}
-                        contentFit="cover"
-                      />
-                      <View style={{ backgroundColor: 'rgba(0,0,0,0.6)', padding: 6, alignItems: 'center' }}>
-                        <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '600' }}>Tap to view full image</Text>
+              return (
+                <ScrollView
+                  style={styles.detailScroll}
+                  contentContainerStyle={styles.detailScrollContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* Card 1: Bank Overview */}
+                  <View style={styles.overviewCard}>
+                    <View style={styles.overviewTopRow}>
+                      <View style={styles.bankIconSquare}>
+                        <MaterialCommunityIcons name="bank" size={24} color="#0284c7" />
                       </View>
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-              </ScrollView>
-            ) : null}
+                      <View style={styles.bankNameCol}>
+                        <Text style={styles.detailBankNameText} numberOfLines={1}>
+                          {selectedAcc.BankName}
+                        </Text>
+                        <Text style={styles.detailAccountTypeText}>
+                          {selectedAcc.AccountType || 'Savings'} account
+                        </Text>
+                      </View>
+                      <View style={styles.activeBadgePill}>
+                        <Ionicons name="checkmark-circle-outline" size={13} color="#16a34a" />
+                        <Text style={styles.activeBadgeText}>{selectedAcc.Status || 'Active'}</Text>
+                      </View>
+                    </View>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.saveBtn} onPress={() => setDetailModalVisible(false)}>
-                <Text style={styles.saveBtnText}>Close</Text>
+                    <Text style={styles.accNumberLabel}>Account number</Text>
+                    <View style={styles.accNumberRow}>
+                      <Text style={styles.accNumberVal}>
+                        {isDetailMasked ? maskedAccDisplay : selectedAcc.AccountNumber}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setIsDetailMasked((p) => !p)}
+                        style={styles.eyeBtn}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityLabel="Toggle mask"
+                      >
+                        <Ionicons
+                          name={isDetailMasked ? 'eye-outline' : 'eye-off-outline'}
+                          size={18}
+                          color="#64748b"
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.overviewDivider} />
+
+                    <View style={styles.holderRow}>
+                      <View style={styles.holderAvatar}>
+                        <Text style={styles.holderAvatarText}>{customerInitials}</Text>
+                      </View>
+                      <View style={styles.holderInfoCol}>
+                        <Text style={styles.holderNameText} numberOfLines={1}>
+                          {selectedCustomer?.FullName || selectedAcc.AccountHolderName}
+                        </Text>
+                        <Text style={styles.holderSubText} numberOfLines={1}>
+                          Holder: {selectedAcc.AccountHolderName}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="#0f172a" />
+                    </View>
+                  </View>
+
+                  {/* Card 2: Loan Limit */}
+                  <View style={styles.loanLimitCard}>
+                    <View style={styles.loanLimitHeaderRow}>
+                      <Text style={styles.loanLimitTitle}>Loan limit</Text>
+                      <Text style={styles.loanLimitPercent}>{utilPercent}% used</Text>
+                    </View>
+                    <View style={styles.limitTrack}>
+                      <View style={[styles.limitFill, { width: `${utilPercent}%` }]} />
+                    </View>
+                    <View style={styles.limitMetricsRow}>
+                      <View style={styles.limitMetricCol}>
+                        <Text style={styles.limitMetricLabel}>Maximum</Text>
+                        <Text style={styles.limitMetricVal}>
+                          ₹{maxLimit.toLocaleString('en-IN')}
+                        </Text>
+                      </View>
+                      <View style={styles.limitMetricCol}>
+                        <Text style={styles.limitMetricLabel}>Utilized</Text>
+                        <Text style={styles.limitMetricVal}>
+                          ₹{utilLimit.toLocaleString('en-IN')}
+                        </Text>
+                      </View>
+                      <View style={styles.limitMetricCol}>
+                        <Text style={styles.limitMetricLabel}>Available</Text>
+                        <Text style={[styles.limitMetricVal, { color: '#10b981' }]}>
+                          ₹{availLimit.toLocaleString('en-IN')}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.limitHelperText}>
+                      Utilized is the sum of active loans on this account.
+                    </Text>
+                  </View>
+
+                  {/* Card 3: Bank Details */}
+                  <Text style={styles.sectionHeaderTitle}>Bank details</Text>
+                  <View style={styles.detailsCard}>
+                    <View style={styles.detailTableRow}>
+                      <Text style={styles.tableKeyText}>Bank</Text>
+                      <Text style={styles.tableValText}>{selectedAcc.BankName}</Text>
+                    </View>
+                    <View style={styles.detailTableRow}>
+                      <Text style={styles.tableKeyText}>Branch</Text>
+                      <Text style={styles.tableValText}>{selectedAcc.BranchName || '—'}</Text>
+                    </View>
+                    <View style={styles.detailTableRow}>
+                      <Text style={styles.tableKeyText}>City</Text>
+                      <Text style={styles.tableValText}>{selectedAcc.City || '—'}</Text>
+                    </View>
+                    <View style={styles.detailTableRow}>
+                      <Text style={styles.tableKeyText}>IFSC</Text>
+                      <Text style={styles.tableValText}>{selectedAcc.IFSCCode || '—'}</Text>
+                    </View>
+                    <View style={styles.detailTableRow}>
+                      <Text style={styles.tableKeyText}>Account type</Text>
+                      <Text style={styles.tableValText}>{selectedAcc.AccountType || 'Savings'}</Text>
+                    </View>
+                    <View style={[styles.detailTableRow, { borderBottomWidth: 0 }]}>
+                      <Text style={styles.tableKeyText}>UPI ID</Text>
+                      <Text style={styles.tableValText}>{selectedAcc.UPI_ID || '—'}</Text>
+                    </View>
+                  </View>
+
+                  {/* Card 4: Documents */}
+                  <Text style={styles.sectionHeaderTitle}>Documents</Text>
+                  <TouchableOpacity
+                    style={styles.documentCard}
+                    onPress={() => {
+                      if (selectedAcc.PassbookImage) {
+                        setPreviewImageUrl(selectedAcc.PassbookImage);
+                      } else {
+                        toast.info('No passbook image uploaded for this account');
+                      }
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.docIconSquare}>
+                      <Ionicons name="book-outline" size={20} color="#64748b" />
+                    </View>
+                    <View style={styles.docTextCol}>
+                      <Text style={styles.docTitleText}>Passbook image</Text>
+                      <Text style={styles.docSubText}>
+                        {selectedAcc.PassbookImage ? 'Tap to view' : 'Not uploaded'}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color="#0f172a" />
+                  </TouchableOpacity>
+
+                  {/* Card 5: Active Loans */}
+                  <Text style={styles.sectionHeaderTitle}>Active loans on this account</Text>
+                  {accountLoans.length === 0 ? (
+                    <View style={styles.noLoansCard}>
+                      <Text style={styles.noLoansText}>No active loans on this account</Text>
+                    </View>
+                  ) : (
+                    accountLoans.map((loan) => (
+                      <View key={loan.LoanId} style={styles.loanItemCard}>
+                        <View style={styles.loanItemTopRow}>
+                          <Text style={styles.loanItemNumber}>{loan.LoanNumber}</Text>
+                          <View style={styles.activeBadgePill}>
+                            <Text style={styles.activeBadgeText}>{loan.LoanStatus}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.loanItemSubText}>
+                          {formatAmountLakh(loan.LoanAmount)} · due {formatLoanDate(loan.DueDate)}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                </ScrollView>
+              );
+            })()}
+
+            {/* Sticky Bottom Bar with Edit Account Button */}
+            <View style={styles.detailBottomBar}>
+              <TouchableOpacity
+                style={styles.editAccountBtn}
+                onPress={() => {
+                  if (selectedAcc) {
+                    setDetailModalVisible(false);
+                    openEditModal(selectedAcc);
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="pencil-outline" size={16} color="#0f172a" />
+                <Text style={styles.editAccountBtnText}>Edit account</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </EdgeSafeAreaView>
       </Modal>
 
       {/* FULL-SCREEN IMAGE PREVIEW */}
@@ -614,5 +792,331 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  detailSafeArea: {
+    flex: 1,
+    backgroundColor: isDark ? '#0c2238' : '#ddf4fe',
+  },
+  detailContainer: {
+    flex: 1,
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  detailHeaderBanner: {
+    backgroundColor: isDark ? '#0c2238' : '#ddf4fe',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  detailBackBtn: {
+    padding: 4,
+    marginLeft: -4,
+  },
+  detailHeaderTitleCol: {
+    flex: 1,
+  },
+  detailHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
+    letterSpacing: -0.2,
+  },
+  detailHeaderSubtitle: {
+    fontSize: 12,
+    color: isDark ? '#94a3b8' : '#64748b',
+    marginTop: 2,
+  },
+  detailScroll: {
+    flex: 1,
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
+  },
+  detailScrollContent: {
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  overviewCard: {
+    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: isDark ? '#1e293b' : '#e2e8f0',
+    padding: 16,
+  },
+  overviewTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  bankIconSquare: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: isDark ? 'rgba(2, 132, 199, 0.2)' : '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bankNameCol: {
+    flex: 1,
+  },
+  detailBankNameText: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
+  },
+  detailAccountTypeText: {
+    fontSize: 12,
+    color: isDark ? '#94a3b8' : '#64748b',
+    marginTop: 2,
+  },
+  activeBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: isDark ? 'rgba(22, 163, 74, 0.2)' : '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 12,
+  },
+  activeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#16a34a',
+  },
+  accNumberLabel: {
+    fontSize: 11.5,
+    color: isDark ? '#94a3b8' : '#64748b',
+    marginTop: 14,
+  },
+  accNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  accNumberVal: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
+    letterSpacing: 1,
+  },
+  eyeBtn: {
+    padding: 4,
+  },
+  overviewDivider: {
+    height: 1,
+    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+    marginVertical: 14,
+  },
+  holderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  holderAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: isDark ? 'rgba(2, 132, 199, 0.2)' : '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  holderAvatarText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0284c7',
+  },
+  holderInfoCol: {
+    flex: 1,
+  },
+  holderNameText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
+  },
+  holderSubText: {
+    fontSize: 11.5,
+    color: isDark ? '#94a3b8' : '#64748b',
+    marginTop: 1,
+  },
+  loanLimitCard: {
+    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: isDark ? '#1e293b' : '#e2e8f0',
+    padding: 16,
+    marginTop: 14,
+  },
+  loanLimitHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  loanLimitTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
+  },
+  loanLimitPercent: {
+    fontSize: 11.5,
+    color: isDark ? '#94a3b8' : '#64748b',
+  },
+  limitTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: isDark ? '#1e293b' : '#e2e8f0',
+    marginVertical: 10,
+    overflow: 'hidden',
+  },
+  limitFill: {
+    height: '100%',
+    backgroundColor: '#0284c7',
+    borderRadius: 3,
+  },
+  limitMetricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  limitMetricCol: {
+    flex: 1,
+  },
+  limitMetricLabel: {
+    fontSize: 10.5,
+    color: isDark ? '#94a3b8' : '#64748b',
+  },
+  limitMetricVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
+    marginTop: 2,
+  },
+  limitHelperText: {
+    fontSize: 10.5,
+    color: isDark ? '#94a3b8' : '#64748b',
+    marginTop: 10,
+  },
+  sectionHeaderTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDark ? '#cbd5e1' : '#0f172a',
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  detailsCard: {
+    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: isDark ? '#1e293b' : '#e2e8f0',
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  detailTableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? '#1e293b' : '#f1f5f9',
+  },
+  tableKeyText: {
+    fontSize: 12,
+    color: isDark ? '#94a3b8' : '#64748b',
+  },
+  tableValText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
+  },
+  documentCard: {
+    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: isDark ? '#1e293b' : '#e2e8f0',
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  docIconSquare: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docTextCol: {
+    flex: 1,
+  },
+  docTitleText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
+  },
+  docSubText: {
+    fontSize: 11,
+    color: isDark ? '#94a3b8' : '#64748b',
+    marginTop: 2,
+  },
+  noLoansCard: {
+    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: isDark ? '#1e293b' : '#e2e8f0',
+    padding: 14,
+  },
+  noLoansText: {
+    fontSize: 12,
+    color: isDark ? '#94a3b8' : '#64748b',
+    textAlign: 'center',
+  },
+  loanItemCard: {
+    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: isDark ? '#1e293b' : '#e2e8f0',
+    padding: 14,
+    marginBottom: 8,
+  },
+  loanItemTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  loanItemNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
+  },
+  loanItemSubText: {
+    fontSize: 11.5,
+    color: isDark ? '#94a3b8' : '#64748b',
+    marginTop: 4,
+  },
+  detailBottomBar: {
+    backgroundColor: isDark ? '#090d16' : '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: isDark ? '#1e293b' : '#e2e8f0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  editAccountBtn: {
+    borderWidth: 1,
+    borderColor: isDark ? '#f8fafc' : '#0f172a',
+    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+    borderRadius: 10,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  editAccountBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDark ? '#f8fafc' : '#0f172a',
   },
 });

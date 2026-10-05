@@ -73,7 +73,7 @@ export default function DashboardScreen() {
         {/* ─── READ-ONLY ROLE BANNER ─── */}
         {isReadOnly && (
           <View style={styles.readOnlyNoticeBanner}>
-            <Ionicons name="eye" size={16} color={isDark ? '#fbbf24' : '#b45309'} />
+            <Ionicons name="eye" size={16} color={isDark ? '#38bdf8' : '#0369a1'} />
             <Text style={styles.readOnlyNoticeText}>
               Viewing in <Text style={{ fontWeight: '700' }}>Read-Only Mode</Text>. Adding loans, customers, gold or settling requires SuperAdmin privileges.
             </Text>
@@ -84,7 +84,7 @@ export default function DashboardScreen() {
         {store.syncError && (store.users.length > 0 || store.loans.length > 0) ? (
           <View style={styles.offlineNoticeBanner}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-              <Ionicons name="cloud-offline-outline" size={15} color={isDark ? '#fbbf24' : '#b45309'} />
+              <Ionicons name="cloud-offline-outline" size={15} color={isDark ? '#38bdf8' : '#0369a1'} />
               <Text style={styles.offlineNoticeText} numberOfLines={1}>
                 {store.syncError}
               </Text>
@@ -104,7 +104,7 @@ export default function DashboardScreen() {
           <View style={{ gap: 20 }}>
             {/* Syncing Pill Notice */}
             <View style={styles.syncNoticePill}>
-              <ActivityIndicator size="small" color={isDark ? '#fbbf24' : colors.primaryDark} />
+              <ActivityIndicator size="small" color={isDark ? '#38bdf8' : colors.primaryDark} />
               <Text style={styles.syncNoticeText}>Loading portfolio data from Google Sheets...</Text>
             </View>
 
@@ -153,7 +153,7 @@ export default function DashboardScreen() {
           /* ─── EMPTY OFFLINE STATE (First run without internet) ─── */
           <View style={styles.offlineEmptyContainer}>
             <View style={styles.offlineIconCircle}>
-              <Ionicons name="cloud-offline-outline" size={36} color={isDark ? '#fbbf24' : colors.primaryDark} />
+              <Ionicons name="cloud-offline-outline" size={36} color={isDark ? '#38bdf8' : colors.primaryDark} />
             </View>
             <Text style={styles.offlineEmptyTitle}>Unable to Connect</Text>
             <Text style={styles.offlineEmptySub}>
@@ -218,12 +218,12 @@ export default function DashboardScreen() {
                     <Text style={[styles.rateKarat, styles.rateKaratFeatured]} numberOfLines={1}>
                       22K Standard (916)
                     </Text>
-                    <View style={[styles.miniBadge, { backgroundColor: isDark ? '#b45309' : colors.primaryDark }]}>
+                    <View style={[styles.miniBadge, { backgroundColor: isDark ? '#0284c7' : colors.primaryDark }]}>
                       <Text style={[styles.miniBadgeText, { color: '#ffffff' }]}>Primary</Text>
                     </View>
                   </View>
-                  <View style={[styles.sovereignBox, { backgroundColor: '#fef3c7', marginTop: 0 }]}>
-                    <Text style={[styles.sovereignText, { color: '#92400e', fontWeight: '700' }]} numberOfLines={1}>
+                  <View style={[styles.sovereignBox, { backgroundColor: '#e0f2fe', marginTop: 0 }]}>
+                    <Text style={[styles.sovereignText, { color: '#0369a1', fontWeight: '700' }]} numberOfLines={1}>
                       8g Sovereign: ₹{(live22kRate * 8).toLocaleString()}
                     </Text>
                   </View>
@@ -254,8 +254,8 @@ export default function DashboardScreen() {
                 <View style={[styles.rateBox, { flex: 1 }]}>
                   <View style={styles.rateBoxHeader}>
                     <Text style={styles.rateKarat} numberOfLines={1}>24K Pure (999)</Text>
-                    <View style={[styles.miniBadge, { backgroundColor: '#fef08a' }]}>
-                      <Text style={[styles.miniBadgeText, { color: '#854d0e' }]}>99.9%</Text>
+                    <View style={[styles.miniBadge, { backgroundColor: '#e0f2fe' }]}>
+                      <Text style={[styles.miniBadgeText, { color: '#0369a1' }]}>99.9%</Text>
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
@@ -302,8 +302,8 @@ export default function DashboardScreen() {
               <View style={styles.rateBox}>
                 <View style={styles.rateBoxHeader}>
                   <Text style={styles.rateKarat} numberOfLines={1}>24K Pure (999)</Text>
-                  <View style={[styles.miniBadge, { backgroundColor: '#fef08a' }]}>
-                    <Text style={[styles.miniBadgeText, { color: '#854d0e' }]}>99.9%</Text>
+                  <View style={[styles.miniBadge, { backgroundColor: '#e0f2fe' }]}>
+                    <Text style={[styles.miniBadgeText, { color: '#0369a1' }]}>99.9%</Text>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
@@ -323,7 +323,7 @@ export default function DashboardScreen() {
               {/* 22K Jewelry Standard (Featured) */}
               <View style={[styles.rateBox, styles.rateBoxFeatured]}>
                 <View style={styles.rateBoxHeader}>
-                  <Text style={[styles.rateKarat, { color: isDark ? '#fbbf24' : colors.primaryDark }]} numberOfLines={1}>
+                  <Text style={[styles.rateKarat, { color: isDark ? '#38bdf8' : colors.primaryDark }]} numberOfLines={1}>
                     22K Standard (916)
                   </Text>
                   <View style={[styles.miniBadge, { backgroundColor: Colors.primaryDark }]}>
@@ -348,8 +348,8 @@ export default function DashboardScreen() {
                   ) : null}
                 </View>
                 <Text style={styles.rateUnit}>per 1g</Text>
-                <View style={[styles.sovereignBox, { backgroundColor: '#fef3c7' }]}>
-                  <Text style={[styles.sovereignText, { color: '#92400e', fontWeight: '700' }]} numberOfLines={1}>
+                <View style={[styles.sovereignBox, { backgroundColor: '#e0f2fe' }]}>
+                  <Text style={[styles.sovereignText, { color: '#0369a1', fontWeight: '700' }]} numberOfLines={1}>
                     8g Sovereign: ₹{(live22kRate * 8).toLocaleString()}
                   </Text>
                 </View>
@@ -387,8 +387,8 @@ export default function DashboardScreen() {
           <View style={[styles.valCard, (isDesktop || isTablet) && { flex: 1 }]}>
             <View style={styles.valCardTop}>
               <Text style={styles.valTitle} numberOfLines={1}>Current Market Value</Text>
-              <View style={[styles.valIconBox, { backgroundColor: '#fef3c7' }]}>
-                <Ionicons name="diamond" size={18} color="#b45309" />
+              <View style={[styles.valIconBox, { backgroundColor: '#e0f2fe' }]}>
+                <Ionicons name="diamond" size={18} color="#0369a1" />
               </View>
             </View>
             <Text style={styles.valAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
@@ -449,7 +449,7 @@ export default function DashboardScreen() {
           >
             <View style={styles.metricTop}>
               <View style={styles.metricIconBox}>
-                <Ionicons name="people" size={20} color={isDark ? '#fbbf24' : colors.primaryDark} />
+                <Ionicons name="people" size={20} color={isDark ? '#38bdf8' : colors.primaryDark} />
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
@@ -486,8 +486,8 @@ export default function DashboardScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.metricTop}>
-              <View style={[styles.metricIconBox, { backgroundColor: '#fef3c7' }]}>
-                <Ionicons name="cash" size={20} color="#b45309" />
+              <View style={[styles.metricIconBox, { backgroundColor: '#e0f2fe' }]}>
+                <Ionicons name="cash" size={20} color="#0369a1" />
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
@@ -561,8 +561,8 @@ export default function DashboardScreen() {
             onPress={() => handleActionPress('/loans/new')} 
             activeOpacity={0.7}
           >
-            <View style={[styles.actionIconBox, { backgroundColor: '#fef08a' }]}>
-              <Ionicons name={isReadOnly ? "lock-closed" : "add-circle"} size={20} color={isDark ? '#fbbf24' : colors.primaryDark} />
+            <View style={[styles.actionIconBox, { backgroundColor: '#e0f2fe' }]}>
+              <Ionicons name={isReadOnly ? "lock-closed" : "add-circle"} size={20} color={isDark ? '#38bdf8' : colors.primaryDark} />
             </View>
             <Text style={styles.actionTitle} numberOfLines={1}>New Loan</Text>
             <Text style={styles.actionSub} numberOfLines={1}>{isReadOnly ? 'Admin only' : 'Disburse collateral'}</Text>
@@ -585,8 +585,8 @@ export default function DashboardScreen() {
             onPress={() => handleActionPress({ pathname: '/(tabs)/ornaments', params: { action: 'add' } })}
             activeOpacity={0.7}
           >
-            <View style={[styles.actionIconBox, { backgroundColor: '#fef3c7' }]}>
-              <Ionicons name={isReadOnly ? "lock-closed" : "diamond"} size={20} color="#b45309" />
+            <View style={[styles.actionIconBox, { backgroundColor: '#e0f2fe' }]}>
+              <Ionicons name={isReadOnly ? "lock-closed" : "diamond"} size={20} color="#0369a1" />
             </View>
             <Text style={styles.actionTitle} numberOfLines={1}>Pledge Gold</Text>
             <Text style={styles.actionSub} numberOfLines={1}>{isReadOnly ? 'Admin only' : 'Deposit vault item'}</Text>
@@ -625,7 +625,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     backgroundColor: isDark ? '#1e293b' : '#fefce8',
-    borderColor: isDark ? '#334155' : '#fef08a',
+    borderColor: isDark ? '#334155' : '#e0f2fe',
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 10,
@@ -634,14 +634,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   syncNoticeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: isDark ? '#fbbf24' : '#854d0e',
+    color: isDark ? '#38bdf8' : '#0369a1',
   },
   readOnlyNoticeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: isDark ? 'rgba(217, 119, 6, 0.15)' : '#fffbeb',
-    borderColor: isDark ? 'rgba(217, 119, 6, 0.4)' : '#fde68a',
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : '#f0f9ff',
+    borderColor: isDark ? 'rgba(56, 189, 248, 0.4)' : '#bae6fd',
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 10,
@@ -651,7 +651,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   readOnlyNoticeText: {
     flex: 1,
     fontSize: 12,
-    color: isDark ? '#fde68a' : '#92400e',
+    color: isDark ? '#bae6fd' : '#0369a1',
     lineHeight: 16,
   },
   actionCardDisabled: {
@@ -661,8 +661,8 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: isDark ? '#261a02' : '#fefce8',
-    borderColor: isDark ? '#78350f' : '#fde68a',
+    backgroundColor: isDark ? '#082f49' : '#fefce8',
+    borderColor: isDark ? '#075985' : '#bae6fd',
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 8,
@@ -673,21 +673,21 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   offlineNoticeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: isDark ? '#fbbf24' : '#854d0e',
+    color: isDark ? '#38bdf8' : '#0369a1',
     flex: 1,
   },
   offlineRetryPill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: isDark ? '#382504' : '#fef08a',
+    backgroundColor: isDark ? '#0c4a6e' : '#e0f2fe',
     borderWidth: 1,
-    borderColor: isDark ? '#78350f' : '#f59e0b',
+    borderColor: isDark ? '#075985' : '#0ea5e9',
   },
   offlineRetryPillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: isDark ? '#fbbf24' : '#b45309',
+    color: isDark ? '#38bdf8' : '#0369a1',
   },
   offlineEmptyContainer: {
     alignItems: 'center',
@@ -704,7 +704,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: isDark ? '#261a02' : '#fef3c7',
+    backgroundColor: isDark ? '#082f49' : '#e0f2fe',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -728,7 +728,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: isDark ? '#d97706' : colors.primaryDark,
+    backgroundColor: isDark ? '#0284c7' : colors.primaryDark,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
@@ -790,7 +790,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: isDark ? '#382504' : '#fef08a',
+    backgroundColor: isDark ? '#0c4a6e' : '#e0f2fe',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -801,7 +801,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: colors.textPrimary,
   },
   cityPill: {
-    backgroundColor: isDark ? '#382504' : '#fef08a',
+    backgroundColor: isDark ? '#0c4a6e' : '#e0f2fe',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -810,7 +810,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   cityPillText: {
     fontSize: 10,
     fontWeight: '700',
-    color: isDark ? '#fbbf24' : '#854d0e',
+    color: isDark ? '#38bdf8' : '#0369a1',
   },
   dateLabel: {
     fontSize: 11,
@@ -839,7 +839,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     borderColor: colors.border,
   },
   rateBoxFeatured: {
-    backgroundColor: isDark ? '#1e1a06' : '#fffbeb',
+    backgroundColor: isDark ? '#082f49' : '#f0f9ff',
     borderColor: colors.primary,
     borderWidth: 1.5,
   },
@@ -869,7 +869,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   rateKaratFeatured: {
     fontSize: 13,
     fontWeight: '800',
-    color: isDark ? '#fbbf24' : colors.primaryDark,
+    color: isDark ? '#38bdf8' : colors.primaryDark,
   },
   miniBadge: {
     paddingHorizontal: 5,
@@ -889,7 +889,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   rateAmountFeatured: {
     fontSize: 19,
-    color: isDark ? '#fbbf24' : colors.primaryDark,
+    color: isDark ? '#38bdf8' : colors.primaryDark,
   },
   rateUnit: {
     fontSize: 10.5,
@@ -973,7 +973,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     marginBottom: 8,
   },
   valBadge: {
-    backgroundColor: isDark ? '#1e293b' : '#fef3c7',
+    backgroundColor: isDark ? '#1e293b' : '#e0f2fe',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -983,7 +983,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   valBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: isDark ? '#fbbf24' : '#92400e',
+    color: isDark ? '#38bdf8' : '#0369a1',
   },
 
   // ─── METRICS GRID (2x2 on Mobile, 4 in a row on Desktop) ───
@@ -1028,7 +1028,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: isDark ? '#382504' : '#fef08a',
+    backgroundColor: isDark ? '#0c4a6e' : '#e0f2fe',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1116,7 +1116,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   barFill: {
     height: '100%',
-    backgroundColor: isDark ? '#f59e0b' : colors.primaryDark,
+    backgroundColor: isDark ? '#0284c7' : colors.primaryDark,
     borderRadius: 5,
   },
   utilFooter: {

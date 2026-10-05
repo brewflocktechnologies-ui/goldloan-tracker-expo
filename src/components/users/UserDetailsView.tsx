@@ -20,7 +20,6 @@ import {
   calculateAge,
   formatDisplayDOB,
 } from '../../utils/userOrnamentCalculations';
-import { BankAccountFormModal } from '../BankAccountFormModal';
 import { BankCard } from '../BankCard';
 import { ConfirmModal } from '../ConfirmModal';
 import { LoanCard } from '../LoanCard';
@@ -62,7 +61,6 @@ export function UserDetailsView({
   onEdit,
 }: UserDetailsViewProps) {
   const router = useRouter();
-  const [bankFormVisible, setBankFormVisible] = useState(false);
   const { styles, colors, isDark } = useUsersStyles();
   const store = useAppStore();
   const toast = useToast();
@@ -521,17 +519,13 @@ export function UserDetailsView({
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Add Bank Account"
-          onPress={() => setBankFormVisible(true)}
+          onPress={() =>
+            router.push({ pathname: '/bank-accounts/form', params: { userId: String(selectedUser.UserId) } } as any)
+          }
         >
           <UserIcon name="add" size={28} color="#ffffff" />
         </TouchableOpacity>
       )}
-
-      <BankAccountFormModal
-        visible={bankFormVisible}
-        onClose={() => setBankFormVisible(false)}
-        presetUserId={String(selectedUser.UserId)}
-      />
 
       {/* Add loan for this customer — opens the loan form with the customer already chosen */}
       {activeTab === 'Loans' && (

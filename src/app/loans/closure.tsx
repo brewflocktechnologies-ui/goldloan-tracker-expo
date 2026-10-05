@@ -298,7 +298,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     minWidth: 140,
   },
   loanChipActive: {
-    backgroundColor: isDark ? '#1e293b' : '#fffbeb',
+    backgroundColor: isDark ? '#1e293b' : '#f0f9ff',
     borderColor: colors.primary,
   },
   loanChipNum: {

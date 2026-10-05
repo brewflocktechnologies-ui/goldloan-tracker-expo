@@ -86,6 +86,14 @@ const NAV_ITEMS: NavItem[] = [
     icon: 'checkmark-done-circle-outline',
     activeIcon: 'checkmark-done-circle',
   },
+  {
+    name: 'menu',
+    route: '/(tabs)/menu',
+    title: 'Menu & Settings',
+    shortTitle: 'Menu',
+    icon: 'menu-outline',
+    activeIcon: 'menu',
+  },
 ];
 
 const MOBILE_NAV_ITEMS: NavItem[] = [
@@ -124,7 +132,7 @@ const MOBILE_NAV_ITEMS: NavItem[] = [
   },
   {
     name: 'menu',
-    route: 'menu',
+    route: '/(tabs)/menu',
     title: 'Menu',
     shortTitle: 'Menu',
     icon: 'menu-outline',
@@ -156,6 +164,10 @@ const TAB_METADATA: Record<string, { title: string; subtitle: string }> = {
   closure: {
     title: 'Loan Closure & Settlements',
     subtitle: 'Settle active loans & release vault collateral',
+  },
+  menu: {
+    title: 'Menu',
+    subtitle: 'Quick access to all features',
   },
   'admin-users': {
     title: 'Staff & Admin Accounts',
@@ -198,7 +210,7 @@ function TabLayoutInner() {
     if (pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/') return 'index';
     const cleanPath = pathname.replace(/^\/+|\/+$/g, '');
     const segments = cleanPath.split('/');
-    for (const key of ['admin-users', 'bank-accounts', 'ornaments', 'loans', 'closure', 'users']) {
+    for (const key of ['admin-users', 'bank-accounts', 'ornaments', 'loans', 'closure', 'users', 'menu']) {
       if (segments.includes(key) || pathname.includes(`/${key}`)) return key;
     }
     return 'index';
@@ -379,7 +391,7 @@ function TabLayoutInner() {
         {/* ─── TAB SCREENS CONTENT ─── */}
         <View style={styles.screensWrapper}>
           {/* ─── GLOBAL SHARED TOP NAVIGATION BAR ─── */}
-          {!isDesktop && ['loans', 'users', 'ornaments'].includes(currentTabKey) ? null : (
+          {!isDesktop && ['loans', 'users', 'ornaments', 'menu'].includes(currentTabKey) ? null : (
             <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
             {isDesktop ? (
               /* Desktop: Sidebar Trigger + Page Title & Subtitle */
@@ -476,6 +488,7 @@ function TabLayoutInner() {
               <Tabs.Screen name="loans" options={{ title: 'Loans' }} />
               <Tabs.Screen name="closure" options={{ title: 'Closure' }} />
               <Tabs.Screen name="admin-users" options={{ title: 'Admins' }} />
+              <Tabs.Screen name="menu" options={{ title: 'Menu' }} />
             </Tabs>
           </View>
 
@@ -483,18 +496,12 @@ function TabLayoutInner() {
           {!isDesktop && (
             <View style={[styles.mobileBottomNav, { paddingBottom: Math.max(bottomInset, 8) }]}>
               {MOBILE_NAV_ITEMS.map((item) => {
-                const active = item.name === 'menu' ? false : isRouteActive(item);
-                const activeColor = item.name === 'loans' ? (isDark ? '#38bdf8' : '#0284c7') : (isDark ? '#fbbf24' : colors.primaryDark);
+                const active = isRouteActive(item);
+                const activeColor = (item.name === 'loans' || item.name === 'menu') ? (isDark ? '#38bdf8' : '#0284c7') : (isDark ? '#fbbf24' : colors.primaryDark);
                 return (
                   <TouchableOpacity
                     key={item.name}
-                    onPress={() => {
-                      if (item.name === 'menu') {
-                        setMobileMenuVisible(true);
-                      } else {
-                        navigateTo(item);
-                      }
-                    }}
+                    onPress={() => navigateTo(item)}
                     style={styles.bottomNavItem}
                     activeOpacity={0.7}
                   >

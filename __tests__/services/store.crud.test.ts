@@ -31,6 +31,7 @@ jest.mock('../../src/services/api', () => ({
     addOrnament: jest.fn(),
     updateOrnament: jest.fn(),
     deleteOrnament: jest.fn(),
+    addLoan: jest.fn(),
   },
 }));
 
@@ -569,5 +570,45 @@ describe('store — sync and derived data', () => {
       a.result.current.addUser({ FullName: 'Shared' });
     });
     expect(b.result.current.users.map(u => u.FullName)).toEqual(['Shared']);
+  });
+});
+
+describe('store — addLoan', () => {
+  const payload = { LoanNumber: 'CMP033', UserId: 'U001', BankAccountId: 'B1', LoanAmount: 1000, ornamentIds: ['ORN001'] };
+
+  it('keeps the loan and reports the number the backend assigned', async () => {
+    const { store$, api } = await setup({ users: USERS, ornaments: ORNAMENTS });
+    api.addLoan.mockResolvedValue({ success: true, data: { LoanNumber: 'CMP034', LoanAmount: 1000 } });
+    const onSuccess = jest.fn();
+    const onError = jest.fn();
+    await act(async () => {
+      store$().addLoan(payload, { onSuccess, onError });
+    });
+    expect(onError).not.toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ LoanNumber: 'CMP034' }));
+    expect(store$().loans[0].LoanNumber).toBe('CMP034');
+  });
+
+  it('rolls back the loan and ornament status when the backend rejects it', async () => {
+    const { store$, api } = await setup({ users: USERS, ornaments: ORNAMENTS });
+    api.addLoan.mockResolvedValue({ success: false, error: 'Server is busy' });
+    const onError = jest.fn();
+    await act(async () => {
+      store$().addLoan(payload, { onError });
+    });
+    expect(onError).toHaveBeenCalledWith('Server is busy');
+    expect(store$().loans).toHaveLength(0);
+    expect(store$().ornaments.find((o: any) => o.OrnamentId === 'ORN001')?.Status).toBe('Available');
+  });
+
+  it('rolls back when the request throws', async () => {
+    const { store$, api } = await setup({ users: USERS, ornaments: ORNAMENTS });
+    api.addLoan.mockRejectedValue(new Error('Network down'));
+    const onError = jest.fn();
+    await act(async () => {
+      store$().addLoan(payload, { onError });
+    });
+    expect(onError).toHaveBeenCalledWith('Network down');
+    expect(store$().loans).toHaveLength(0);
   });
 });

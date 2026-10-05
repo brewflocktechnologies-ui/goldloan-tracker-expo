@@ -2,6 +2,14 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
 
+jest.mock('react-native-safe-area-context', () => {
+  const { View } = require('react-native');
+  return {
+    SafeAreaView: View,
+    useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  };
+});
+
 jest.mock('../../src/context/ThemeContext', () => ({
   useTheme: () => ({ isDark: false, colors: require('../../src/constants/theme').LightColors }),
 }));
@@ -30,7 +38,7 @@ const mockStore: any = {
 jest.mock('../../src/services/store', () => ({ useAppStore: () => mockStore }));
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { BankAccountFormModal } = require('../../src/components/BankAccountFormModal');
+const { BankAccountForm } = require('../../src/components/BankAccountForm');
 
 const EXISTING = {
   BankAccountId: 'B1',
@@ -50,13 +58,18 @@ const EXISTING = {
 };
 
 function setup(overrides: Record<string, unknown> = {}) {
-  const props = { visible: true, onClose: jest.fn(), ...overrides };
-  const utils = render(<BankAccountFormModal {...props} />);
+  const props = { onClose: jest.fn(), ...overrides };
+  const utils = render(<BankAccountForm {...props} />);
   return { props, ...utils };
 }
 
-// The first still-empty text input in an add form is the Account Number field.
-const typeAccountNumber = (value: string) => fireEvent.changeText(screen.getAllByDisplayValue('')[0], value);
+const typeAccountNumber = (value: string) =>
+  fireEvent.changeText(screen.getByPlaceholderText('9-18 digits'), value);
+const pickBank = (name: string) => {
+  fireEvent.press(screen.getByLabelText('Select bank'));
+  fireEvent.press(screen.getByText(name));
+};
+const save = () => fireEvent.press(screen.getByLabelText('Save account'));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -64,72 +77,67 @@ beforeEach(() => {
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
-describe('BankAccountFormModal — add', () => {
-  it('renders nothing when not visible', () => {
-    setup({ visible: false });
-    expect(screen.queryByText('Add Bank Account')).toBeNull();
-  });
-
-  it('shows the add form with defaults and a borrower picker', () => {
+describe('BankAccountForm — add', () => {
+  it('shows the add form with defaults', () => {
     setup();
-    expect(screen.getByText('Add Bank Account')).toBeTruthy();
-    expect(screen.getByText('Select Borrower *')).toBeTruthy();
+    expect(screen.getByText('Add bank account')).toBeTruthy();
     expect(screen.getByText('Ravi Kumar')).toBeTruthy();
-    expect(screen.getByText('Anita Sharma')).toBeTruthy();
-    expect(screen.getByDisplayValue('State Bank of India')).toBeTruthy();
     expect(screen.getByDisplayValue('Bengaluru')).toBeTruthy();
-    expect(screen.getByText('Add Bank')).toBeTruthy();
+    expect(screen.getByDisplayValue('500000')).toBeTruthy();
+    expect(screen.getByText('Select bank')).toBeTruthy();
   });
 
-  it('pre-selects the first customer and follows the borrower chip', () => {
+  it('pre-selects the first customer and lets you switch via the picker', () => {
     setup();
     expect(screen.getByDisplayValue('Ravi Kumar')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Select customer'));
     fireEvent.press(screen.getByText('Anita Sharma'));
     expect(screen.getByDisplayValue('Anita Sharma')).toBeTruthy();
     expect(screen.queryByDisplayValue('Ravi Kumar')).toBeNull();
   });
 
-  it('warns when no customers exist yet', () => {
-    mockStore.users = [];
-    setup();
-    expect(screen.getByText(/No borrowers registered yet/)).toBeTruthy();
-  });
-
-  it('fixes the customer and hides the picker when opened for a preset customer', () => {
+  it('locks the customer when opened for a preset customer', () => {
     setup({ presetUserId: 'USR002' });
-    expect(screen.getByText('Borrower')).toBeTruthy();
-    expect(screen.queryByText('Select Borrower *')).toBeNull();
     expect(screen.getByDisplayValue('Anita Sharma')).toBeTruthy();
-    // The other customers are not offered as choices.
-    expect(screen.queryByText('Ravi Kumar')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Select customer'));
+    expect(screen.queryByText('Select customer', { exact: true })).toBeNull();
   });
 
   it('requires an account holder name', () => {
     setup();
     fireEvent.changeText(screen.getByDisplayValue('Ravi Kumar'), '   ');
-    fireEvent.press(screen.getByText('Add Bank'));
+    save();
     expect(Alert.alert).toHaveBeenCalledWith('Validation Error', 'Account Holder Name is required.');
     expect(mockStore.addBankAccount).not.toHaveBeenCalled();
   });
 
   it('requires an account number', () => {
     setup();
-    fireEvent.press(screen.getByText('Add Bank'));
+    save();
     expect(Alert.alert).toHaveBeenCalledWith('Validation Error', 'Account Number is required.');
+    expect(mockStore.addBankAccount).not.toHaveBeenCalled();
+  });
+
+  it('requires a bank', () => {
+    setup();
+    typeAccountNumber('123456789012');
+    save();
+    expect(Alert.alert).toHaveBeenCalledWith('Validation Error', 'Please select a bank.');
     expect(mockStore.addBankAccount).not.toHaveBeenCalled();
   });
 
   it('adds the account with numeric limits, toasts and closes', () => {
     const { props } = setup({ presetUserId: 'USR002' });
     typeAccountNumber('123456789012');
-    fireEvent.press(screen.getByText('Add Bank'));
+    pickBank('HDFC Bank');
+    save();
 
     expect(mockStore.addBankAccount).toHaveBeenCalledWith(
       expect.objectContaining({
         UserId: 'USR002',
         AccountHolderName: 'Anita Sharma',
         AccountNumber: '123456789012',
-        BankName: 'State Bank of India',
+        BankName: 'HDFC Bank',
         MaxLoanAmount: 500000,
         UtilizedLoanAmount: 0,
         Status: 'Active',
@@ -140,58 +148,46 @@ describe('BankAccountFormModal — add', () => {
     expect(props.onClose).toHaveBeenCalled();
   });
 
-  it('recalculates the available limit as the limits change', () => {
-    setup();
-    expect(screen.getByText(`₹${(500000).toLocaleString()}`)).toBeTruthy();
-    fireEvent.changeText(screen.getByDisplayValue('500000'), '200000');
-    fireEvent.changeText(screen.getByDisplayValue('0'), '50000');
-    expect(screen.getByText(`₹${(150000).toLocaleString()}`)).toBeTruthy();
-  });
-
-  it('never shows a negative available limit', () => {
-    setup();
-    fireEvent.changeText(screen.getByDisplayValue('0'), '900000');
-    expect(screen.getByText('₹0')).toBeTruthy();
-  });
-
   it('toggles account type and status', () => {
     setup({ presetUserId: 'USR001' });
     typeAccountNumber('555566667777');
+    pickBank('Axis Bank');
     fireEvent.press(screen.getByText('Current'));
     fireEvent.press(screen.getByText('Inactive'));
-    fireEvent.press(screen.getByText('Add Bank'));
+    save();
     expect(mockStore.addBankAccount).toHaveBeenCalledWith(
       expect.objectContaining({ AccountType: 'Current', Status: 'Inactive' })
     );
   });
 
-  it('closes without saving from Cancel and from the header close icon', () => {
+  it('closes without saving from the header back button', () => {
     const { props } = setup();
-    fireEvent.press(screen.getByText('Cancel'));
     fireEvent.press(screen.getByLabelText('Close'));
-    expect(props.onClose).toHaveBeenCalledTimes(2);
+    expect(props.onClose).toHaveBeenCalledTimes(1);
     expect(mockStore.addBankAccount).not.toHaveBeenCalled();
   });
 });
 
-describe('BankAccountFormModal — edit', () => {
+describe('BankAccountForm — edit', () => {
   it('pre-fills the form from the account being edited', () => {
     setup({ account: EXISTING });
-    expect(screen.getByText('Edit Bank Account')).toBeTruthy();
-    expect(screen.getByText('Save Changes')).toBeTruthy();
+    expect(screen.getByText('Edit bank account')).toBeTruthy();
     expect(screen.getByDisplayValue('999900001111')).toBeTruthy();
-    expect(screen.getByDisplayValue('HDFC Bank')).toBeTruthy();
+    expect(screen.getByText('HDFC Bank')).toBeTruthy();
     expect(screen.getByDisplayValue('MG Road')).toBeTruthy();
     expect(screen.getByDisplayValue('anita@okaxis')).toBeTruthy();
     expect(screen.getByDisplayValue('300000')).toBeTruthy();
-    expect(screen.getByDisplayValue('100000')).toBeTruthy();
-    expect(screen.getByText(`₹${(200000).toLocaleString()}`)).toBeTruthy();
+  });
+
+  it('accepts a numeric account number from the backend', () => {
+    setup({ account: { ...EXISTING, AccountNumber: 999900001111 } });
+    expect(screen.getByDisplayValue('999900001111')).toBeTruthy();
   });
 
   it('updates the existing account instead of adding a new one', () => {
     const { props } = setup({ account: EXISTING });
-    fireEvent.changeText(screen.getByDisplayValue('HDFC Bank'), 'ICICI Bank');
-    fireEvent.press(screen.getByText('Save Changes'));
+    pickBank('ICICI Bank');
+    save();
 
     expect(mockStore.updateBankAccount).toHaveBeenCalledWith(
       'B1',
@@ -200,16 +196,5 @@ describe('BankAccountFormModal — edit', () => {
     expect(mockStore.addBankAccount).not.toHaveBeenCalled();
     expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('updated'));
     expect(props.onClose).toHaveBeenCalled();
-  });
-
-  it('re-initialises when reopened in add mode', () => {
-    const { rerender, props } = setup({ account: EXISTING });
-    expect(screen.getByDisplayValue('HDFC Bank')).toBeTruthy();
-
-    rerender(<BankAccountFormModal {...props} visible={false} account={null} />);
-    rerender(<BankAccountFormModal {...props} visible account={null} />);
-    expect(screen.getByText('Add Bank Account')).toBeTruthy();
-    expect(screen.queryByDisplayValue('HDFC Bank')).toBeNull();
-    expect(screen.getByDisplayValue('State Bank of India')).toBeTruthy();
   });
 });

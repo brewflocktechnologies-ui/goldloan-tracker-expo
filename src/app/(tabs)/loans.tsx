@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
+import { getNextLoanNumber } from '../../utils/loanNumber';
 import {
   Alert,
   Modal,
@@ -161,7 +162,7 @@ export default function LoansScreen() {
     dueDate.setMonth(dueDate.getMonth() + 12);
 
     setForm({
-      LoanNumber: `LN-${new Date().getFullYear()}-${String(store.loans.length + 1).padStart(3, '0')}`,
+      LoanNumber: getNextLoanNumber(store.loans),
       UserId: initialUser,
       BankAccountId: initialBank,
       LoanDate: date.toISOString().split('T')[0],
@@ -300,6 +301,13 @@ export default function LoansScreen() {
         TotalCharges: totalCharges,
         NetDisbursementAmount: netDisbursement,
         ornamentIds: selectedOrnIds,
+      }, {
+        onSuccess: (saved) => {
+          if (saved.LoanNumber !== form.LoanNumber) {
+            toast.info(`Loan number ${form.LoanNumber} was taken; saved as ${saved.LoanNumber}`);
+          }
+        },
+        onError: (message) => toast.danger(`Loan ${form.LoanNumber} was not saved: ${message}`),
       });
 
       Alert.alert('Success', 'Loan contract created and ornaments pledged!');
@@ -905,7 +913,7 @@ export default function LoansScreen() {
                 <TouchableOpacity
                   style={[
                     styles.saveBtn,
-                    { backgroundColor: '#d97706', flexDirection: 'row', alignItems: 'center', gap: 6 },
+                    { backgroundColor: '#0284c7', flexDirection: 'row', alignItems: 'center', gap: 6 },
                   ]}
                   onPress={() => {
                     const l = selectedLoan;

@@ -199,7 +199,7 @@ export default function ClosureScreen() {
       >
         {/* Informational Banner */}
         <View style={styles.infoBanner}>
-          <Ionicons name="information-circle-outline" size={20} color={isDark ? '#fbbf24' : colors.primaryDark} style={styles.infoIcon} />
+          <Ionicons name="information-circle-outline" size={20} color={isDark ? '#38bdf8' : colors.primaryDark} style={styles.infoIcon} />
           <Text style={styles.infoText}>
             Closing a loan updates its status to <Text style={{fontWeight: '700'}}>Closed</Text>, automatically releases attached gold ornaments back to <Text style={{fontWeight: '700'}}>Available</Text> in vault, and restores the bank limit.
           </Text>
@@ -270,7 +270,7 @@ export default function ClosureScreen() {
                 }
                 avatar={
                   <View style={styles.closureAvatar}>
-                    <Ionicons name="lock-closed" size={16} color={isDark ? '#fbbf24' : colors.primaryDark} />
+                    <Ionicons name="lock-closed" size={16} color={isDark ? '#38bdf8' : colors.primaryDark} />
                   </View>
                 }
                 title={u ? u.FullName : 'Unknown Customer'}
@@ -280,7 +280,7 @@ export default function ClosureScreen() {
                     label: 'Loan Amount',
                     value: `₹${loan.LoanAmount.toLocaleString('en-IN')}`,
                     highlighted: true,
-                    color: isDark ? '#fbbf24' : colors.primaryDark,
+                    color: isDark ? '#38bdf8' : colors.primaryDark,
                   },
                   {
                     label: 'Due Date',
@@ -362,7 +362,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: colors.primary,
     borderWidth: isDark ? 1 : 0,
-    borderColor: isDark ? '#382504' : 'transparent',
+    borderColor: isDark ? '#0c4a6e' : 'transparent',
     gap: 10,
   },
   infoIcon: {
@@ -371,7 +371,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 12,
-    color: isDark ? '#fef08a' : Colors.brand[900],
+    color: isDark ? '#e0f2fe' : Colors.brand[900],
     lineHeight: 18,
   },
   loanNumberCell: {
@@ -382,7 +382,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   loanNumberText: {
     fontSize: 13,
     fontWeight: '700',
-    color: isDark ? '#fbbf24' : colors.primaryDark,
+    color: isDark ? '#38bdf8' : colors.primaryDark,
   },
   overdueBadge: {
     backgroundColor: isDark ? '#450a0a' : '#fee2e2',
@@ -464,21 +464,21 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: isDark ? '#78350f' : '#fef3c7',
+    backgroundColor: isDark ? '#075985' : '#e0f2fe',
     borderWidth: 1,
-    borderColor: isDark ? '#b45309' : '#fde68a',
+    borderColor: isDark ? '#0369a1' : '#bae6fd',
   },
   dueSoonText: {
     fontSize: 10,
     fontWeight: '700',
-    color: isDark ? '#fde68a' : '#92400e',
+    color: isDark ? '#bae6fd' : '#0369a1',
     letterSpacing: 0.5,
   },
   closureAvatar: {
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: isDark ? '#1e293b' : '#fef3c7',
+    backgroundColor: isDark ? '#1e293b' : '#e0f2fe',
     alignItems: 'center',
     justifyContent: 'center',
   },
