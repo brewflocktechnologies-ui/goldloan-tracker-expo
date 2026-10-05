@@ -69,7 +69,7 @@ export function LoanListView({
   }, [users]);
 
   // Compute status counts across all loans
-  const { allCount, activeCount, overdueCount, closedCount } = useMemo(() => {
+  const { allCount, activeCount, overdueCount } = useMemo(() => {
     let act = 0;
     let ovd = 0;
     let cls = 0;

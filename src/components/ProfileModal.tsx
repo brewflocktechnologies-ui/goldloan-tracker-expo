@@ -6,7 +6,6 @@ import {
   Modal,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +45,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) 
   const [passError, setPassError] = useState<string | null>(null);
 
   const username = user?.username || 'User';
-  const role = user?.role || 'User';
   const initials = username.slice(0, 2).toUpperCase();
 
   const handleManageUsers = () => {

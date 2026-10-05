@@ -501,7 +501,6 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       justifyContent: 'center',
       position: 'relative',
     },
-    tabSegmentBtnActive: {},
     tabSegmentText: {
       fontSize: 13.5,
       fontWeight: '500',
@@ -634,9 +633,6 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       ...Typography.sectionTitle,
       color: isDark ? '#f8fafc' : '#0d172a',
     },
-    keyValList: {
-      gap: 10,
-    },
     keyValRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -644,18 +640,6 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       paddingVertical: 4,
       borderBottomWidth: 1,
       borderBottomColor: isDark ? '#1e293b' : '#f8fafc',
-    },
-    keyText: {
-      fontSize: 13,
-      color: isDark ? '#94a3b8' : '#64748b',
-      flex: 1,
-    },
-    valText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: isDark ? '#f8fafc' : '#0f172a',
-      textAlign: 'right',
-      flex: 1.2,
     },
 
     // Bank Accounts Tab Styles
@@ -681,73 +665,8 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       shadowRadius: 6,
       elevation: 2,
     },
-    bankCardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: 12,
-    },
     bankNameCol: {
       gap: 2,
-    },
-    bankNameTitle: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: isDark ? '#f8fafc' : '#0d172a',
-    },
-    bankAccountType: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: isDark ? '#cbd5e1' : '#334155',
-    },
-    bankBranchText: {
-      fontSize: 11,
-      color: isDark ? '#94a3b8' : '#64748b',
-    },
-    bankInfoGrid: {
-      gap: 8,
-      paddingVertical: 10,
-      borderTopWidth: 1,
-      borderBottomWidth: 1,
-      borderColor: isDark ? '#1e293b' : '#f1f5f9',
-      marginBottom: 12,
-    },
-    bankInfoItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    bankInfoLabel: {
-      fontSize: 12,
-      color: isDark ? '#94a3b8' : '#64748b',
-    },
-    bankInfoValue: {
-      fontSize: 12.5,
-      fontWeight: '600',
-      color: isDark ? '#f8fafc' : '#0f172a',
-    },
-    bankLimitBox: {
-      backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-      borderRadius: 14,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: isDark ? '#334155' : '#e2e8f0',
-    },
-    bankLimitAmountRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    bankUtilizedBigText: {
-      fontSize: 20,
-      fontWeight: '800',
-      color: '#0284c7',
-    },
-    bankPercentText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: isDark ? '#cbd5e1' : '#475569',
     },
     progressBarBg: {
       height: 8,
@@ -761,44 +680,6 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       backgroundColor: '#0284c7',
       borderRadius: 4,
     },
-    limitColumnsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    limitCol: {
-      flex: 1,
-    },
-    limitColLabel: {
-      fontSize: 10.5,
-      color: isDark ? '#94a3b8' : '#64748b',
-      marginBottom: 2,
-    },
-    limitColVal: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: isDark ? '#f8fafc' : '#0f172a',
-    },
-
-    // Loans Tab Styles
-    loanCard: {
-      backgroundColor: isDark ? '#0f172a' : '#ffffff',
-      borderRadius: 18,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: isDark ? '#1e293b' : '#e2e8f0',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDark ? 0.2 : 0.04,
-      shadowRadius: 6,
-      elevation: 2,
-    },
-    loanCardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
     loanNumberTitle: {
       fontSize: 15,
       fontWeight: '800',
@@ -809,115 +690,6 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       color: isDark ? '#94a3b8' : '#64748b',
       marginTop: 1,
     },
-    loanStatusBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 12,
-    },
-    loanStatusDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-    },
-    loanStatusText: {
-      fontSize: 11,
-      fontWeight: '700',
-    },
-    loanMetricsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      paddingVertical: 10,
-      borderTopWidth: 1,
-      borderBottomWidth: 1,
-      borderColor: isDark ? '#1e293b' : '#f1f5f9',
-      marginBottom: 12,
-    },
-    loanMetricCol: {
-      flex: 1,
-    },
-    loanMetricLabel: {
-      fontSize: 11,
-      color: isDark ? '#94a3b8' : '#64748b',
-      marginBottom: 3,
-    },
-    loanMetricVal: {
-      fontSize: 13.5,
-      fontWeight: '700',
-      color: isDark ? '#f8fafc' : '#0f172a',
-    },
-    duePillBadge: {
-      alignSelf: 'flex-start',
-      marginTop: 4,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 8,
-    },
-    duePillText: {
-      fontSize: 10,
-      fontWeight: '700',
-    },
-    loanOrnamentsBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-      borderRadius: 12,
-      padding: 10,
-      marginBottom: 12,
-    },
-    ornThumbRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    ornThumbBox: {
-      width: 32,
-      height: 32,
-      borderRadius: 8,
-      backgroundColor: isDark ? '#0f172a' : '#e0f2fe',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-    },
-    ornCountMiniBadge: {
-      position: 'absolute',
-      top: -3,
-      right: -3,
-      backgroundColor: '#0284c7',
-      borderRadius: 6,
-      paddingHorizontal: 3,
-      paddingVertical: 1,
-    },
-    ornCountMiniBadgeText: {
-      fontSize: 8,
-      fontWeight: '700',
-      color: '#ffffff',
-    },
-    ornCountText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: isDark ? '#f8fafc' : '#0f172a',
-    },
-    ornWeightText: {
-      fontSize: 12.5,
-      fontWeight: '700',
-      color: '#0284c7',
-    },
-    interestRateTag: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 8,
-      backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
-    },
-    interestRateText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: '#0284c7',
-    },
     viewLoanBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -926,11 +698,6 @@ export const getUsersStyles = (colors: ThemeColors, isDark: boolean, isSmall: bo
       borderRadius: 12,
       backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#e0f2fe',
       gap: 4,
-    },
-    viewLoanBtnText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: '#0284c7',
     },
     loanFabBtn: {
       position: 'absolute',

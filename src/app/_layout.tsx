@@ -79,10 +79,6 @@ function RootLayoutInner() {
           name="bank-accounts/form"
           options={{ presentation: 'modal', headerShown: false }}
         />
-        <Stack.Screen 
-          name="loans/closure" 
-          options={{ presentation: 'modal', headerShown: false }} 
-        />
       </Stack>
     </>
   );

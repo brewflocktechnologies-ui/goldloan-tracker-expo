@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import { SafeAreaView as EdgeSafeAreaView } from 'react-native-safe-area-context';
 import { Badge } from '../../components/Badge';
-import { BankCard } from '../../components/BankCard';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Column, DataTable } from '../../components/DataTable';
 import { ImageViewModal } from '../../components/ImageViewModal';
@@ -249,16 +248,6 @@ export default function BankAccountsScreen() {
               upi.includes(normQuery)
             );
           }}
-          renderMobileCard={(b) => (
-            <BankCard
-              account={b}
-              onPress={() => openDetailModal(b)}
-              onViewDetails={() => openDetailModal(b)}
-              onEdit={isSuperAdmin ? () => openEditModal(b) : undefined}
-              onDelete={isSuperAdmin ? () => handleDelete(b) : undefined}
-              onImagePress={(img) => setPreviewImageUrl(img)}
-            />
-          )}
         />
       </ScrollView>
 
@@ -676,25 +665,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 8,
   },
-  calcResultRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#fef08a',
-    paddingTop: 8,
-    marginTop: 4,
-  },
-  calcResultLabel: {
-    fontSize: 12,
-    color: isDark ? '#fbbf24' : '#854d0e',
-    fontWeight: '600',
-  },
-  calcResultVal: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.success,
-  },
   cancelBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -718,45 +688,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     fontWeight: '700',
     color: '#ffffff',
   },
-  detailCard: {
-    backgroundColor: isDark ? '#1e293b' : '#fffbeb',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: isDark ? '#334155' : '#fef08a',
-    marginBottom: 14,
-  },
-  detailName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: isDark ? '#fbbf24' : '#713f12',
-  },
-  detailCode: {
-    fontSize: 12,
-    color: isDark ? '#facc15' : '#a16207',
-    marginTop: 2,
-  },
-  detailSection: {
-    marginBottom: 14,
-    backgroundColor: isDark ? '#090d16' : '#f8fafc',
-    borderRadius: 10,
-    padding: 12,
-  },
-  detailSecTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  detailRowText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  bold: {
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
   statusToggleRow: {
     flexDirection: 'row',
     gap: 4,
@@ -778,20 +709,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   statusBtnTextActive: {
     color: '#ffffff',
-  },
-  cardThumb: {
-    width: 36,
-    height: 36,
-    borderRadius: 6,
-    backgroundColor: isDark ? '#1e293b' : '#e2e8f0',
-  },
-  miniAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 6,
-    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   detailSafeArea: {
     flex: 1,

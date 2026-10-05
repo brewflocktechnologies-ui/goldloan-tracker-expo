@@ -18,7 +18,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatAmountLakh, formatLoanDate, formatLoanPhone } from '../../components/loans/loanUtils';
 import { ThemeColors } from '../../constants/theme';
-import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { useAppStore } from '../../services/store';
@@ -41,16 +40,6 @@ function dmyToYmd(dmy: string): string {
   return dmy;
 }
 
-// Helper to convert "YYYY-MM-DD" to "DD-MM-YYYY"
-function ymdToDmy(ymd: string): string {
-  if (!ymd) return formatDateDMY(new Date());
-  const parts = ymd.split('-');
-  if (parts.length === 3 && parts[0].length === 4) {
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  }
-  return ymd;
-}
-
 // Add months to a Date
 function addMonths(baseDate: Date, months: number): Date {
   const d = new Date(baseDate);
@@ -64,7 +53,6 @@ export default function NewLoanScreen() {
   const router = useRouter();
   const store = useAppStore();
   const toast = useToast();
-  const { isSuperAdmin } = useAuth();
 
   // When opened from a customer's page, the customer is already known: skip the customer step.
   const { userId: presetUserId } = useLocalSearchParams<{ userId?: string }>();

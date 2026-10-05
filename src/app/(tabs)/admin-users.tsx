@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   useWindowDimensions,
-  Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -33,7 +31,6 @@ export default function AdminUsersTabScreen() {
   const isDesktop = width >= 768;
   const styles = getStyles(colors, isDark, isDesktop);
 
-  const router = useRouter();
   const { isSuperAdmin, user: currentUser } = useAuth();
   const toast = useToast();
 

@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { getNextLoanNumber } from '../../utils/loanNumber';
 import {
   Alert,
   Modal,
@@ -12,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Badge } from '../../components/Badge';
 import { LoanFilterType, LoanListView } from '../../components/loans/LoanListView';
 import { ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -35,10 +33,8 @@ export default function LoansScreen() {
 
   // Modals
   const [modalVisible, setModalVisible] = useState(false);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [payModalVisible, setPayModalVisible] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -105,7 +101,7 @@ export default function LoansScreen() {
   // Ornaments available for this loan contract
   const availableOrns = store.ornaments.filter((o) => {
     if (form.UserId && o.UserId && o.UserId !== form.UserId) return false;
-    if (isEditing && editingLoan?.ornamentIds?.includes(o.OrnamentId)) return true;
+    if (editingLoan?.ornamentIds?.includes(o.OrnamentId)) return true;
     if (selectedOrnIds.includes(o.OrnamentId)) return true;
     return o.Status === 'Available';
   });
@@ -122,7 +118,7 @@ export default function LoansScreen() {
       l.LoanStatus === 'Active' &&
       l.UserId === form.UserId &&
       l.BankAccountId === (form.BankAccountId || selectedBank?.BankAccountId) &&
-      (!isEditing || l.LoanId !== editingLoan?.LoanId)
+      l.LoanId !== editingLoan?.LoanId
   );
   const utilLimit = activeLoansForBank.reduce((sum, l) => sum + (Number(l.LoanAmount) || 0), 0);
   const availLimit = maxLimit > 0 ? Math.max(0, maxLimit - utilLimit) : 0;
@@ -151,42 +147,7 @@ export default function LoansScreen() {
     );
   };
 
-  const openAddModal = () => {
-    setIsEditing(false);
-    setEditingLoan(null);
-    setSelectedLoan(null);
-    const initialUser = store.users[0]?.UserId || '';
-    const initialBank = store.bankAccounts.find((b) => b.UserId === initialUser)?.BankAccountId || '';
-    const date = new Date();
-    const dueDate = new Date();
-    dueDate.setMonth(dueDate.getMonth() + 12);
-
-    setForm({
-      LoanNumber: getNextLoanNumber(store.loans),
-      UserId: initialUser,
-      BankAccountId: initialBank,
-      LoanDate: date.toISOString().split('T')[0],
-      DueDate: dueDate.toISOString().split('T')[0],
-      LoanPeriod: '12 Months',
-      LoanAmount: '150000',
-      InterestRate: '9.5',
-      InterestType: 'Simple',
-      ProcessingFee: '750',
-      DocumentCharge: '250',
-      InsuranceCharge: '500',
-      GrossWeight: '',
-      NetWeight: '',
-      Remarks: '',
-    });
-    const candidateInitial = store.ornaments.filter(
-      (o) => o.Status === 'Available' && (!initialUser || o.UserId === initialUser)
-    );
-    setSelectedOrnIds(candidateInitial.slice(0, 1).map((o) => o.OrnamentId));
-    setModalVisible(true);
-  };
-
   const openEditModal = (l: Loan) => {
-    setIsEditing(true);
     setEditingLoan(l);
     setSelectedLoan(l);
 
@@ -268,52 +229,26 @@ export default function LoansScreen() {
     const finalGross = parseFloat(form.GrossWeight) > 0 ? parseFloat(form.GrossWeight) : totalGrossWeight;
     const finalNet = parseFloat(form.NetWeight) > 0 ? parseFloat(form.NetWeight) : totalNetWeight;
 
-    if (isEditing && editingLoan) {
-      store.updateLoan(editingLoan.LoanId, {
-        ...form,
-        LoanAmount: amount,
-        InterestRate: rate,
-        BankName: selectedBank?.BankName || editingLoan.BankName || 'Bank',
-        GrossWeight: finalGross,
-        NetWeight: finalNet,
-        ProcessingFee: procFee,
-        DocumentCharge: docCharge,
-        InsuranceCharge: insCharge,
-        TotalCharges: totalCharges,
-        NetDisbursementAmount: netDisbursement,
-        ornamentIds: selectedOrnIds,
-      });
+    if (!editingLoan) return;
 
-      Alert.alert('Success', 'Loan contract updated successfully!');
-      toast.success(`Loan ${form.LoanNumber} updated successfully!`);
-      setModalVisible(false);
-    } else {
-      store.addLoan({
-        ...form,
-        LoanAmount: amount,
-        InterestRate: rate,
-        BankName: selectedBank?.BankName || 'Bank',
-        GrossWeight: finalGross,
-        NetWeight: finalNet,
-        ProcessingFee: procFee,
-        DocumentCharge: docCharge,
-        InsuranceCharge: insCharge,
-        TotalCharges: totalCharges,
-        NetDisbursementAmount: netDisbursement,
-        ornamentIds: selectedOrnIds,
-      }, {
-        onSuccess: (saved) => {
-          if (saved.LoanNumber !== form.LoanNumber) {
-            toast.info(`Loan number ${form.LoanNumber} was taken; saved as ${saved.LoanNumber}`);
-          }
-        },
-        onError: (message) => toast.danger(`Loan ${form.LoanNumber} was not saved: ${message}`),
-      });
+    store.updateLoan(editingLoan.LoanId, {
+      ...form,
+      LoanAmount: amount,
+      InterestRate: rate,
+      BankName: selectedBank?.BankName || editingLoan.BankName || 'Bank',
+      GrossWeight: finalGross,
+      NetWeight: finalNet,
+      ProcessingFee: procFee,
+      DocumentCharge: docCharge,
+      InsuranceCharge: insCharge,
+      TotalCharges: totalCharges,
+      NetDisbursementAmount: netDisbursement,
+      ornamentIds: selectedOrnIds,
+    });
 
-      Alert.alert('Success', 'Loan contract created and ornaments pledged!');
-      toast.success(`Loan ${form.LoanNumber} created successfully!`);
-      setModalVisible(false);
-    }
+    Alert.alert('Success', 'Loan contract updated successfully!');
+    toast.success(`Loan ${form.LoanNumber} updated successfully!`);
+    setModalVisible(false);
   };
 
   const handleSavePayment = () => {
@@ -365,13 +300,13 @@ export default function LoansScreen() {
         onPayPress={isSuperAdmin ? openPayModal : undefined}
       />
 
-      {/* ─── ADD / EDIT LOAN MODAL ─── */}
+      {/* ─── EDIT LOAN MODAL ─── */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {isEditing ? `Edit Loan (${editingLoan?.LoanNumber})` : 'Originate New Loan'}
+                Edit Loan ({editingLoan?.LoanNumber})
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
@@ -381,53 +316,28 @@ export default function LoansScreen() {
             <ScrollView style={styles.modalBody}>
               {/* Step 1: Select User */}
               <View style={styles.field}>
-                <Text style={styles.label}>1. {isEditing ? 'Borrower (Locked)' : 'Select Borrower *'}</Text>
-                {isEditing ? (
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-                      padding: 10,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    <Ionicons
-                      name="person-circle-outline"
-                      size={20}
-                      color={colors.primaryDark}
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
-                      {getUserName(form.UserId)}
-                    </Text>
-                  </View>
-                ) : store.users.length === 0 ? (
-                  <View style={{ backgroundColor: colors.warningBg, padding: 10, borderRadius: 8, marginTop: 4 }}>
-                    <Text style={{ fontSize: 13, color: colors.warning, fontWeight: '500' }}>
-                      ⚠️ No borrowers registered yet. Please add a customer in the Users tab first.
-                    </Text>
-                  </View>
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
-                    {store.users.map((u) => (
-                      <TouchableOpacity
-                        key={u.UserId}
-                        style={[styles.userChip, form.UserId === u.UserId && styles.userChipActive]}
-                        onPress={() => {
-                          const bank = store.bankAccounts.find((b) => b.UserId === u.UserId)?.BankAccountId || '';
-                          setForm((p) => ({ ...p, UserId: u.UserId, BankAccountId: bank }));
-                        }}
-                      >
-                        <Text style={[styles.userChipText, form.UserId === u.UserId && styles.userChipTextActive]}>
-                          {u.FullName}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
+                <Text style={styles.label}>1. Borrower (Locked)</Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                    padding: 10,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Ionicons
+                    name="person-circle-outline"
+                    size={20}
+                    color={colors.primaryDark}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                    {getUserName(form.UserId)}
+                  </Text>
+                </View>
               </View>
 
               {/* Step 2: Select Bank Account with headroom */}
@@ -476,7 +386,7 @@ export default function LoansScreen() {
                 ) : (
                   availableOrns.map((o) => {
                     const checked = selectedOrnIds.includes(o.OrnamentId);
-                    const isCurrentlyPledgedToThis = isEditing && editingLoan?.ornamentIds?.includes(o.OrnamentId);
+                    const isCurrentlyPledgedToThis = editingLoan?.ornamentIds?.includes(o.OrnamentId);
                     return (
                       <TouchableOpacity
                         key={o.OrnamentId}
@@ -673,7 +583,7 @@ export default function LoansScreen() {
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveBtn} onPress={handleSaveLoan}>
-                <Text style={styles.saveBtnText}>{isEditing ? 'Save Changes' : 'Disburse & Pledge'}</Text>
+                <Text style={styles.saveBtnText}>Save Changes</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -787,148 +697,6 @@ export default function LoansScreen() {
         </View>
       </Modal>
 
-      {/* ─── VIEW LOAN DETAIL MODAL ─── */}
-      <Modal visible={detailModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Loan Details ({selectedLoan?.LoanNumber})</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            {selectedLoan ? (
-              <ScrollView style={styles.modalBody}>
-                <View style={styles.detailCard}>
-                  <Text style={styles.detailName}>{selectedLoan.LoanNumber}</Text>
-                  <Text style={styles.detailCode}>
-                    Borrower: {getUserName(selectedLoan.UserId)} • Bank: {selectedLoan.BankName}
-                  </Text>
-                  <View style={{ marginTop: 6 }}>
-                    <Badge
-                      label={selectedLoan.LoanStatus}
-                      variant={selectedLoan.LoanStatus === 'Active' ? 'success' : 'info'}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSecTitle}>Contract Financials</Text>
-                  <Text style={styles.detailRowText}>
-                    <Text style={styles.bold}>Principal Amount:</Text> ₹{selectedLoan.LoanAmount.toLocaleString()}
-                  </Text>
-                  <Text style={styles.detailRowText}>
-                    <Text style={styles.bold}>Net Disbursed:</Text> ₹
-                    {(selectedLoan.NetDisbursementAmount || 0).toLocaleString()}
-                  </Text>
-                  <Text style={styles.detailRowText}>
-                    <Text style={styles.bold}>Interest Rate:</Text> {selectedLoan.InterestRate}% (
-                    {selectedLoan.InterestType || 'Simple'})
-                  </Text>
-                  <Text style={styles.detailRowText}>
-                    <Text style={styles.bold}>Loan Period:</Text> {selectedLoan.LoanPeriod || 'N/A'}
-                  </Text>
-                  <Text style={styles.detailRowText}>
-                    <Text style={styles.bold}>Loan Date → Due Date:</Text> {selectedLoan.LoanDate} ➔{' '}
-                    {selectedLoan.DueDate || 'N/A'}
-                  </Text>
-                  <Text style={styles.detailRowText}>
-                    <Text style={styles.bold}>Pledged Gold Net:</Text> {Number(selectedLoan.NetWeight || 0).toFixed(2)} g
-                    (Gross: {Number(selectedLoan.GrossWeight || 0).toFixed(2)} g)
-                  </Text>
-                  {selectedLoan.ProcessingFee ? (
-                    <Text style={styles.detailRowText}>
-                      <Text style={styles.bold}>Processing Fee:</Text> ₹
-                      {Number(selectedLoan.ProcessingFee).toLocaleString()}
-                    </Text>
-                  ) : null}
-                  {selectedLoan.TotalCharges ? (
-                    <Text style={styles.detailRowText}>
-                      <Text style={styles.bold}>Total Charges:</Text> ₹
-                      {Number(selectedLoan.TotalCharges).toLocaleString()}
-                    </Text>
-                  ) : null}
-                  {selectedLoan.Remarks ? (
-                    <Text style={styles.detailRowText}>
-                      <Text style={styles.bold}>Remarks:</Text> {selectedLoan.Remarks}
-                    </Text>
-                  ) : null}
-                </View>
-
-                {/* Repayment History */}
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSecTitle}>Repayment History</Text>
-                  {(() => {
-                    const loanPayments = store.payments.filter((p) => p.LoanId === selectedLoan.LoanId);
-                    const totalPaid = loanPayments.reduce((s, p) => s + (p.TotalPaidAmount || 0), 0);
-                    if (loanPayments.length === 0)
-                      return <Text style={styles.emptyNotice}>No repayments logged for this loan.</Text>;
-                    return (
-                      <>
-                        {loanPayments.map((p, idx) => (
-                          <View key={p.PaymentId || idx} style={styles.payHistRow}>
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.payHistTitle}>
-                                {p.PaymentDate} • {p.PaymentType}
-                              </Text>
-                              <Text style={styles.payHistSub}>
-                                {p.PaymentMethod}
-                                {p.TransactionReference ? ` (Ref: ${p.TransactionReference})` : ''}
-                              </Text>
-                              {p.PrincipalAmount > 0 || p.InterestAmount > 0 ? (
-                                <Text style={styles.payHistSub}>
-                                  {p.PrincipalAmount > 0 ? `Principal: ₹${p.PrincipalAmount.toLocaleString()} ` : ''}
-                                  {p.InterestAmount > 0 ? `Interest: ₹${p.InterestAmount.toLocaleString()}` : ''}
-                                </Text>
-                              ) : null}
-                              {p.Remarks ? <Text style={styles.payHistSub}>📝 {p.Remarks}</Text> : null}
-                            </View>
-                            <Text style={styles.payHistAmt}>+₹{p.TotalPaidAmount.toLocaleString()}</Text>
-                          </View>
-                        ))}
-                        <View
-                          style={[
-                            styles.payHistRow,
-                            { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8, marginTop: 4 },
-                          ]}
-                        >
-                          <Text style={[styles.payHistTitle, { color: colors.success }]}>Total Paid So Far</Text>
-                          <Text style={[styles.payHistAmt, { color: colors.success }]}>
-                            ₹{totalPaid.toLocaleString()}
-                          </Text>
-                        </View>
-                      </>
-                    );
-                  })()}
-                </View>
-              </ScrollView>
-            ) : null}
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setDetailModalVisible(false)}>
-                <Text style={styles.cancelBtnText}>Close</Text>
-              </TouchableOpacity>
-              {isSuperAdmin && selectedLoan?.LoanStatus === 'Active' ? (
-                <TouchableOpacity
-                  style={[
-                    styles.saveBtn,
-                    { backgroundColor: '#0284c7', flexDirection: 'row', alignItems: 'center', gap: 6 },
-                  ]}
-                  onPress={() => {
-                    const l = selectedLoan;
-                    setDetailModalVisible(false);
-                    openEditModal(l);
-                  }}
-                >
-                  <Ionicons name="pencil-outline" size={15} color="#ffffff" />
-                  <Text style={styles.saveBtnText}>Edit Loan</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -1142,77 +910,5 @@ const getStyles = (colors: ThemeColors, isDark: boolean) =>
       fontSize: 13,
       fontWeight: '700',
       color: colors.textPrimary,
-    },
-
-    // Detail Modal Styles
-    detailCard: {
-      backgroundColor: colors.surfaceSubtle,
-      borderRadius: 10,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginBottom: 12,
-    },
-    detailName: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: colors.textPrimary,
-    },
-    detailCode: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      marginTop: 2,
-    },
-    detailSection: {
-      marginBottom: 14,
-      backgroundColor: colors.surfaceSubtle,
-      borderRadius: 10,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    detailSecTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.textPrimary,
-      marginBottom: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      paddingBottom: 4,
-    },
-    detailRowText: {
-      fontSize: 12.5,
-      color: colors.textPrimary,
-      marginBottom: 5,
-    },
-    bold: {
-      fontWeight: '700',
-      color: colors.textSecondary,
-    },
-    emptyNotice: {
-      fontSize: 12,
-      color: colors.textMuted,
-      fontStyle: 'italic',
-      paddingVertical: 4,
-    },
-    payHistRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 5,
-    },
-    payHistTitle: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
-    payHistSub: {
-      fontSize: 11,
-      color: colors.textSecondary,
-    },
-    payHistAmt: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.success,
     },
   });

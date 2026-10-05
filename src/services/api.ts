@@ -3,7 +3,7 @@ import {
   AdminUser,
   ApiResponse,
   BankAccount,
-  DashboardData, GoldRateData,
+  GoldRateData,
   InitialSyncData,
   Loan,
   Ornament,
@@ -26,22 +26,6 @@ export function getDriveDirectImageUrl(driveUrl?: string | null): string | undef
 }
 
 export const getDriveImageUrl = getDriveDirectImageUrl;
-
-const emptyDashboardData: DashboardData = {
-  totalUsers: 0,
-  totalBankAccounts: 0,
-  totalOrnaments: 0,
-  pledgedOrnamentsCount: 0,
-  pledgedGrams: 0,
-  activeLoans: 0,
-  closedLoans: 0,
-  totalLoanAmount: 0,
-  totalEligibleLoanAmount: 0,
-  totalAvailableLoanAmount: 0,
-  totalGoldWeight: 0,
-  totalBuyingGoldValue: 0,
-  recentTransactions: [],
-};
 
 const defaultGoldRates: GoldRateData = {
   location: "Bangalore",
@@ -84,11 +68,6 @@ export function normalizeGoldRates(rawRates: any): GoldRateData {
 }
 
 class ApiService {
-  /**
-   * Helper to convert Google Drive sharing links to direct image thumbnail URLs
-   */
-  getDriveImageUrl = getDriveDirectImageUrl;
-
   private sessionToken: string | null = null;
   private onUnauthorizedCallback: (() => void) | null = null;
 
@@ -226,7 +205,6 @@ class ApiService {
       if (res.data.loans) await cache.set('loans_all', res.data.loans, CacheTTL.LISTS);
       if (res.data.payments) await cache.set('payments_all', res.data.payments, CacheTTL.LISTS);
       if (res.data.goldRates) await cache.set('gold_rates_bangalore', res.data.goldRates, CacheTTL.GOLD_RATES);
-      if (res.data.adminUsers) await cache.set('admin_users_list', res.data.adminUsers, CacheTTL.LISTS);
       return { success: true, data: res.data, isCached: false };
     }
 
@@ -243,31 +221,6 @@ class ApiService {
   }
 
   // ─── DASHBOARD & RATES ───
-
-  async getDashboardData(forceRefresh: boolean = false): Promise<{ data: DashboardData; isCached: boolean }> {
-    const CACHE_KEY = 'dashboard_kpis';
-
-    if (!forceRefresh) {
-      const cached = await cache.get<DashboardData>(CACHE_KEY);
-      if (cached.data) {
-        return { data: cached.data, isCached: true };
-      }
-    }
-
-    const res = await this.getFromGas<DashboardData>('getDashboardData');
-    if (res.success && res.data) {
-      await cache.set(CACHE_KEY, res.data, CacheTTL.DASHBOARD);
-      return { data: res.data, isCached: false };
-    }
-
-    // Fallback to stale cache if network fails
-    const stale = await cache.get<DashboardData>(CACHE_KEY, true);
-    if (stale.data) {
-      return { data: stale.data, isCached: true };
-    }
-
-    return { data: emptyDashboardData, isCached: false };
-  }
 
   async getGoldRates(forceRefresh: boolean = false): Promise<{ data: GoldRateData; isCached: boolean }> {
     const CACHE_KEY = 'gold_rates_bangalore';
@@ -402,14 +355,6 @@ class ApiService {
     return stale.data || [];
   }
 
-  async getAvailableOrnaments(): Promise<Ornament[]> {
-    const res = await this.getFromGas<Ornament[]>('getAvailableOrnaments');
-    if (res.success && Array.isArray(res.data)) {
-      return res.data;
-    }
-    return [];
-  }
-
   async addOrnament(ornamentData: Partial<Ornament> & { files?: any[] }): Promise<ApiResponse<Ornament>> {
     const res = await this.postToGas<Ornament>('addOrnament', { ornamentData });
     if (res.success) {
@@ -428,14 +373,6 @@ class ApiService {
 
   async deleteOrnament(ornamentId: string): Promise<ApiResponse<any>> {
     const res = await this.postToGas('deleteOrnament', { ornamentId });
-    if (res.success) {
-      await cache.invalidateEntity('ornaments');
-    }
-    return res;
-  }
-
-  async deleteOrnamentImage(ornamentId: string, imageUrl: string): Promise<ApiResponse<any>> {
-    const res = await this.postToGas('deleteOrnamentImage', { ornamentId, imageUrl });
     if (res.success) {
       await cache.invalidateEntity('ornaments');
     }
@@ -494,18 +431,6 @@ class ApiService {
       await cache.invalidate('bank_accounts');
     }
     return res;
-  }
-
-  async getActiveLoansForClosure(): Promise<Loan[]> {
-    const res = await this.getFromGas<Loan[]>('getActiveLoansForClosure');
-    if (res.success && Array.isArray(res.data)) {
-      return res.data;
-    }
-    return [];
-  }
-
-  async getLoanDetails(loanId: string): Promise<ApiResponse<any>> {
-    return this.getFromGas('getLoanDetails', { loanId });
   }
 
   // ─── PAYMENTS ───
@@ -601,4 +526,3 @@ class ApiService {
 }
 
 export const api = new ApiService();
-api.getDriveImageUrl = getDriveDirectImageUrl;

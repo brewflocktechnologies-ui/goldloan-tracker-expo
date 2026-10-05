@@ -2,7 +2,7 @@ import { OrnamentIcon, UserIcon } from '@/components/Icon';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Dispatch, RefObject, SetStateAction, useState } from 'react';
+import { Dispatch, RefObject, SetStateAction } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';

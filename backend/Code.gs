@@ -1343,15 +1343,6 @@ function getAvailableOrnaments_() {
   }
 }
 
-function updateOrnamentStatus_(ornamentId, status) {
-  try {
-    updateRow_("Ornaments", "OrnamentId", ornamentId, { Status: status });
-    return { success: true, data: "Ornament status updated" };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
 // ─── LOAN FUNCTIONS ───
 
 /**
@@ -1558,19 +1549,6 @@ function getLoans_(userId, status) {
     });
 
     return { success: true, data: loans };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
-function updateLoanStatus_(loanId, status) {
-  try {
-    const loan = getSheetData_("Loans").find(l => String(l.LoanId) === String(loanId));
-    updateRow_("Loans", "LoanId", loanId, { LoanStatus: status, UpdatedDate: new Date().toISOString() });
-    if (loan && loan.BankAccountId) {
-      recalculateAndSyncBankUtilization_(loan.BankAccountId);
-    }
-    return { success: true, data: "Loan status updated" };
   } catch (e) {
     return { success: false, error: e.message };
   }
@@ -1869,43 +1847,6 @@ function getPayments_(loanId) {
       payments = payments.filter(p => String(p.LoanId) === String(loanId));
     }
     return { success: true, data: payments };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
-// ─── RELEASE FUNCTIONS ───
-
-function releaseOrnaments_(releaseData) {
-  try {
-    const proofUrl = processDriveFiles_(releaseData.files, "Delivery_Proofs")[0] || "";
-
-    (releaseData.ornamentIds || []).forEach(ornamentId => {
-      const releaseId = generateId_("REL", "Releases", "ReleaseId");
-      const record = {
-        ReleaseId: releaseId,
-        LoanId: releaseData.LoanId,
-        OrnamentId: ornamentId,
-        ReleaseDate: releaseData.ReleaseDate,
-        ReleasedBy: releaseData.ReleasedBy || "",
-        CustomerSignature: "", // Placeholder for signature data if captured
-        DeliveryProofImage: proofUrl,
-        Remarks: releaseData.Remarks || ""
-      };
-      appendRow_("Releases", record);
-
-      // Update ornament status to Available
-      updateRow_("Ornaments", "OrnamentId", ornamentId, { Status: "Available" });
-
-      // Update mapping status
-      const mappings = getSheetData_("LoanOrnaments");
-      const mappingToUpdate = mappings.find(m => String(m.LoanId) === String(releaseData.LoanId) && String(m.OrnamentId) === String(ornamentId));
-      if (mappingToUpdate) {
-        updateRow_("LoanOrnaments", "MappingId", mappingToUpdate.MappingId, { Status: "Released" });
-      }
-    });
-
-    return { success: true, data: "Ornaments released successfully" };
   } catch (e) {
     return { success: false, error: e.message };
   }

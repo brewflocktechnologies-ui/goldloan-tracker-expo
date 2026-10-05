@@ -24,7 +24,7 @@ export default function DashboardScreen() {
   const { width } = useWindowDimensions();
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors, isDark);
-  const { isSuperAdmin, isReadOnly } = useAuth();
+  const { isReadOnly } = useAuth();
   const toast = useToast();
   const [refreshing, setRefreshing] = useState(false);
 

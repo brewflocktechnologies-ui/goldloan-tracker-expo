@@ -40,7 +40,7 @@ function notify() {
  * Hydrate in-memory state from L2 persistent storage (AsyncStorage) immediately on boot.
  * Delivers instant offline UI before any network requests complete.
  */
-export async function hydrateFromCache() {
+async function hydrateFromCache() {
   if (isCacheHydrated) return;
   try {
     // 1. Check unified sync snapshot first (fastest, all entities in 1 read)
@@ -230,7 +230,7 @@ function calculateUserBankUtilization(userId: string, bankAccountId: string): nu
     .reduce((sum, l) => sum + (Number(l.LoanAmount) || 0), 0);
 }
 
-export function calculateLoanPeriodInterest(params: {
+function calculateLoanPeriodInterest(params: {
   LoanAmount: number;
   InterestRate: number;
   InterestType: string;
@@ -793,10 +793,5 @@ export function useAppStore() {
     updateLoan,
     closeAndReleaseLoan,
     addPayment,
-    calculateUserBankUtilization,
-    clearCache: async () => {
-      await cache.clearAll();
-      await syncFromBackend(true);
-    },
   };
 }

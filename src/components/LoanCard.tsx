@@ -49,7 +49,6 @@ export function LoanCard({
   const isOverdue = loan.Status === 'Overdue';
   const isDueOverdue = isOverdue || loan.DueBadgeType === 'overdue' || loan.DueBadgeText?.toLowerCase().includes('overdue');
   const isClosed = loan.Status === 'Closed';
-  const isActive = loan.Status === 'Active';
 
   // Format date display (e.g. 10 Jan 2024)
   const formatDisplayDate = (d?: string) => {

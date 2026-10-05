@@ -34,7 +34,7 @@ export function LoanOptionsMenu({
   onEdit,
   onPay,
 }: LoanOptionsMenuProps) {
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { isSuperAdmin } = useAuth();
   const toast = useToast();
   const router = useRouter();

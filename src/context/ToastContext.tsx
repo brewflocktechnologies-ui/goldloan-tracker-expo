@@ -22,7 +22,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   const opacityAnim = useRef(new Animated.Value(0)).current;

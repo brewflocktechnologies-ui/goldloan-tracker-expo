@@ -10,11 +10,9 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MobileMenuModal } from '../../components/MobileMenuModal';
 import { ProfileModal } from '../../components/ProfileModal';
 import { SidebarTrigger } from '../../components/SidebarTrigger';
 import { ThemeToggleBtn } from '../../components/ThemeToggleBtn';
@@ -187,10 +185,8 @@ function TabLayoutInner() {
   const router = useRouter();
   const pathname = usePathname();
   const store = useAppStore();
-  const { width } = useWindowDimensions();
   const { user, isSuperAdmin } = useAuth();
   const [profileModalVisible, setProfileModalVisible] = useState(false);
-  const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
 
   const desktopNavItems = React.useMemo(() => {
     return [
@@ -544,12 +540,6 @@ function TabLayoutInner() {
         onClose={() => setProfileModalVisible(false)}
       />
 
-      {/* Mobile Menu Sheet */}
-      <MobileMenuModal
-        visible={mobileMenuVisible}
-        onClose={() => setMobileMenuVisible(false)}
-        onOpenProfile={() => setProfileModalVisible(true)}
-      />
     </View>
   );
 }
@@ -791,9 +781,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     gap: 4,
-  },
-  desktopNavItemActive: {
-    backgroundColor: isDark ? '#261a02' : colors.primarySubtle,
   },
   navItemActive: {
     backgroundColor: isDark ? '#261a02' : colors.primarySubtle,
