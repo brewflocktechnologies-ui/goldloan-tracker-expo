@@ -293,13 +293,15 @@ export default function OrnamentsScreen() {
       };
 
       if (viewMode === 'edit' && selectedOrn) {
-        store.updateOrnament(selectedOrn.OrnamentId, payload);
-        toast.success(`Ornament "${form.OrnamentName}" updated`);
+        store.updateOrnament(selectedOrn.OrnamentId, payload, {
+          onSuccess: () => toast.success(`Ornament "${form.OrnamentName}" updated`),
+        });
         setSelectedOrn(prev => prev ? { ...prev, ...payload } as Ornament : null);
         setViewMode('details');
       } else {
-        store.addOrnament(payload);
-        toast.success(`Ornament "${form.OrnamentName}" added to vault`);
+        store.addOrnament(payload, {
+          onSuccess: () => toast.success(`Ornament "${form.OrnamentName}" added to vault`),
+        });
         setViewMode('list');
       }
     } catch (e: any) {

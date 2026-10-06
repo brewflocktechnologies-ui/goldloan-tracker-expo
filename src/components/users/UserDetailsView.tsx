@@ -554,9 +554,11 @@ export function UserDetailsView({
         cancelLabel="Cancel"
         type="danger"
         onConfirm={() => {
-          store.deleteUser(selectedUser.UserId);
+          const name = selectedUser.FullName;
+          store.deleteUser(selectedUser.UserId, {
+            onSuccess: () => toast.danger(`Customer "${name}" deleted`),
+          });
           setDeleteModalVisible(false);
-          toast.danger(`Customer "${selectedUser.FullName}" deleted`);
           onBack();
         }}
         onCancel={() => setDeleteModalVisible(false)}

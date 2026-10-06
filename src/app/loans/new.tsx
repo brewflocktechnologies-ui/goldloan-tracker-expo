@@ -381,14 +381,15 @@ export default function NewLoanScreen() {
       };
 
       store.addLoan(loanPayload, {
+        // "Created" is announced only once the sheet confirms it
         onSuccess: (saved) => {
           if (saved.LoanNumber !== loanPayload.LoanNumber) {
             toast.info(`Loan number ${loanPayload.LoanNumber} was taken; saved as ${saved.LoanNumber}`);
           }
+          toast.success(`Loan contract ${saved.LoanNumber || loanPayload.LoanNumber} created successfully!`);
         },
         onError: (message) => toast.danger(`Loan ${loanPayload.LoanNumber} was not saved: ${message}`),
       });
-      toast.success(`Loan contract ${loanPayload.LoanNumber} created successfully!`);
 
       // Return to loans list
       if (router.canGoBack()) {
@@ -414,12 +415,13 @@ export default function NewLoanScreen() {
       FullName: newCustomerName.trim(),
       MobileNumber: cleanPhone,
       Status: 'Active',
+    }, {
+      onSuccess: () => toast.success(`Customer ${newCustomerName.trim()} created.`),
     });
     setSelectedCustomerId(user.UserId);
     setNewCustomerName('');
     setNewCustomerPhone('');
     setShowAddCustomerModal(false);
-    toast.success(`Customer ${user.FullName} created.`);
   };
 
   const handleQuickAddBank = () => {
@@ -438,12 +440,13 @@ export default function NewLoanScreen() {
       AccountNumber: newAccountNumber.trim(),
       IFSCCode: newIFSCCode.trim(),
       MaxLoanAmount: parseFloat(newMaxLimit) || 500000,
+    }, {
+      onSuccess: () => toast.success('Bank account added.'),
     });
     setSelectedBankAccountId(acc.BankAccountId);
     setNewAccountNumber('');
     setNewIFSCCode('');
     setShowAddBankModal(false);
-    toast.success('Bank account added.');
   };
 
   const handleQuickAddOrnament = () => {
@@ -464,13 +467,14 @@ export default function NewLoanScreen() {
       StoneWeight: Math.max(0, gw - nw),
       MarketValue: mkt,
       Status: 'Available',
+    }, {
+      onSuccess: () => toast.success('Ornament added and selected.'),
     });
     setSelectedOrnamentIds((prev) => [...prev, orn.OrnamentId]);
     setNewOrnamentName('');
     setNewGrossWeight('');
     setNewNetWeight('');
     setShowAddOrnamentModal(false);
-    toast.success('Ornament added and selected.');
   };
 
   // Subtitle per step

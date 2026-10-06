@@ -1492,15 +1492,21 @@ function addLoanLocked_(loanData) {
     };
     appendRow_("Loans", record);
 
-    // Link ornaments and update their status
-    (loanData.ornamentIds || []).forEach(ornamentId => {
-      const mappingId = generateId_("MAP", "LoanOrnaments", "MappingId");
-      appendRow_("LoanOrnaments", { MappingId: mappingId, LoanId: loanId, OrnamentId: ornamentId, Status: "Pledged" });
-      updateRow_("Ornaments", "OrnamentId", ornamentId, { Status: "Pledged" });
-    });
+    // The loan row is already written; a failure in the follow-up steps must not report the
+    // whole save as failed (the app would treat the loan as unsaved while it exists in the sheet).
+    try {
+      // Link ornaments and update their status
+      (loanData.ornamentIds || []).forEach(ornamentId => {
+        const mappingId = generateId_("MAP", "LoanOrnaments", "MappingId");
+        appendRow_("LoanOrnaments", { MappingId: mappingId, LoanId: loanId, OrnamentId: ornamentId, Status: "Pledged" });
+        updateRow_("Ornaments", "OrnamentId", ornamentId, { Status: "Pledged" });
+      });
 
-    // Recalculate & sync utilized amount for this user + bank
-    recalculateAndSyncBankUtilization_(loanData.BankAccountId);
+      // Recalculate & sync utilized amount for this user + bank
+      recalculateAndSyncBankUtilization_(loanData.BankAccountId);
+    } catch (postErr) {
+      console.error("Loan saved but post-save sync failed:", postErr);
+    }
 
     return { success: true, data: record };
   } catch (e) {

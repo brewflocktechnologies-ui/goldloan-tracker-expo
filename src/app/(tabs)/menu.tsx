@@ -23,7 +23,7 @@ import { ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
-import { useAppStore } from '../../services/store';
+import { useAppStore, getSyncError } from '../../services/store';
 
 type MenuView = 'main' | 'reports' | 'gold-rates' | 'settings' | 'help' | 'about';
 
@@ -99,7 +99,9 @@ export default function MenuScreen() {
       setIsSyncingData(true);
       toast.info('Syncing portfolio data & live rates...');
       await store.syncFromBackend(true);
-      toast.success('Sync complete! All records up to date.');
+      const syncError = getSyncError();
+      if (syncError) toast.danger(syncError);
+      else toast.success('Sync complete! All records up to date.');
     } catch {
       toast.danger('Sync failed. Please check internet.');
     } finally {

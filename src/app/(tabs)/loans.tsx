@@ -244,10 +244,13 @@ export default function LoansScreen() {
       TotalCharges: totalCharges,
       NetDisbursementAmount: netDisbursement,
       ornamentIds: selectedOrnIds,
+    }, {
+      onSuccess: () => {
+        Alert.alert('Success', 'Loan contract updated successfully!');
+        toast.success(`Loan ${form.LoanNumber} updated successfully!`);
+      },
     });
 
-    Alert.alert('Success', 'Loan contract updated successfully!');
-    toast.success(`Loan ${form.LoanNumber} updated successfully!`);
     setModalVisible(false);
   };
 
@@ -269,10 +272,13 @@ export default function LoansScreen() {
       PaymentMethod: payForm.Method,
       TransactionReference: payForm.Reference,
       Remarks: payForm.Remarks,
+    }, {
+      onSuccess: () => {
+        Alert.alert('Success', `Repayment of ₹${payAmt.toLocaleString()} recorded.`);
+        toast.success(`Repayment of ₹${payAmt.toLocaleString()} recorded.`);
+      },
     });
 
-    Alert.alert('Success', `Repayment of ₹${payAmt.toLocaleString()} recorded.`);
-    toast.success(`Repayment of ₹${payAmt.toLocaleString()} recorded.`);
     setPayModalVisible(false);
   };
 

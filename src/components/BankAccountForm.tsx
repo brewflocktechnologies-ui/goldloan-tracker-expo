@@ -243,11 +243,13 @@ export function BankAccountForm({
     };
 
     if (account) {
-      store.updateBankAccount(account.BankAccountId, payload);
-      toast.success(`Bank account "${form.BankName}" updated successfully`);
+      store.updateBankAccount(account.BankAccountId, payload, {
+        onSuccess: () => toast.success(`Bank account "${form.BankName}" updated successfully`),
+      });
     } else {
-      store.addBankAccount(payload);
-      toast.success(`Bank account "${form.BankName}" added successfully`);
+      store.addBankAccount(payload, {
+        onSuccess: () => toast.success(`Bank account "${form.BankName}" added successfully`),
+      });
     }
     onClose();
   };

@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from './ThemeContext';
+import { setMutationErrorHandler } from '../services/store';
 
 export type ToastType = 'success' | 'danger' | 'info' | 'warning';
 
@@ -74,6 +75,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       dismissToast();
     }, duration);
   }, [opacityAnim, translateYAnim, dismissToast]);
+
+  // A save that failed and was reverted must never go unnoticed, wherever it was triggered from.
+  useEffect(() => {
+    setMutationErrorHandler((message) => showToast({ message, type: 'danger', duration: 5000 }));
+    return () => setMutationErrorHandler(null);
+  }, [showToast]);
 
   const success = useCallback((msg: string) => showToast(msg, 'success'), [showToast]);
   const danger = useCallback((msg: string) => showToast(msg, 'danger'), [showToast]);

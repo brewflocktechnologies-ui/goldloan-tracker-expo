@@ -255,6 +255,116 @@ export async function syncFromBackend(force: boolean = false) {
   }
 }
 
+// ─── Failed-save handling ───
+
+type MutationErrorHandler = (message: string) => void;
+let mutationErrorHandler: MutationErrorHandler | null = null;
+
+/** Lets the UI (toast provider) show a message when a save fails and is reverted. */
+export function setMutationErrorHandler(handler: MutationErrorHandler | null) {
+  mutationErrorHandler = handler;
+}
+
+function reportMutationError(message: string) {
+  if (mutationErrorHandler) mutationErrorHandler(message);
+  else console.warn('[Store]', message);
+}
+
+function replaceItem<T>(list: T[], item: T | undefined, key: keyof T): T[] {
+  if (!item) return list;
+  return list.map(x => (x[key] === item[key] ? item : x));
+}
+
+function restoreItem<T>(list: T[], item: T | undefined, key: keyof T, index: number): T[] {
+  if (!item || list.some(x => x[key] === item[key])) return list;
+  const copy = [...list];
+  copy.splice(Math.min(Math.max(index, 0), copy.length), 0, item);
+  return copy;
+}
+
+function recomputeBankUtilization() {
+  bankAccountsState = bankAccountsState.map(b => {
+    const utilized = calculateUserBankUtilization(b.UserId, b.BankAccountId);
+    return { ...b, UtilizedLoanAmount: utilized, AvailableLoanAmount: Math.max(0, b.MaxLoanAmount - utilized) };
+  });
+}
+
+/** Optional hooks so a screen can react to the real outcome (e.g. show "saved" only once confirmed). */
+export interface SaveCallbacks {
+  onSuccess?: (saved?: any) => void;
+  /** If given, replaces the global error toast for this save. */
+  onError?: (message: string) => void;
+}
+
+interface MutationOptions<T> {
+  callbacks?: SaveCallbacks;
+  /** Shown to the user when the save fails, e.g. "Customer was not saved". */
+  failureMessage: string;
+  /** Runs when the backend confirms (only if it returned the saved row). */
+  onSaved?: (data: T) => void;
+  /** Puts the local list back the way it was. Must be safe to run twice. */
+  undo: () => void;
+  /** Adds: the temp row must always go, since the sheet either has the real row or nothing. */
+  alwaysUndo?: boolean;
+  /** Adds: finds the real row if the save actually reached the sheet (lost reply). */
+  findSaved?: () => any;
+  /** Called instead of the global error handler (e.g. the loan form has its own message). */
+  onFailure?: (message: string) => void;
+  onFound?: (row: any) => void;
+}
+
+/**
+ * Runs a backend save. On any failure (rejected, `success: false`, or an unreadable reply) the
+ * result is unknown, so ask the sheet what is true instead of guessing:
+ *  - sheet reachable → the refreshed lists are the truth (a lost reply that did save is kept);
+ *  - sheet unreachable → undo the local change so the UI never shows something that was not saved.
+ * The user is always told when a change was not saved.
+ */
+async function runMutation<T>(
+  call: () => Promise<{ success: boolean; data?: any; error?: string }>,
+  opts: MutationOptions<T>
+) {
+  let res: { success: boolean; data?: any; error?: string };
+  try {
+    res = await call();
+  } catch (err: any) {
+    console.warn('[Store] save failed:', err);
+    res = { success: false, error: err?.message || 'Network request failed' };
+  }
+
+  try {
+    if (res.success) {
+      if (res.data && opts.onSaved) opts.onSaved(res.data as T);
+      opts.callbacks?.onSuccess?.(res.data);
+      return;
+    }
+
+    await syncFromBackend(true);
+    const offline = !api.getSessionToken() || getSyncError() !== null;
+
+    const saved = !offline && opts.findSaved ? opts.findSaved() : null;
+    if (saved) {
+      opts.onFound?.(saved);
+      opts.callbacks?.onSuccess?.(saved);
+      return;
+    }
+
+    if (offline || opts.alwaysUndo) opts.undo();
+    notify();
+
+    const detail = res.error ? `: ${res.error}` : '';
+    const message = offline
+      ? `${opts.failureMessage}${detail} (no connection, change undone)`
+      : `${opts.failureMessage}${detail}`;
+    if (opts.onFailure) opts.onFailure(res.error || opts.failureMessage);
+    else if (opts.callbacks?.onError) opts.callbacks.onError(message);
+    else reportMutationError(message);
+  } finally {
+    persistAll();
+    notify();
+  }
+}
+
 function calculateUserBankUtilization(userId: string, bankAccountId: string): number {
   return loansState
     .filter(l => l.UserId === userId && l.BankAccountId === bankAccountId && l.LoanStatus === 'Active')
@@ -378,7 +488,7 @@ export function useAppStore() {
 
   // --- CRUD: Users ---
 
-  const addUser = (userData: Partial<User> & { files?: any[] }) => {
+  const addUser = (userData: Partial<User> & { files?: any[] }, callbacks?: SaveCallbacks) => {
     const tempId = nextId('U', usersState, 'UserId');
     const newUser: User = {
       UserId: tempId,
@@ -402,40 +512,57 @@ export function useAppStore() {
       Status: (userData.Status as any) || 'Active',
       CreatedDate: new Date().toISOString(),
     };
+    const prevIds = new Set(usersState.map(u => u.UserId));
     usersState = [newUser, ...usersState];
     persistAll();
     notify();
 
-    api.addUser(userData).then(res => {
-      if (res.success && res.data) {
-        usersState = usersState.map(u => u.UserId === tempId ? { ...u, ...normalizeUser(res.data as User) } : u);
+    runMutation<User>(() => api.addUser(userData), {
+      callbacks,
+      failureMessage: `Customer "${newUser.FullName}" was not saved`,
+      onSaved: data => {
+        usersState = usersState.map(u => u.UserId === tempId ? { ...u, ...normalizeUser(data) } : u);
         persistAll();
         notify();
-      }
-    }).catch(err => console.warn('[Store] addUser error:', err)).finally(persistAll);
+      },
+      undo: () => { usersState = usersState.filter(u => u.UserId !== tempId); },
+      alwaysUndo: true,
+      findSaved: () => usersState.find(u => !prevIds.has(u.UserId) && u.FullName === newUser.FullName),
+    });
 
     return newUser;
   };
 
-  const updateUser = (userId: string, updated: Partial<User> & { files?: any[] }) => {
+  const updateUser = (userId: string, updated: Partial<User> & { files?: any[] }, callbacks?: SaveCallbacks) => {
+    const prev = usersState.find(u => u.UserId === userId);
     usersState = usersState.map(u => u.UserId === userId ? { ...u, ...updated, UpdatedDate: new Date().toISOString() } : u);
     persistAll();
     notify();
 
-    api.updateUser(userId, updated).catch(err => console.warn('[Store] updateUser error:', err)).finally(persistAll);
+    runMutation(() => api.updateUser(userId, updated), {
+      callbacks,
+      failureMessage: `Changes to ${prev?.FullName || userId} were not saved`,
+      undo: () => { usersState = replaceItem(usersState, prev, 'UserId'); },
+    });
   };
 
-  const deleteUser = (userId: string) => {
+  const deleteUser = (userId: string, callbacks?: SaveCallbacks) => {
+    const index = usersState.findIndex(u => u.UserId === userId);
+    const prev = usersState[index];
     usersState = usersState.filter(u => u.UserId !== userId);
     persistAll();
     notify();
 
-    api.deleteUser(userId).catch(err => console.warn('[Store] deleteUser error:', err)).finally(persistAll);
+    runMutation(() => api.deleteUser(userId), {
+      callbacks,
+      failureMessage: `${prev?.FullName || userId} was not deleted`,
+      undo: () => { usersState = restoreItem(usersState, prev, 'UserId', index); },
+    });
   };
 
   // --- CRUD: Bank Accounts ---
 
-  const addBankAccount = (accData: Partial<BankAccount> & { files?: any[] }) => {
+  const addBankAccount = (accData: Partial<BankAccount> & { files?: any[] }, callbacks?: SaveCallbacks) => {
     const tempId = nextId('BA', bankAccountsState, 'BankAccountId');
     const max = Number(accData.MaxLoanAmount) || 0;
     const util = Number(accData.UtilizedLoanAmount) || 0;
@@ -457,22 +584,30 @@ export function useAppStore() {
       UtilizedLoanAmount: util,
       AvailableLoanAmount: Math.max(0, max - util),
     };
+    const prevIds = new Set(bankAccountsState.map(b => b.BankAccountId));
     bankAccountsState = [newAcc, ...bankAccountsState];
     persistAll();
     notify();
 
-    api.addBankAccount(accData).then(res => {
-      if (res.success && res.data) {
-        bankAccountsState = bankAccountsState.map(b => b.BankAccountId === tempId ? { ...b, ...normalizeBankAccount(res.data as BankAccount) } : b);
+    runMutation<BankAccount>(() => api.addBankAccount(accData), {
+      callbacks,
+      failureMessage: `Bank account ${newAcc.BankName || ''} was not saved`.replace('  ', ' '),
+      onSaved: data => {
+        bankAccountsState = bankAccountsState.map(b => b.BankAccountId === tempId ? { ...b, ...normalizeBankAccount(data) } : b);
         persistAll();
         notify();
-      }
-    }).catch(err => console.warn('[Store] addBankAccount error:', err)).finally(persistAll);
+      },
+      undo: () => { bankAccountsState = bankAccountsState.filter(b => b.BankAccountId !== tempId); },
+      alwaysUndo: true,
+      findSaved: () => bankAccountsState.find(b =>
+        !prevIds.has(b.BankAccountId) && String(b.AccountNumber) === String(newAcc.AccountNumber) && b.UserId === newAcc.UserId),
+    });
 
     return newAcc;
   };
 
-  const updateBankAccount = (accId: string, updated: Partial<BankAccount> & { files?: any[] }) => {
+  const updateBankAccount = (accId: string, updated: Partial<BankAccount> & { files?: any[] }, callbacks?: SaveCallbacks) => {
+    const prev = bankAccountsState.find(b => b.BankAccountId === accId);
     bankAccountsState = bankAccountsState.map(b => {
       if (b.BankAccountId === accId) {
         const merged = { ...b, ...updated, UpdatedDate: new Date().toISOString() };
@@ -486,20 +621,30 @@ export function useAppStore() {
     persistAll();
     notify();
 
-    api.updateBankAccount(accId, updated).catch(err => console.warn('[Store] updateBankAccount error:', err)).finally(persistAll);
+    runMutation(() => api.updateBankAccount(accId, updated), {
+      callbacks,
+      failureMessage: `Changes to bank account ${prev?.BankName || accId} were not saved`,
+      undo: () => { bankAccountsState = replaceItem(bankAccountsState, prev, 'BankAccountId'); },
+    });
   };
 
-  const deleteBankAccount = (accId: string) => {
+  const deleteBankAccount = (accId: string, callbacks?: SaveCallbacks) => {
+    const index = bankAccountsState.findIndex(b => b.BankAccountId === accId);
+    const prev = bankAccountsState[index];
     bankAccountsState = bankAccountsState.filter(b => b.BankAccountId !== accId);
     persistAll();
     notify();
 
-    api.deleteBankAccount(accId).catch(err => console.warn('[Store] deleteBankAccount error:', err)).finally(persistAll);
+    runMutation(() => api.deleteBankAccount(accId), {
+      callbacks,
+      failureMessage: `Bank account ${prev?.BankName || accId} was not deleted`,
+      undo: () => { bankAccountsState = restoreItem(bankAccountsState, prev, 'BankAccountId', index); },
+    });
   };
 
   // --- CRUD: Ornaments ---
 
-  const addOrnament = (ornData: Partial<Ornament> & { files?: any[] }) => {
+  const addOrnament = (ornData: Partial<Ornament> & { files?: any[] }, callbacks?: SaveCallbacks) => {
     const tempId = nextId('ORN', ornamentsState, 'OrnamentId');
     const { gross, stone, metal, net, buyingPrice, currentPrice, buyingCost, marketValue, appreciationValue, appreciationPercentage } =
       calculateOrnamentFigures(ornData);
@@ -531,22 +676,30 @@ export function useAppStore() {
       Remarks: ornData.Remarks || '',
       Status: (ornData.Status as any) || 'Available',
     };
+    const prevIds = new Set(ornamentsState.map(o => o.OrnamentId));
     ornamentsState = [newOrn, ...ornamentsState];
     persistAll();
     notify();
 
-    api.addOrnament(ornData).then(res => {
-      if (res.success && res.data) {
-        ornamentsState = ornamentsState.map(o => o.OrnamentId === tempId ? { ...o, ...normalizeOrnament(res.data as Ornament) } : o);
+    runMutation<Ornament>(() => api.addOrnament(ornData), {
+      callbacks,
+      failureMessage: `Ornament "${newOrn.OrnamentName}" was not saved`,
+      onSaved: data => {
+        ornamentsState = ornamentsState.map(o => o.OrnamentId === tempId ? { ...o, ...normalizeOrnament(data) } : o);
         persistAll();
         notify();
-      }
-    }).catch(err => console.warn('[Store] addOrnament error:', err)).finally(persistAll);
+      },
+      undo: () => { ornamentsState = ornamentsState.filter(o => o.OrnamentId !== tempId); },
+      alwaysUndo: true,
+      findSaved: () => ornamentsState.find(o =>
+        !prevIds.has(o.OrnamentId) && o.UserId === newOrn.UserId && o.OrnamentName === newOrn.OrnamentName),
+    });
 
     return newOrn;
   };
 
-  const updateOrnament = (ornId: string, updated: Partial<Ornament> & { files?: any[] }) => {
+  const updateOrnament = (ornId: string, updated: Partial<Ornament> & { files?: any[] }, callbacks?: SaveCallbacks) => {
+    const prev = ornamentsState.find(o => o.OrnamentId === ornId);
     ornamentsState = ornamentsState.map(o => {
       if (o.OrnamentId === ornId) {
         const merged = { ...o, ...updated };
@@ -571,15 +724,25 @@ export function useAppStore() {
     persistAll();
     notify();
 
-    api.updateOrnament(ornId, updated).catch(err => console.warn('[Store] updateOrnament error:', err)).finally(persistAll);
+    runMutation(() => api.updateOrnament(ornId, updated), {
+      callbacks,
+      failureMessage: `Changes to ${prev?.OrnamentName || ornId} were not saved`,
+      undo: () => { ornamentsState = replaceItem(ornamentsState, prev, 'OrnamentId'); },
+    });
   };
 
-  const deleteOrnament = (ornId: string) => {
+  const deleteOrnament = (ornId: string, callbacks?: SaveCallbacks) => {
+    const index = ornamentsState.findIndex(o => o.OrnamentId === ornId);
+    const prev = ornamentsState[index];
     ornamentsState = ornamentsState.filter(o => o.OrnamentId !== ornId);
     persistAll();
     notify();
 
-    api.deleteOrnament(ornId).catch(err => console.warn('[Store] deleteOrnament error:', err)).finally(persistAll);
+    runMutation(() => api.deleteOrnament(ornId), {
+      callbacks,
+      failureMessage: `${prev?.OrnamentName || ornId} was not deleted`,
+      undo: () => { ornamentsState = restoreItem(ornamentsState, prev, 'OrnamentId', index); },
+    });
   };
 
   // --- CRUD: Loans ---
@@ -646,43 +809,48 @@ export function useAppStore() {
     persistAll();
     notify();
 
-    const rollback = (message: string) => {
-      loansState = loansState.filter(l => l.LoanId !== tempId);
-      const pledgedIds: string[] = loanData.ornamentIds || [];
-      ornamentsState = ornamentsState.map(o => {
-        if (!pledgedIds.includes(o.OrnamentId)) return o;
-        const before = prevOrnaments.find(p => p.OrnamentId === o.OrnamentId);
-        return before ? { ...o, Status: before.Status } : o;
-      });
-      bankAccountsState = bankAccountsState.map(b => {
-        const utilized = calculateUserBankUtilization(b.UserId, b.BankAccountId);
-        return { ...b, UtilizedLoanAmount: utilized, AvailableLoanAmount: Math.max(0, b.MaxLoanAmount - utilized) };
-      });
-      persistAll();
-      notify();
-      callbacks?.onError?.(message);
-    };
+    const prevLoanIds = new Set(loansState.filter(l => l.LoanId !== tempId).map(l => l.LoanId));
+    const startedAt = Date.now();
 
-    api.addLoan(loanData).then(res => {
-      if (res.success && res.data) {
-        const saved = { ...newLoan, ...normalizeLoan(res.data as Loan) };
+    runMutation<Loan>(() => api.addLoan(loanData), {
+      failureMessage: 'Unable to save the loan',
+      onSaved: data => {
+        const saved = { ...newLoan, ...normalizeLoan(data) };
         loansState = loansState.map(l => l.LoanId === tempId ? saved : l);
         persistAll();
         notify();
         callbacks?.onSuccess?.(saved);
-      } else {
-        rollback(res.error || 'Unable to save the loan');
-      }
-    }).catch(err => {
-      console.warn('[Store] addLoan error:', err);
-      rollback(err?.message || 'Unable to save the loan');
-    }).finally(persistAll);
+      },
+      undo: () => {
+        loansState = loansState.filter(l => l.LoanId !== tempId);
+        const pledgedIds: string[] = loanData.ornamentIds || [];
+        ornamentsState = ornamentsState.map(o => {
+          if (!pledgedIds.includes(o.OrnamentId)) return o;
+          const before = prevOrnaments.find(p => p.OrnamentId === o.OrnamentId);
+          return before ? { ...o, Status: before.Status } : o;
+        });
+        recomputeBankUtilization();
+      },
+      alwaysUndo: true,
+      // A lost reply or a late backend error doesn't mean the loan wasn't written: look in the sheet.
+      findSaved: () => loansState.find(l =>
+        !prevLoanIds.has(l.LoanId) && l.LoanId !== tempId &&
+        String(l.UserId) === String(loanData.UserId) &&
+        Number(l.LoanAmount) === amount &&
+        new Date(l.CreatedDate || 0).getTime() >= startedAt - 5000),
+      onFound: saved => callbacks?.onSuccess?.(saved),
+      // The loan form shows its own message
+      onFailure: message => callbacks?.onError?.(message),
+    });
 
     return newLoan;
   };
 
-  const updateLoan = (loanId: string, updated: Partial<Loan>) => {
+  const updateLoan = (loanId: string, updated: Partial<Loan>, callbacks?: SaveCallbacks) => {
     const prevLoan = loansState.find(l => l.LoanId === loanId);
+    // Ornaments whose status this change may touch, kept as they were so a failed save can restore them
+    const affectedIds = new Set<string>([...(prevLoan?.ornamentIds || []), ...(updated.ornamentIds || [])]);
+    const affectedOrnaments = ornamentsState.filter(o => affectedIds.has(o.OrnamentId));
     loansState = loansState.map(l => l.LoanId === loanId ? { ...l, ...updated, UpdatedDate: new Date().toISOString() } : l);
 
     // Reconcile ornament statuses if ornamentIds were updated
@@ -715,18 +883,26 @@ export function useAppStore() {
     persistAll();
     notify();
 
-    api.updateLoan(loanId, updated).then(res => {
-      if (res.success && res.data) {
-        loansState = loansState.map(l => l.LoanId === loanId ? { ...l, ...normalizeLoan(res.data as Loan) } : l);
+    runMutation<Loan>(() => api.updateLoan(loanId, updated), {
+      callbacks,
+      failureMessage: `Changes to loan ${prevLoan?.LoanNumber || loanId} were not saved`,
+      onSaved: data => {
+        loansState = loansState.map(l => l.LoanId === loanId ? { ...l, ...normalizeLoan(data) } : l);
         persistAll();
         notify();
-      }
-    }).catch(err => console.warn('[Store] updateLoan error:', err)).finally(persistAll);
+      },
+      undo: () => {
+        loansState = replaceItem(loansState, prevLoan, 'LoanId');
+        affectedOrnaments.forEach(o => { ornamentsState = replaceItem(ornamentsState, o, 'OrnamentId'); });
+        recomputeBankUtilization();
+      },
+    });
   };
 
-  const closeAndReleaseLoan = (loanId: string, remarks: string) => {
+  const closeAndReleaseLoan = (loanId: string, remarks: string, callbacks?: SaveCallbacks) => {
     const targetLoan = loansState.find(l => l.LoanId === loanId);
     if (!targetLoan) return;
+    const affectedOrnaments = ornamentsState.filter(o => targetLoan.ornamentIds?.includes(o.OrnamentId));
 
     loansState = loansState.map(l => l.LoanId === loanId ? {
       ...l,
@@ -754,12 +930,20 @@ export function useAppStore() {
     persistAll();
     notify();
 
-    api.closeAndReleaseLoan(loanId, remarks).catch(err => console.warn('[Store] closeAndReleaseLoan error:', err)).finally(persistAll);
+    runMutation(() => api.closeAndReleaseLoan(loanId, remarks), {
+      callbacks,
+      failureMessage: `Loan ${targetLoan.LoanNumber || loanId} was not closed`,
+      undo: () => {
+        loansState = replaceItem(loansState, targetLoan, 'LoanId');
+        affectedOrnaments.forEach(o => { ornamentsState = replaceItem(ornamentsState, o, 'OrnamentId'); });
+        recomputeBankUtilization();
+      },
+    });
   };
 
   // --- CRUD: Payments ---
 
-  const addPayment = (payData: Partial<Payment>) => {
+  const addPayment = (payData: Partial<Payment>, callbacks?: SaveCallbacks) => {
     const tempId = `PAY${String(paymentsState.length + 1).padStart(3, '0')}`;
     const newPay: Payment = {
       PaymentId: tempId,
@@ -775,17 +959,25 @@ export function useAppStore() {
       Remarks: payData.Remarks || '',
       CreatedDate: new Date().toISOString(),
     };
+    const prevIds = new Set(paymentsState.map(p => p.PaymentId));
     paymentsState = [newPay, ...paymentsState];
     persistAll();
     notify();
 
-    api.addPayment(payData).then(res => {
-      if (res.success && res.data) {
-        paymentsState = paymentsState.map(p => p.PaymentId === tempId ? { ...p, ...normalizePayment(res.data as Payment) } : p);
+    runMutation<Payment>(() => api.addPayment(payData), {
+      callbacks,
+      failureMessage: 'Payment was not saved',
+      onSaved: data => {
+        paymentsState = paymentsState.map(p => p.PaymentId === tempId ? { ...p, ...normalizePayment(data) } : p);
         persistAll();
         notify();
-      }
-    }).catch(err => console.warn('[Store] addPayment error:', err)).finally(persistAll);
+      },
+      undo: () => { paymentsState = paymentsState.filter(p => p.PaymentId !== tempId); },
+      alwaysUndo: true,
+      findSaved: () => paymentsState.find(p =>
+        !prevIds.has(p.PaymentId) && p.PaymentId !== tempId && p.LoanId === newPay.LoanId &&
+        Number(p.TotalPaidAmount) === newPay.TotalPaidAmount && p.PaymentDate === newPay.PaymentDate),
+    });
 
     return newPay;
   };

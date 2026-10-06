@@ -65,9 +65,10 @@ export function OrnamentDetailsView({
     if (uris.length === 0) return;
     const newUris = uris.join(' | ');
     const updated = selectedOrn.OrnamentImages ? `${selectedOrn.OrnamentImages} | ${newUris}` : newUris;
-    store.updateOrnament(selectedOrn.OrnamentId, { OrnamentImages: updated });
+    store.updateOrnament(selectedOrn.OrnamentId, { OrnamentImages: updated }, {
+      onSuccess: () => toast.success('Photos added successfully'),
+    });
     setSelectedOrn(prev => prev ? { ...prev, OrnamentImages: updated } : null);
-    toast.success('Photos added successfully');
   };
 
   return (
@@ -338,9 +339,11 @@ export function OrnamentDetailsView({
         cancelLabel="Cancel"
         type="danger"
         onConfirm={() => {
-          store.deleteOrnament(selectedOrn.OrnamentId);
+          const name = selectedOrn.OrnamentName;
+          store.deleteOrnament(selectedOrn.OrnamentId, {
+            onSuccess: () => toast.danger(`Ornament "${name}" deleted`),
+          });
           setDeleteModalVisible(false);
-          toast.danger(`Ornament "${selectedOrn.OrnamentName}" deleted`);
           onBack();
         }}
         onCancel={() => setDeleteModalVisible(false)}

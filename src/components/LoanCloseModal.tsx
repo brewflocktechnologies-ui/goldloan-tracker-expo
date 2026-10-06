@@ -44,13 +44,17 @@ export function LoanCloseModal({ visible, loan, onClose, onClosed }: LoanCloseMo
 
   const handleConfirmClose = () => {
     if (!loan) return;
-    store.closeAndReleaseLoan(loan.LoanId, remarks || 'Closed and ornaments released');
+    // Announce success only once the sheet has confirmed it
+    store.closeAndReleaseLoan(loan.LoanId, remarks || 'Closed and ornaments released', {
+      onSuccess: () => {
+        Alert.alert(
+          'Loan Closed Successfully',
+          `Loan ${loan.LoanNumber} has been successfully marked as Closed. All pledged ornaments have been released back to Available status in the vault.`
+        );
+        toast.success(`Loan ${loan.LoanNumber} settled & ornaments released!`);
+      },
+    });
     onClose();
-    Alert.alert(
-      'Loan Closed Successfully',
-      `Loan ${loan.LoanNumber} has been successfully marked as Closed. All pledged ornaments have been released back to Available status in the vault.`
-    );
-    toast.success(`Loan ${loan.LoanNumber} settled & ornaments released!`);
     onClosed?.(loan);
   };
 

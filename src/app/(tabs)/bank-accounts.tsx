@@ -72,10 +72,11 @@ export default function BankAccountsScreen() {
   const confirmDelete = () => {
     if (!accountToDelete) return;
     const name = accountToDelete.BankName;
-    store.deleteBankAccount(accountToDelete.BankAccountId);
+    store.deleteBankAccount(accountToDelete.BankAccountId, {
+      onSuccess: () => toast.danger(`Bank account "${name}" deleted successfully`),
+    });
     setDeleteModalVisible(false);
     setAccountToDelete(null);
-    toast.danger(`Bank account "${name}" deleted successfully`);
   };
 
   // Table Columns exactly matching bankAccountsTable in index.html:

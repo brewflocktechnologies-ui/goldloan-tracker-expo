@@ -223,13 +223,15 @@ export default function UsersScreen() {
       };
 
       if (viewMode === 'edit' && selectedUser) {
-        store.updateUser(selectedUser.UserId, { ...payload, files: filesPayload });
-        toast.success(`Customer "${form.FullName}" updated successfully`);
+        store.updateUser(selectedUser.UserId, { ...payload, files: filesPayload }, {
+          onSuccess: () => toast.success(`Customer "${form.FullName}" updated successfully`),
+        });
         setSelectedUser(prev => (prev ? ({ ...prev, ...payload } as User) : null));
         setViewMode('details');
       } else {
-        const newUser = store.addUser({ ...payload, files: filesPayload });
-        toast.success(`Customer "${form.FullName}" registered successfully`);
+        const newUser = store.addUser({ ...payload, files: filesPayload }, {
+          onSuccess: () => toast.success(`Customer "${form.FullName}" registered successfully`),
+        });
         setSelectedUser(newUser);
         setViewMode('details');
       }
