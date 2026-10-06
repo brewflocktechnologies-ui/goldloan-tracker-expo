@@ -178,23 +178,46 @@ describe('store — users CRUD', () => {
       expect(store$().users[0]).toMatchObject({ UserId: 'U900', FullName: 'Server Person', CustomerPhoto: 'https://drive/photo' });
     });
 
-    it('keeps the local record when the backend reports failure', async () => {
-      const { store$, api } = await setup();
-      api.addUser.mockResolvedValue({ success: false });
+    it('removes the temporary record and tells the user when the backend rejects it', async () => {
+      const { store$, api, store } = await setup({ users: USERS });
+      const onError = jest.fn();
+      store.setMutationErrorHandler(onError);
+      api.addUser.mockResolvedValue({ success: false, error: 'FullName is required' });
       await act(async () => {
         store$().addUser({ FullName: 'Local Only' });
       });
-      expect(store$().users[0]).toMatchObject({ UserId: 'U001', FullName: 'Local Only' });
+      expect(store$().users.map(u => u.UserId)).toEqual(['U001', 'U003']);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('Local Only'));
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('FullName is required'));
     });
 
-    it('keeps the local record and only warns when the request rejects', async () => {
-      const { store$, api } = await setup();
+    it('removes the temporary record and says so when offline (request rejects)', async () => {
+      const { store$, api, store } = await setup();
+      const onError = jest.fn();
+      store.setMutationErrorHandler(onError);
+      api.getInitialSyncData.mockRejectedValue(new Error('offline'));
       api.addUser.mockRejectedValue(new Error('network'));
       await act(async () => {
         store$().addUser({ FullName: 'Offline' });
       });
-      expect(store$().users).toHaveLength(1);
-      expect(warnSpy).toHaveBeenCalledWith('[Store] addUser error:', expect.any(Error));
+      expect(store$().users).toHaveLength(0);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('no connection'));
+    });
+
+    it('keeps the user when the reply was lost but the sheet really has the row', async () => {
+      const { store$, api, store } = await setup();
+      const onError = jest.fn();
+      store.setMutationErrorHandler(onError);
+      api.addUser.mockRejectedValue(new Error('reply lost'));
+      api.getInitialSyncData.mockResolvedValue({
+        success: true,
+        data: { users: [{ UserId: 'U007', FullName: 'Saved Anyway', Status: 'Active' }] },
+      });
+      await act(async () => {
+        store$().addUser({ FullName: 'Saved Anyway' });
+      });
+      expect(store$().users.map(u => u.UserId)).toEqual(['U007']);
+      expect(onError).not.toHaveBeenCalled();
     });
   });
 
@@ -229,14 +252,29 @@ describe('store — users CRUD', () => {
       expect(store$().users.map(u => u.FullName)).toEqual(['Ravi Kumar', 'Anita Sharma']);
     });
 
-    it('keeps the local change and only warns when the request rejects', async () => {
-      const { store$, api } = await setup({ users: USERS });
+    it('shows what the sheet has and tells the user when the update is rejected', async () => {
+      const { store$, api, store } = await setup({ users: USERS });
+      const onError = jest.fn();
+      store.setMutationErrorHandler(onError);
+      api.updateUser.mockResolvedValue({ success: false, error: 'Server is busy' });
+      await act(async () => {
+        store$().updateUser('U001', { FullName: 'Edited' });
+      });
+      expect(store$().users[0].FullName).toBe('Ravi Kumar');
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('Ravi Kumar'));
+    });
+
+    it('puts the old values back when offline', async () => {
+      const { store$, api, store } = await setup({ users: USERS });
+      const onError = jest.fn();
+      store.setMutationErrorHandler(onError);
+      api.getInitialSyncData.mockRejectedValue(new Error('offline'));
       api.updateUser.mockRejectedValue(new Error('boom'));
       await act(async () => {
         store$().updateUser('U001', { FullName: 'Edited Offline' });
       });
-      expect(store$().users[0].FullName).toBe('Edited Offline');
-      expect(warnSpy).toHaveBeenCalledWith('[Store] updateUser error:', expect.any(Error));
+      expect(store$().users[0].FullName).toBe('Ravi Kumar');
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('no connection'));
     });
   });
 
@@ -267,14 +305,26 @@ describe('store — users CRUD', () => {
       expect(store$().users).toHaveLength(2);
     });
 
-    it('keeps the local delete and only warns when the request rejects', async () => {
+    it('brings the customer back and tells the user when the delete is rejected', async () => {
+      const { store$, api, store } = await setup({ users: USERS });
+      const onError = jest.fn();
+      store.setMutationErrorHandler(onError);
+      api.deleteUser.mockResolvedValue({ success: false, error: 'Denied' });
+      await act(async () => {
+        store$().deleteUser('U001');
+      });
+      expect(store$().users.map(u => u.UserId)).toEqual(['U001', 'U003']);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('was not deleted'));
+    });
+
+    it('restores the customer in its old position when offline', async () => {
       const { store$, api } = await setup({ users: USERS });
+      api.getInitialSyncData.mockRejectedValue(new Error('offline'));
       api.deleteUser.mockRejectedValue(new Error('nope'));
       await act(async () => {
         store$().deleteUser('U001');
       });
-      expect(store$().users).toHaveLength(1);
-      expect(warnSpy).toHaveBeenCalledWith('[Store] deleteUser error:', expect.any(Error));
+      expect(store$().users.map(u => u.UserId)).toEqual(['U001', 'U003']);
     });
   });
 });
@@ -398,14 +448,17 @@ describe('store — ornaments CRUD', () => {
       expect(store$().ornaments[0]).toMatchObject({ OrnamentId: 'ORN555', OrnamentName: 'Synced', OrnamentImages: 'drive-id' });
     });
 
-    it('keeps the local record and only warns when the request rejects', async () => {
-      const { store$, api } = await setup();
+    it('removes the temporary ornament and tells the user when the request rejects', async () => {
+      const { store$, api, store } = await setup();
+      const onError = jest.fn();
+      store.setMutationErrorHandler(onError);
+      api.getInitialSyncData.mockRejectedValue(new Error('offline'));
       api.addOrnament.mockRejectedValue(new Error('network'));
       await act(async () => {
         store$().addOrnament({ OrnamentName: 'Offline' });
       });
-      expect(store$().ornaments).toHaveLength(1);
-      expect(warnSpy).toHaveBeenCalledWith('[Store] addOrnament error:', expect.any(Error));
+      expect(store$().ornaments).toHaveLength(0);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('Offline'));
     });
   });
 
@@ -466,14 +519,17 @@ describe('store — ornaments CRUD', () => {
       expect(store$().ornaments.map(o => o.OrnamentName)).toEqual(['Chain', 'Ring', 'Old']);
     });
 
-    it('keeps the local change and only warns when the request rejects', async () => {
-      const { store$, api } = await setup({ ornaments: ORNAMENTS });
+    it('puts the old ornament back when the update is rejected while offline', async () => {
+      const { store$, api, store } = await setup({ ornaments: ORNAMENTS });
+      const onError = jest.fn();
+      store.setMutationErrorHandler(onError);
+      api.getInitialSyncData.mockRejectedValue(new Error('offline'));
       api.updateOrnament.mockRejectedValue(new Error('boom'));
       await act(async () => {
         store$().updateOrnament('ORN001', { OrnamentName: 'Renamed' });
       });
-      expect(store$().ornaments.find(o => o.OrnamentId === 'ORN001')!.OrnamentName).toBe('Renamed');
-      expect(warnSpy).toHaveBeenCalledWith('[Store] updateOrnament error:', expect.any(Error));
+      expect(store$().ornaments.find(o => o.OrnamentId === 'ORN001')!.OrnamentName).toBe('Chain');
+      expect(onError).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -497,14 +553,13 @@ describe('store — ornaments CRUD', () => {
       expect(store$().ornaments).toHaveLength(3);
     });
 
-    it('keeps the local delete and only warns when the request rejects', async () => {
+    it('brings the ornament back when the delete is rejected', async () => {
       const { store$, api } = await setup({ ornaments: ORNAMENTS });
-      api.deleteOrnament.mockRejectedValue(new Error('nope'));
+      api.deleteOrnament.mockResolvedValue({ success: false, error: 'Denied' });
       await act(async () => {
         store$().deleteOrnament('ORN001');
       });
-      expect(store$().ornaments).toHaveLength(2);
-      expect(warnSpy).toHaveBeenCalledWith('[Store] deleteOrnament error:', expect.any(Error));
+      expect(store$().ornaments.map(o => o.OrnamentId)).toContain('ORN001');
     });
   });
 });

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
 jest.mock('expo-router', () => ({
@@ -56,8 +56,10 @@ const mockStore = {
   lastSyncedAt: '12:00 PM',
 };
 
+const mockGetSyncError = jest.fn<string | null, []>(() => null);
 jest.mock('../../src/services/store', () => ({
   useAppStore: () => mockStore,
+  getSyncError: () => mockGetSyncError(),
 }));
 
 // Mock ProfileModal to keep test lightweight
@@ -71,6 +73,7 @@ const MenuScreen = require('../../src/app/(tabs)/menu').default;
 describe('MenuScreen UI and Navigation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetSyncError.mockReturnValue(null);
   });
 
   it('renders the main menu with user profile card, section titles, and action items', () => {
@@ -132,6 +135,31 @@ describe('MenuScreen UI and Navigation', () => {
     expect(screen.getByText('Due date reminders')).toBeTruthy();
     expect(screen.getByText('Sync automatically')).toBeTruthy();
     expect(screen.getByText('Sync now')).toBeTruthy();
+  });
+
+  it('shows "Sync complete" after Sync now when the store reports no sync error', async () => {
+    mockGetSyncError.mockReturnValue(null);
+    render(<MenuScreen />);
+    fireEvent.press(screen.getByText('Settings'));
+    await act(async () => {
+      fireEvent.press(screen.getByText('Sync now'));
+    });
+
+    expect(mockStore.syncFromBackend).toHaveBeenCalledWith(true);
+    expect(mockToast.success).toHaveBeenCalledWith('Sync complete! All records up to date.');
+    expect(mockToast.danger).not.toHaveBeenCalled();
+  });
+
+  it('shows the sync error toast instead of "Sync complete" when the store reports an error', async () => {
+    mockGetSyncError.mockReturnValue('Backend unreachable');
+    render(<MenuScreen />);
+    fireEvent.press(screen.getByText('Settings'));
+    await act(async () => {
+      fireEvent.press(screen.getByText('Sync now'));
+    });
+
+    expect(mockToast.danger).toHaveBeenCalledWith('Backend unreachable');
+    expect(mockToast.success).not.toHaveBeenCalled();
   });
 
   it('navigates to Help & Support view, and toggles FAQ accordion item', () => {

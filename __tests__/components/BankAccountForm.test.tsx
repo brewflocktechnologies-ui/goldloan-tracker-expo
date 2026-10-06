@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
 
@@ -142,9 +142,25 @@ describe('BankAccountForm — add', () => {
         UtilizedLoanAmount: 0,
         Status: 'Active',
         AccountType: 'Savings',
-      })
+      }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
+    // Success toast only after the store confirms the save
+    expect(mockToast.success).not.toHaveBeenCalled();
+    expect(props.onClose).toHaveBeenCalled();
+    const callbacks = mockStore.addBankAccount.mock.calls[0][1];
+    act(() => callbacks.onSuccess());
     expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('added'));
+  });
+
+  it('does not toast success when the add fails to save', () => {
+    const { props } = setup({ presetUserId: 'USR002' });
+    typeAccountNumber('123456789012');
+    pickBank('HDFC Bank');
+    save();
+    expect(mockStore.addBankAccount).toHaveBeenCalledTimes(1);
+    // onSuccess is never invoked (save failed)
+    expect(mockToast.success).not.toHaveBeenCalled();
     expect(props.onClose).toHaveBeenCalled();
   });
 
@@ -156,7 +172,8 @@ describe('BankAccountForm — add', () => {
     fireEvent.press(screen.getByText('Inactive'));
     save();
     expect(mockStore.addBankAccount).toHaveBeenCalledWith(
-      expect.objectContaining({ AccountType: 'Current', Status: 'Inactive' })
+      expect.objectContaining({ AccountType: 'Current', Status: 'Inactive' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
   });
 
@@ -191,10 +208,14 @@ describe('BankAccountForm — edit', () => {
 
     expect(mockStore.updateBankAccount).toHaveBeenCalledWith(
       'B1',
-      expect.objectContaining({ BankName: 'ICICI Bank', MaxLoanAmount: 300000, UtilizedLoanAmount: 100000, Status: 'Inactive' })
+      expect.objectContaining({ BankName: 'ICICI Bank', MaxLoanAmount: 300000, UtilizedLoanAmount: 100000, Status: 'Inactive' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
     expect(mockStore.addBankAccount).not.toHaveBeenCalled();
-    expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('updated'));
+    expect(mockToast.success).not.toHaveBeenCalled();
     expect(props.onClose).toHaveBeenCalled();
+    const callbacks = mockStore.updateBankAccount.mock.calls[0][2];
+    act(() => callbacks.onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('updated'));
   });
 });

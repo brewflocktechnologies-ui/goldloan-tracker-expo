@@ -223,8 +223,26 @@ describe('Ornament details — photo gallery', () => {
     });
     expect(mockStore.updateOrnament).toHaveBeenCalledWith('ORN001', {
       OrnamentImages: 'p1 | p2 | p3 | p4 | file://new1.jpg | file://new2.jpg',
-    });
+    }, expect.objectContaining({ onSuccess: expect.any(Function) }));
+    // The toast waits for the backend to confirm the save.
+    expect(mockToast.success).not.toHaveBeenCalled();
+    const callbacks = mockStore.updateOrnament.mock.calls[0][2];
+    act(() => callbacks.onSuccess());
     expect(mockToast.success).toHaveBeenCalledWith('Photos added successfully');
+  });
+
+  it('does not show the photos-added toast when the save fails', async () => {
+    ImagePicker.launchImageLibraryAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://new1.jpg' }],
+    });
+    open('Gold Necklace');
+    await act(async () => {
+      fireEvent.press(screen.getByText('Add Photos'));
+    });
+    expect(mockStore.updateOrnament).toHaveBeenCalledTimes(1);
+    // onSuccess is never invoked (store reports an error instead)
+    expect(mockToast.success).not.toHaveBeenCalled();
   });
 
   it('uploads the first photo when the ornament has none', async () => {
@@ -236,7 +254,7 @@ describe('Ornament details — photo gallery', () => {
     await act(async () => {
       fireEvent.press(screen.getByText('Upload Photo'));
     });
-    expect(mockStore.updateOrnament).toHaveBeenCalledWith('ORN002', { OrnamentImages: 'file://first.jpg' });
+    expect(mockStore.updateOrnament).toHaveBeenCalledWith('ORN002', { OrnamentImages: 'file://first.jpg' }, expect.objectContaining({ onSuccess: expect.any(Function) }));
   });
 
   it('does nothing when the picker is cancelled', async () => {
@@ -424,6 +442,12 @@ describe('Ornament wizard — step 3 (photos & extras)', () => {
       Status: 'Available',
       OrnamentImages: 'file://a.jpg | file://b.jpg',
     });
+    expect(mockStore.addOrnament.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
+    // Toast waits for the backend to confirm the save.
+    expect(mockToast.success).not.toHaveBeenCalled();
+    act(() => mockStore.addOrnament.mock.calls[0][1].onSuccess());
     expect(mockToast.success).toHaveBeenCalledWith('Ornament "Test Piece" added to vault');
   });
 

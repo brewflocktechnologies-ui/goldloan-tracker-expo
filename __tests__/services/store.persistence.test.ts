@@ -145,15 +145,17 @@ describe('persistAll — snapshot and entity caches stay in sync', () => {
       expectInSync(cache, 'users_list', 'users', l => l.length === 0);
     });
 
-    it('re-persists after the server call settles, even if it fails', async () => {
+    it('re-persists after the server call settles, and caches the reverted state when it fails', async () => {
       const { s, cache, api } = await setup({ users: USERS });
+      api.getInitialSyncData.mockRejectedValue(new Error('offline'));
       api.updateUser.mockRejectedValue(new Error('offline'));
       await act(async () => {
         s().updateUser('U001', { FullName: 'Offline Edit' });
       });
       const snapshotWrites = cache.set.mock.calls.filter((c: any[]) => c[0] === 'initial_sync_data');
       expect(snapshotWrites.length).toBeGreaterThanOrEqual(2); // optimistic write + after settle
-      expectInSync(cache, 'users_list', 'users', l => l[0].FullName === 'Offline Edit');
+      // the failed edit must not survive in the cache
+      expectInSync(cache, 'users_list', 'users', l => l[0].FullName === 'Ravi');
     });
   });
 
@@ -295,13 +297,15 @@ describe('persistAll — snapshot and entity caches stay in sync', () => {
         l => l.length === 1 && l[0].PaymentId === 'PAY050');
     });
 
-    it('add failure: keeps the optimistic payment cached and does not crash', async () => {
+    it('add failure: the unsaved payment is removed from state and cache', async () => {
       const { s, cache, api } = await setup({ loans: LOANS });
+      api.getInitialSyncData.mockRejectedValue(new Error('offline'));
       api.addPayment.mockRejectedValue(new Error('offline'));
       await act(async () => {
         s().addPayment({ LoanId: 'L001', TotalPaidAmount: 500 });
       });
-      expectInSync(cache, 'payments_all', 'payments', l => l.length === 1);
+      expect(s().payments).toHaveLength(0);
+      expectInSync(cache, 'payments_all', 'payments', l => l.length === 0);
     });
   });
 });
@@ -455,5 +459,283 @@ describe('refreshGoldRates', () => {
       await ctx.store.refreshGoldRates(true);
     });
     expect(hook.result.current.goldRates.location).toBe('Bangalore');
+  });
+});
+
+
+describe('failed saves — revert and tell the user', () => {
+  const offline = (api: any) => api.getInitialSyncData.mockRejectedValue(new Error('offline'));
+
+  function withErrors(ctx: any) {
+    const onError = jest.fn();
+    ctx.store.setMutationErrorHandler(onError);
+    return onError;
+  }
+
+  describe('bank accounts', () => {
+    it('add: removes the temporary account when the backend rejects it', async () => {
+      const ctx = await setup({ users: USERS, bankAccounts: BANKS });
+      const onError = withErrors(ctx);
+      ctx.api.addBankAccount.mockResolvedValue({ success: false, error: 'BankName required' });
+      await act(async () => {
+        ctx.s().addBankAccount({ UserId: 'U001', BankName: 'HDFC', AccountNumber: '9' });
+      });
+      expect(ctx.s().bankAccounts.map((b: any) => b.BankAccountId)).toEqual(['BA001']);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('BankName required'));
+    });
+
+    it('add: keeps the account if the reply was lost but the sheet has it', async () => {
+      const ctx = await setup({ users: USERS, bankAccounts: BANKS });
+      const onError = withErrors(ctx);
+      ctx.api.addBankAccount.mockRejectedValue(new Error('reply lost'));
+      ctx.api.getInitialSyncData.mockResolvedValue({
+        success: true,
+        data: { users: USERS, bankAccounts: [...BANKS, { BankAccountId: 'BA002', UserId: 'U001', AccountNumber: '9', BankName: 'HDFC' }] },
+      });
+      await act(async () => {
+        ctx.s().addBankAccount({ UserId: 'U001', BankName: 'HDFC', AccountNumber: '9' });
+      });
+      expect(ctx.s().bankAccounts.map((b: any) => b.BankAccountId)).toEqual(['BA001', 'BA002']);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('edit: restores the old limit when offline', async () => {
+      const ctx = await setup({ bankAccounts: BANKS });
+      const onError = withErrors(ctx);
+      offline(ctx.api);
+      ctx.api.updateBankAccount.mockRejectedValue(new Error('x'));
+      await act(async () => {
+        ctx.s().updateBankAccount('BA001', { MaxLoanAmount: 999 });
+      });
+      expect(ctx.s().bankAccounts[0].MaxLoanAmount).toBe(100000);
+      expect(onError).toHaveBeenCalledTimes(1);
+    });
+
+    it('delete: brings the account back when the backend rejects it', async () => {
+      const ctx = await setup({ bankAccounts: BANKS });
+      ctx.api.deleteBankAccount.mockResolvedValue({ success: false, error: 'Denied' });
+      await act(async () => {
+        ctx.s().deleteBankAccount('BA001');
+      });
+      expect(ctx.s().bankAccounts.map((b: any) => b.BankAccountId)).toEqual(['BA001']);
+    });
+  });
+
+  describe('loans', () => {
+    const seed = { users: USERS, bankAccounts: BANKS, ornaments: ORNS, loans: LOANS };
+
+    it('edit: restores the loan, ornament statuses and bank utilisation when offline', async () => {
+      const second = { OrnamentId: 'ORN002', UserId: 'U001', OrnamentName: 'Ring', Status: 'Available' };
+      const ctx = await setup({
+        ...seed,
+        ornaments: [{ ...ORNS[0], Status: 'Pledged' }, second],
+        bankAccounts: [{ ...BANKS[0], UtilizedLoanAmount: 5000 }],
+      });
+      const onError = withErrors(ctx);
+      offline(ctx.api);
+      ctx.api.updateLoan.mockRejectedValue(new Error('x'));
+      await act(async () => {
+        ctx.s().updateLoan('L001', { ornamentIds: ['ORN002'], LoanAmount: 7000 });
+      });
+      expect(ctx.s().loans[0].LoanAmount).toBe(5000);
+      expect(ctx.s().ornaments.find((o: any) => o.OrnamentId === 'ORN001')?.Status).toBe('Pledged');
+      expect(ctx.s().ornaments.find((o: any) => o.OrnamentId === 'ORN002')?.Status).toBe('Available');
+      expect(ctx.s().bankAccounts[0].UtilizedLoanAmount).toBe(5000);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('CMP001'));
+    });
+
+    it('edit: shows the sheet values when the backend rejects the change', async () => {
+      const ctx = await setup(seed);
+      ctx.api.updateLoan.mockResolvedValue({ success: false, error: 'Locked' });
+      await act(async () => {
+        ctx.s().updateLoan('L001', { LoanAmount: 9999 });
+      });
+      expect(ctx.s().loans[0].LoanAmount).toBe(5000);
+    });
+
+    it('close and release: reopens the loan and re-pledges ornaments when offline', async () => {
+      const ctx = await setup({
+        ...seed,
+        ornaments: [{ ...ORNS[0], Status: 'Pledged' }],
+        bankAccounts: [{ ...BANKS[0], UtilizedLoanAmount: 5000 }],
+      });
+      const onError = withErrors(ctx);
+      offline(ctx.api);
+      ctx.api.closeAndReleaseLoan.mockRejectedValue(new Error('x'));
+      await act(async () => {
+        ctx.s().closeAndReleaseLoan('L001', 'Paid');
+      });
+      expect(ctx.s().loans[0].LoanStatus).toBe('Active');
+      expect(ctx.s().ornaments[0].Status).toBe('Pledged');
+      expect(ctx.s().bankAccounts[0].UtilizedLoanAmount).toBe(5000);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('was not closed'));
+    });
+
+    it('add: keeps the loan when the backend reported failure but the sheet has it', async () => {
+      const ctx = await setup({ users: USERS, bankAccounts: BANKS, ornaments: ORNS });
+      const onError = jest.fn();
+      const onSuccess = jest.fn();
+      ctx.api.addLoan.mockResolvedValue({ success: false, error: 'late backend error' });
+      ctx.api.getInitialSyncData.mockResolvedValue({
+        success: true,
+        data: {
+          users: USERS, bankAccounts: BANKS, ornaments: ORNS,
+          loans: [{ LoanId: 'L010', LoanNumber: 'CMP010', UserId: 'U001', BankAccountId: 'BA001', LoanAmount: 1000, LoanStatus: 'Active', CreatedDate: new Date().toISOString() }],
+        },
+      });
+      await act(async () => {
+        ctx.s().addLoan({ UserId: 'U001', BankAccountId: 'BA001', LoanAmount: 1000, ornamentIds: ['ORN001'] }, { onError, onSuccess });
+      });
+      expect(onError).not.toHaveBeenCalled();
+      expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ LoanId: 'L010' }));
+      expect(ctx.s().loans.map((l: any) => l.LoanId)).toEqual(['L010']);
+    });
+
+    it('add: reports through the form callback and not the global handler', async () => {
+      const ctx = await setup({ users: USERS, bankAccounts: BANKS, ornaments: ORNS });
+      const globalError = withErrors(ctx);
+      const onError = jest.fn();
+      ctx.api.addLoan.mockResolvedValue({ success: false, error: 'Server is busy' });
+      await act(async () => {
+        ctx.s().addLoan({ UserId: 'U001', BankAccountId: 'BA001', LoanAmount: 1000, ornamentIds: ['ORN001'] }, { onError });
+      });
+      expect(onError).toHaveBeenCalledWith('Server is busy');
+      expect(globalError).not.toHaveBeenCalled();
+      expect(ctx.s().loans).toHaveLength(0);
+      expect(ctx.s().ornaments[0].Status).toBe('Available');
+    });
+  });
+
+  describe('payments', () => {
+    it('add: removes the temporary payment and tells the user when rejected', async () => {
+      const ctx = await setup({ loans: LOANS });
+      const onError = withErrors(ctx);
+      ctx.api.addPayment.mockResolvedValue({ success: false, error: 'Loan closed' });
+      await act(async () => {
+        ctx.s().addPayment({ LoanId: 'L001', TotalPaidAmount: 500 });
+      });
+      expect(ctx.s().payments).toHaveLength(0);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('Payment was not saved'));
+    });
+  });
+
+  describe('error reporting', () => {
+    it('falls back to console.warn when no UI handler is registered', async () => {
+      const ctx = await setup({ users: USERS });
+      ctx.api.deleteUser.mockResolvedValue({ success: false, error: 'Denied' });
+      await act(async () => {
+        ctx.s().deleteUser('U001');
+      });
+      expect(warnSpy).toHaveBeenCalledWith('[Store]', expect.stringContaining('was not deleted'));
+    });
+
+    it('a successful save reports nothing and leaves the change in place', async () => {
+      const ctx = await setup({ users: USERS });
+      const onError = withErrors(ctx);
+      await act(async () => {
+        ctx.s().updateUser('U001', { FullName: 'Renamed' });
+      });
+      expect(onError).not.toHaveBeenCalled();
+      expect(ctx.s().users[0].FullName).toBe('Renamed');
+    });
+
+    it('the handler can be cleared', async () => {
+      const ctx = await setup({ users: USERS });
+      const onError = withErrors(ctx);
+      ctx.store.setMutationErrorHandler(null);
+      ctx.api.deleteUser.mockResolvedValue({ success: false });
+      await act(async () => {
+        ctx.s().deleteUser('U001');
+      });
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('does not report twice when the sync after a failure finds the data already correct', async () => {
+      const ctx = await setup({ users: USERS });
+      const onError = withErrors(ctx);
+      ctx.api.updateUser.mockResolvedValue({ success: false, error: 'x' });
+      await act(async () => {
+        ctx.s().updateUser('U001', { FullName: 'A' });
+      });
+      expect(onError).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('save callbacks — success is reported only once the backend confirms', () => {
+  it.each([
+    ['addUser', (s: any, cb: any) => s.addUser({ FullName: 'New' }, cb), 'addUser', { UserId: 'U002', FullName: 'New' }],
+    ['updateUser', (s: any, cb: any) => s.updateUser('U001', { FullName: 'X' }, cb), 'updateUser', undefined],
+    ['deleteUser', (s: any, cb: any) => s.deleteUser('U001', cb), 'deleteUser', undefined],
+    ['addBankAccount', (s: any, cb: any) => s.addBankAccount({ UserId: 'U001', BankName: 'HDFC', AccountNumber: '9' }, cb), 'addBankAccount', { BankAccountId: 'BA002', UserId: 'U001', BankName: 'HDFC' }],
+    ['updateBankAccount', (s: any, cb: any) => s.updateBankAccount('BA001', { MaxLoanAmount: 5 }, cb), 'updateBankAccount', undefined],
+    ['deleteBankAccount', (s: any, cb: any) => s.deleteBankAccount('BA001', cb), 'deleteBankAccount', undefined],
+    ['addOrnament', (s: any, cb: any) => s.addOrnament({ UserId: 'U001', OrnamentName: 'Ring' }, cb), 'addOrnament', { OrnamentId: 'ORN002', OrnamentName: 'Ring' }],
+    ['updateOrnament', (s: any, cb: any) => s.updateOrnament('ORN001', { OrnamentName: 'Y' }, cb), 'updateOrnament', undefined],
+    ['deleteOrnament', (s: any, cb: any) => s.deleteOrnament('ORN001', cb), 'deleteOrnament', undefined],
+    ['updateLoan', (s: any, cb: any) => s.updateLoan('L001', { LoanAmount: 1 }, cb), 'updateLoan', undefined],
+    ['closeAndReleaseLoan', (s: any, cb: any) => s.closeAndReleaseLoan('L001', 'done', cb), 'closeAndReleaseLoan', undefined],
+    ['addPayment', (s: any, cb: any) => s.addPayment({ LoanId: 'L001', TotalPaidAmount: 5 }, cb), 'addPayment', { PaymentId: 'PAY009', LoanId: 'L001', TotalPaidAmount: 5 }],
+  ])('%s: onSuccess fires after a confirmed save and not before', async (_n, call, apiName, data) => {
+    const ctx = await setup({ users: USERS, bankAccounts: BANKS, ornaments: ORNS, loans: LOANS });
+    let resolve: (v: any) => void = () => {};
+    ctx.api[apiName].mockReturnValue(new Promise(r => { resolve = r; }));
+    const onSuccess = jest.fn();
+    act(() => {
+      call(ctx.s(), { onSuccess });
+    });
+    expect(onSuccess).not.toHaveBeenCalled(); // the screen has updated, the backend has not answered yet
+    await act(async () => {
+      resolve({ success: true, data });
+    });
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['rejected by the backend', (api: any) => api.updateUser.mockResolvedValue({ success: false, error: 'nope' })],
+    ['request throws', (api: any) => api.updateUser.mockRejectedValue(new Error('offline'))],
+  ])('onSuccess never fires when the save fails (%s)', async (_n, arrange) => {
+    const ctx = await setup({ users: USERS });
+    arrange(ctx.api);
+    const onSuccess = jest.fn();
+    await act(async () => {
+      ctx.s().updateUser('U001', { FullName: 'X' }, { onSuccess });
+    });
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it('onError replaces the global error toast for that save', async () => {
+    const ctx = await setup({ users: USERS });
+    const globalError = jest.fn();
+    ctx.store.setMutationErrorHandler(globalError);
+    ctx.api.deleteUser.mockResolvedValue({ success: false, error: 'Denied' });
+    const onError = jest.fn();
+    await act(async () => {
+      ctx.s().deleteUser('U001', { onError });
+    });
+    expect(onError).toHaveBeenCalledWith(expect.stringContaining('was not deleted'));
+    expect(globalError).not.toHaveBeenCalled();
+  });
+
+  it('onSuccess still fires when a lost reply turns out to have been saved', async () => {
+    const ctx = await setup();
+    ctx.api.addUser.mockRejectedValue(new Error('reply lost'));
+    ctx.api.getInitialSyncData.mockResolvedValue({
+      success: true,
+      data: { users: [{ UserId: 'U007', FullName: 'Saved Anyway', Status: 'Active' }] },
+    });
+    const onSuccess = jest.fn();
+    await act(async () => {
+      ctx.s().addUser({ FullName: 'Saved Anyway' }, { onSuccess });
+    });
+    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ UserId: 'U007' }));
+  });
+
+  it('works without any callbacks (existing callers)', async () => {
+    const ctx = await setup({ users: USERS });
+    await act(async () => {
+      ctx.s().updateUser('U001', { FullName: 'Plain' });
+    });
+    expect(ctx.s().users[0].FullName).toBe('Plain');
   });
 });

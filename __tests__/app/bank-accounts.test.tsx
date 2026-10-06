@@ -369,9 +369,23 @@ describe('BankAccountsScreen — delete flow', () => {
     fireEvent.press(screen.getAllByLabelText('Delete')[1]);
     fireEvent.press(screen.getByText('Delete Account'));
     expect(mockStore.deleteBankAccount).toHaveBeenCalledTimes(1);
-    expect(mockStore.deleteBankAccount).toHaveBeenCalledWith('B2');
-    expect(mockToast.danger).toHaveBeenCalledWith('Bank account "HDFC" deleted successfully');
+    expect(mockStore.deleteBankAccount).toHaveBeenCalledWith('B2', expect.objectContaining({ onSuccess: expect.any(Function) }));
     expect(screen.queryByText('Delete Bank Account')).toBeNull();
+    // Toast only after the store confirms the delete
+    expect(mockToast.danger).not.toHaveBeenCalled();
+
+    const callbacks = mockStore.deleteBankAccount.mock.calls[0][1];
+    act(() => callbacks.onSuccess());
+    expect(mockToast.danger).toHaveBeenCalledWith('Bank account "HDFC" deleted successfully');
+  });
+
+  it('does not toast when the delete fails to save', () => {
+    renderScreen();
+    fireEvent.press(screen.getAllByLabelText('Delete')[1]);
+    fireEvent.press(screen.getByText('Delete Account'));
+    expect(mockStore.deleteBankAccount).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Delete Bank Account')).toBeNull();
+    expect(mockToast.danger).not.toHaveBeenCalled();
   });
 
   it('Cancel closes the dialog without deleting', () => {
@@ -397,7 +411,7 @@ describe('BankAccountsScreen — delete flow', () => {
     fireEvent.press(screen.getByText('Cancel'));
     fireEvent.press(screen.getAllByLabelText('Delete')[2]);
     fireEvent.press(screen.getByText('Delete Account'));
-    expect(mockStore.deleteBankAccount).toHaveBeenCalledWith('B3');
+    expect(mockStore.deleteBankAccount).toHaveBeenCalledWith('B3', expect.objectContaining({ onSuccess: expect.any(Function) }));
   });
 });
 

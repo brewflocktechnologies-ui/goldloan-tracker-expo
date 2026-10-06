@@ -327,10 +327,27 @@ describe('ClosureScreen closing a loan', () => {
     fireEvent.press(btns[btns.length - 1]);
 
     expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledTimes(1);
-    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith('L2', 'Closed and ornaments released');
+    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith('L2', 'Closed and ornaments released', expect.objectContaining({ onSuccess: expect.any(Function) }));
+    expect(screen.queryByText('Close Loan & Release')).toBeNull();
+    // Success messages only after the store confirms
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockToast.success).not.toHaveBeenCalled();
+
+    const callbacks = mockStore.closeAndReleaseLoan.mock.calls[0][2];
+    act(() => callbacks.onSuccess());
     expect(Alert.alert).toHaveBeenCalledWith('Loan Closed Successfully', expect.stringContaining('LN-2'));
     expect(mockToast.success).toHaveBeenCalledWith('Loan LN-2 settled & ornaments released!');
+  });
+
+  it('shows no success message when closing the loan fails to save', () => {
+    setup();
+    fireEvent.press(screen.getAllByText('Close & Release')[1]);
+    const btns = screen.getAllByText('Close & Release');
+    fireEvent.press(btns[btns.length - 1]);
+    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Close Loan & Release')).toBeNull();
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockToast.success).not.toHaveBeenCalled();
   });
 
   it('passes typed remarks to closeAndReleaseLoan', () => {
@@ -339,7 +356,7 @@ describe('ClosureScreen closing a loan', () => {
     fireEvent.changeText(screen.getByPlaceholderText(/Enter remarks for Ravi Kumar/), 'Settled in cash');
     const btns = screen.getAllByText('Close & Release');
     fireEvent.press(btns[btns.length - 1]);
-    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith('L1', 'Settled in cash');
+    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith('L1', 'Settled in cash', expect.objectContaining({ onSuccess: expect.any(Function) }));
   });
 
   it('cancel closes the modal without closing the loan', () => {

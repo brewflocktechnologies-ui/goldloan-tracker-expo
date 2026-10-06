@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
 import { Loan } from '../../src/types';
@@ -88,18 +88,33 @@ describe('LoanCloseModal', () => {
     const { props } = setup();
     fireEvent.press(screen.getByText('Close & Release'));
 
-    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith('L1', 'Closed and ornaments released');
+    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith('L1', 'Closed and ornaments released', expect.objectContaining({ onSuccess: expect.any(Function) }));
     expect(props.onClose).toHaveBeenCalled();
+    expect(props.onClosed).toHaveBeenCalledWith(LOAN);
+    // Success messages only after the store confirms
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockToast.success).not.toHaveBeenCalled();
+
+    const callbacks = mockStore.closeAndReleaseLoan.mock.calls[0][2];
+    act(() => callbacks.onSuccess());
     expect(Alert.alert).toHaveBeenCalledWith('Loan Closed Successfully', expect.stringContaining('LN-1'));
     expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('LN-1'));
-    expect(props.onClosed).toHaveBeenCalledWith(LOAN);
+  });
+
+  it('shows no success message when the close fails to save', () => {
+    const { props } = setup();
+    fireEvent.press(screen.getByText('Close & Release'));
+    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledTimes(1);
+    expect(props.onClose).toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockToast.success).not.toHaveBeenCalled();
   });
 
   it('passes the typed remarks to the store', () => {
     setup();
     fireEvent.changeText(screen.getByPlaceholderText(/Enter remarks for Ravi Kumar/), 'Paid in full via RTGS');
     fireEvent.press(screen.getByText('Close & Release'));
-    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith('L1', 'Paid in full via RTGS');
+    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith('L1', 'Paid in full via RTGS', expect.objectContaining({ onSuccess: expect.any(Function) }));
   });
 
   it('cancels without closing the loan', () => {

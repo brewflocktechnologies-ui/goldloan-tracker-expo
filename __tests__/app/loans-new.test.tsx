@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { Alert, BackHandler } from 'react-native';
 
@@ -189,5 +189,114 @@ describe('NewLoanScreen — opened from a customer (userId preset)', () => {
     render(<NewLoanScreen />);
     expect(screen.getByText('Step 1 of 5 . Customer')).toBeTruthy();
     expect(screen.getByPlaceholderText('Search existing customer...')).toBeTruthy();
+  });
+});
+
+describe('NewLoanScreen — save confirmation toasts', () => {
+  const goToCreateStep = () => {
+    mockParams.userId = 'USR001';
+    render(<NewLoanScreen />);
+    fireEvent.press(screen.getByText('Continue')); // bank -> ornaments
+    fireEvent.press(screen.getByText('Gold Chain'));
+    fireEvent.press(screen.getByText('Continue')); // ornaments -> terms
+    fireEvent.press(screen.getByText('Continue')); // terms -> review
+  };
+
+  const createLoan = async () => {
+    goToCreateStep();
+    await act(async () => {
+      fireEvent.press(screen.getByText('Create Loan'));
+    });
+    expect(mockStore.addLoan).toHaveBeenCalledTimes(1);
+    return mockStore.addLoan.mock.calls[0] as [any, { onSuccess: (s: any) => void; onError: (m: string) => void }];
+  };
+
+  it('navigates away immediately but announces "created" only after addLoan onSuccess', async () => {
+    const [payload, callbacks] = await createLoan();
+
+    expect(callbacks).toEqual(expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }));
+    expect(mockRouter.back).toHaveBeenCalled();
+    expect(mockToast.success).not.toHaveBeenCalled();
+
+    act(() => callbacks.onSuccess({ ...payload }));
+    expect(mockToast.success).toHaveBeenCalledWith(`Loan contract ${payload.LoanNumber} created successfully!`);
+    expect(mockToast.info).not.toHaveBeenCalled();
+  });
+
+  it('reports the saved loan number and notes when it differs from the requested one', async () => {
+    const [payload, callbacks] = await createLoan();
+
+    act(() => callbacks.onSuccess({ ...payload, LoanNumber: 'LN-TAKEN-2' }));
+    expect(mockToast.info).toHaveBeenCalledWith(
+      `Loan number ${payload.LoanNumber} was taken; saved as LN-TAKEN-2`
+    );
+    expect(mockToast.success).toHaveBeenCalledWith('Loan contract LN-TAKEN-2 created successfully!');
+  });
+
+  it('shows the danger toast and no success toast when addLoan onError fires', async () => {
+    const [payload, callbacks] = await createLoan();
+
+    act(() => callbacks.onError('Sheet unreachable'));
+    expect(mockToast.danger).toHaveBeenCalledWith(`Loan ${payload.LoanNumber} was not saved: Sheet unreachable`);
+    expect(mockToast.success).not.toHaveBeenCalled();
+  });
+
+  it('quick-add customer: modal closes at once, toast only after onSuccess', () => {
+    mockStore.addUser.mockReturnValue({ UserId: 'USR009', FullName: 'New Person' });
+    render(<NewLoanScreen />);
+    fireEvent.press(screen.getByText('Add new customer'));
+    fireEvent.changeText(screen.getByPlaceholderText('e.g. Ramesh Kumar Iyer'), 'New Person');
+    fireEvent.changeText(screen.getByPlaceholderText('10-digit mobile'), '9123456780');
+    fireEvent.press(screen.getByText('Save Customer'));
+
+    expect(mockStore.addUser).toHaveBeenCalledWith(
+      expect.objectContaining({ FullName: 'New Person', MobileNumber: '9123456780' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
+    expect(screen.queryByText('Add New Customer')).toBeNull();
+    expect(mockToast.success).not.toHaveBeenCalled();
+
+    act(() => mockStore.addUser.mock.calls[0][1].onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith('Customer New Person created.');
+  });
+
+  it('quick-add bank account: toast only after onSuccess', () => {
+    mockParams.userId = 'USR001';
+    mockStore.addBankAccount.mockReturnValue({ BankAccountId: 'B9' });
+    render(<NewLoanScreen />);
+    fireEvent.press(screen.getByText('Add bank account'));
+    fireEvent.changeText(screen.getByPlaceholderText('Account number'), '999900001111');
+    fireEvent.press(screen.getByText('Save Bank Account'));
+
+    expect(mockStore.addBankAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ AccountNumber: '999900001111' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
+    expect(screen.queryByText('Add Bank Account')).toBeNull();
+    expect(mockToast.success).not.toHaveBeenCalled();
+
+    act(() => mockStore.addBankAccount.mock.calls[0][1].onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith('Bank account added.');
+  });
+
+  it('quick-add ornament: toast only after onSuccess', () => {
+    mockParams.userId = 'USR001';
+    mockStore.addOrnament.mockReturnValue({ OrnamentId: 'ORN9' });
+    render(<NewLoanScreen />);
+    fireEvent.press(screen.getByText('Continue')); // bank -> ornaments
+    fireEvent.press(screen.getByText('Add ornament'));
+    fireEvent.changeText(screen.getByPlaceholderText("e.g. Men's bracelet"), 'Ring');
+    fireEvent.changeText(screen.getAllByPlaceholderText('e.g. 14.20')[1], '5');
+    fireEvent.press(screen.getByText('Save Ornament'));
+
+    expect(mockStore.addOrnament).toHaveBeenCalledWith(
+      expect.objectContaining({ OrnamentName: 'Ring' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
+    expect(screen.queryByText('Add Ornament')).toBeNull();
+    expect(mockToast.success).not.toHaveBeenCalled();
+
+    act(() => mockStore.addOrnament.mock.calls[0][1].onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith('Ornament added and selected.');
   });
 });
