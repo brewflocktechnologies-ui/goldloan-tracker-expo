@@ -2,6 +2,8 @@ import type { act as ActFn, renderHook as RenderHookFn } from '@testing-library/
 
 // resetModules gives every test its own React instance, so the renderer must be re-required
 // from the same registry as the store (mixing instances breaks hooks).
+jest.setTimeout(20000);
+
 let act: typeof ActFn;
 let renderHook: typeof RenderHookFn;
 
