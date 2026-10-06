@@ -145,7 +145,6 @@ Goldloan-mobile-main/
 ├── backend/Code.gs        # Google Apps Script: API, auth, Sheets CRUD, Drive, gold-rate scraper
 ├── docs/                  # CRUD_Flow.md, PROJECT_STRUCTURE.md
 ├── assets/                # Logo, icons, splash
-├── scratch/               # Old analysis scripts, not used by the app
 └── src/
     ├── app/               # Expo Router screens
     │   ├── _layout.tsx    #   providers, login redirect, stack
