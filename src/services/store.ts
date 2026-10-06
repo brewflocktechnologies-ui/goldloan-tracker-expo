@@ -37,6 +37,28 @@ function notify() {
 }
 
 /**
+ * Write the current in-memory state to every cache key (unified snapshot + per-entity lists)
+ * so they can never disagree. Called after each local change and again once the server call
+ * settles, because the API layer invalidates cache keys after a successful mutation.
+ */
+function persistAll() {
+  cache.set('initial_sync_data', {
+    users: usersState,
+    bankAccounts: bankAccountsState,
+    ornaments: ornamentsState,
+    loans: loansState,
+    payments: paymentsState,
+    goldRates: goldRatesState,
+    timestamp: new Date().toISOString(),
+  } as InitialSyncData, CacheTTL.SYNC_DATA);
+  cache.set('users_list', usersState, CacheTTL.LISTS);
+  cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+  cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
+  cache.set('loans_all', loansState, CacheTTL.LISTS);
+  cache.set('payments_all', paymentsState, CacheTTL.LISTS);
+}
+
+/**
  * Hydrate in-memory state from L2 persistent storage (AsyncStorage) immediately on boot.
  * Delivers instant offline UI before any network requests complete.
  */
@@ -381,34 +403,34 @@ export function useAppStore() {
       CreatedDate: new Date().toISOString(),
     };
     usersState = [newUser, ...usersState];
-    cache.set('users_list', usersState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
     api.addUser(userData).then(res => {
       if (res.success && res.data) {
         usersState = usersState.map(u => u.UserId === tempId ? { ...u, ...normalizeUser(res.data as User) } : u);
-        cache.set('users_list', usersState, CacheTTL.LISTS);
+        persistAll();
         notify();
       }
-    }).catch(err => console.warn('[Store] addUser error:', err));
+    }).catch(err => console.warn('[Store] addUser error:', err)).finally(persistAll);
 
     return newUser;
   };
 
   const updateUser = (userId: string, updated: Partial<User> & { files?: any[] }) => {
     usersState = usersState.map(u => u.UserId === userId ? { ...u, ...updated, UpdatedDate: new Date().toISOString() } : u);
-    cache.set('users_list', usersState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
-    api.updateUser(userId, updated).catch(err => console.warn('[Store] updateUser error:', err));
+    api.updateUser(userId, updated).catch(err => console.warn('[Store] updateUser error:', err)).finally(persistAll);
   };
 
   const deleteUser = (userId: string) => {
     usersState = usersState.filter(u => u.UserId !== userId);
-    cache.set('users_list', usersState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
-    api.deleteUser(userId).catch(err => console.warn('[Store] deleteUser error:', err));
+    api.deleteUser(userId).catch(err => console.warn('[Store] deleteUser error:', err)).finally(persistAll);
   };
 
   // --- CRUD: Bank Accounts ---
@@ -436,16 +458,16 @@ export function useAppStore() {
       AvailableLoanAmount: Math.max(0, max - util),
     };
     bankAccountsState = [newAcc, ...bankAccountsState];
-    cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
     api.addBankAccount(accData).then(res => {
       if (res.success && res.data) {
         bankAccountsState = bankAccountsState.map(b => b.BankAccountId === tempId ? { ...b, ...normalizeBankAccount(res.data as BankAccount) } : b);
-        cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+        persistAll();
         notify();
       }
-    }).catch(err => console.warn('[Store] addBankAccount error:', err));
+    }).catch(err => console.warn('[Store] addBankAccount error:', err)).finally(persistAll);
 
     return newAcc;
   };
@@ -461,18 +483,18 @@ export function useAppStore() {
       }
       return b;
     });
-    cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
-    api.updateBankAccount(accId, updated).catch(err => console.warn('[Store] updateBankAccount error:', err));
+    api.updateBankAccount(accId, updated).catch(err => console.warn('[Store] updateBankAccount error:', err)).finally(persistAll);
   };
 
   const deleteBankAccount = (accId: string) => {
     bankAccountsState = bankAccountsState.filter(b => b.BankAccountId !== accId);
-    cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
-    api.deleteBankAccount(accId).catch(err => console.warn('[Store] deleteBankAccount error:', err));
+    api.deleteBankAccount(accId).catch(err => console.warn('[Store] deleteBankAccount error:', err)).finally(persistAll);
   };
 
   // --- CRUD: Ornaments ---
@@ -510,16 +532,16 @@ export function useAppStore() {
       Status: (ornData.Status as any) || 'Available',
     };
     ornamentsState = [newOrn, ...ornamentsState];
-    cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
     api.addOrnament(ornData).then(res => {
       if (res.success && res.data) {
         ornamentsState = ornamentsState.map(o => o.OrnamentId === tempId ? { ...o, ...normalizeOrnament(res.data as Ornament) } : o);
-        cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
+        persistAll();
         notify();
       }
-    }).catch(err => console.warn('[Store] addOrnament error:', err));
+    }).catch(err => console.warn('[Store] addOrnament error:', err)).finally(persistAll);
 
     return newOrn;
   };
@@ -546,18 +568,18 @@ export function useAppStore() {
       }
       return o;
     });
-    cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
-    api.updateOrnament(ornId, updated).catch(err => console.warn('[Store] updateOrnament error:', err));
+    api.updateOrnament(ornId, updated).catch(err => console.warn('[Store] updateOrnament error:', err)).finally(persistAll);
   };
 
   const deleteOrnament = (ornId: string) => {
     ornamentsState = ornamentsState.filter(o => o.OrnamentId !== ornId);
-    cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
-    api.deleteOrnament(ornId).catch(err => console.warn('[Store] deleteOrnament error:', err));
+    api.deleteOrnament(ornId).catch(err => console.warn('[Store] deleteOrnament error:', err)).finally(persistAll);
   };
 
   // --- CRUD: Loans ---
@@ -621,9 +643,7 @@ export function useAppStore() {
       const utilized = calculateUserBankUtilization(b.UserId, b.BankAccountId);
       return { ...b, UtilizedLoanAmount: utilized, AvailableLoanAmount: Math.max(0, b.MaxLoanAmount - utilized) };
     });
-    cache.set('loans_all', loansState, CacheTTL.LISTS);
-    cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
-    cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
     const rollback = (message: string) => {
@@ -638,9 +658,7 @@ export function useAppStore() {
         const utilized = calculateUserBankUtilization(b.UserId, b.BankAccountId);
         return { ...b, UtilizedLoanAmount: utilized, AvailableLoanAmount: Math.max(0, b.MaxLoanAmount - utilized) };
       });
-      cache.set('loans_all', loansState, CacheTTL.LISTS);
-      cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
-      cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+      persistAll();
       notify();
       callbacks?.onError?.(message);
     };
@@ -649,7 +667,7 @@ export function useAppStore() {
       if (res.success && res.data) {
         const saved = { ...newLoan, ...normalizeLoan(res.data as Loan) };
         loansState = loansState.map(l => l.LoanId === tempId ? saved : l);
-        cache.set('loans_all', loansState, CacheTTL.LISTS);
+        persistAll();
         notify();
         callbacks?.onSuccess?.(saved);
       } else {
@@ -658,7 +676,7 @@ export function useAppStore() {
     }).catch(err => {
       console.warn('[Store] addLoan error:', err);
       rollback(err?.message || 'Unable to save the loan');
-    });
+    }).finally(persistAll);
 
     return newLoan;
   };
@@ -684,7 +702,7 @@ export function useAppStore() {
           }
           return o;
         });
-        cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
+        persistAll();
       }
     }
 
@@ -694,17 +712,16 @@ export function useAppStore() {
       return { ...b, UtilizedLoanAmount: utilized, AvailableLoanAmount: Math.max(0, b.MaxLoanAmount - utilized) };
     });
 
-    cache.set('loans_all', loansState, CacheTTL.LISTS);
-    cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
     api.updateLoan(loanId, updated).then(res => {
       if (res.success && res.data) {
         loansState = loansState.map(l => l.LoanId === loanId ? { ...l, ...normalizeLoan(res.data as Loan) } : l);
-        cache.set('loans_all', loansState, CacheTTL.LISTS);
+        persistAll();
         notify();
       }
-    }).catch(err => console.warn('[Store] updateLoan error:', err));
+    }).catch(err => console.warn('[Store] updateLoan error:', err)).finally(persistAll);
   };
 
   const closeAndReleaseLoan = (loanId: string, remarks: string) => {
@@ -734,12 +751,10 @@ export function useAppStore() {
       return { ...b, UtilizedLoanAmount: utilized, AvailableLoanAmount: Math.max(0, b.MaxLoanAmount - utilized) };
     });
 
-    cache.set('loans_all', loansState, CacheTTL.LISTS);
-    cache.set('ornaments_all', ornamentsState, CacheTTL.LISTS);
-    cache.set('bank_accounts_all', bankAccountsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
-    api.closeAndReleaseLoan(loanId, remarks).catch(err => console.warn('[Store] closeAndReleaseLoan error:', err));
+    api.closeAndReleaseLoan(loanId, remarks).catch(err => console.warn('[Store] closeAndReleaseLoan error:', err)).finally(persistAll);
   };
 
   // --- CRUD: Payments ---
@@ -761,16 +776,16 @@ export function useAppStore() {
       CreatedDate: new Date().toISOString(),
     };
     paymentsState = [newPay, ...paymentsState];
-    cache.set('payments_all', paymentsState, CacheTTL.LISTS);
+    persistAll();
     notify();
 
     api.addPayment(payData).then(res => {
       if (res.success && res.data) {
         paymentsState = paymentsState.map(p => p.PaymentId === tempId ? { ...p, ...normalizePayment(res.data as Payment) } : p);
-        cache.set('payments_all', paymentsState, CacheTTL.LISTS);
+        persistAll();
         notify();
       }
-    }).catch(err => console.warn('[Store] addPayment error:', err));
+    }).catch(err => console.warn('[Store] addPayment error:', err)).finally(persistAll);
 
     return newPay;
   };
