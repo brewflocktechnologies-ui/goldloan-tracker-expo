@@ -324,7 +324,7 @@ describe('syncFromBackend — freshness and failure reporting', () => {
     await act(async () => {
       await s().syncFromBackend(true);
     });
-    expect(s().users.map(u => u.UserId)).toEqual(['U001']);
+    expect(s().users.map((u: any) => u.UserId)).toEqual(['U001']);
   });
 
   it('a fresh sync clears the error and stamps the last-synced time', async () => {
