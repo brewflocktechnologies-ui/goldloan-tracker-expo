@@ -280,13 +280,14 @@ export default function BankAccountsScreen() {
               const selectedCustomer = store.users.find(
                 (u) => String(u.UserId) === String(selectedAcc.UserId)
               );
-              const customerInitials = (selectedCustomer?.FullName || selectedAcc.AccountHolderName || 'BA')
-                .split(' ')
-                .map((p) => p[0])
-                .filter(Boolean)
-                .join('')
-                .slice(0, 2)
-                .toUpperCase();
+              const customerInitials =
+                (selectedCustomer?.FullName || selectedAcc.AccountHolderName || '')
+                  .split(' ')
+                  .map((p) => p[0])
+                  .filter(Boolean)
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase() || 'BA';
               const accountLoans = store.loans.filter(
                 (l) =>
                   (String(l.BankAccountId) === String(selectedAcc.BankAccountId) ||
@@ -481,21 +482,23 @@ export default function BankAccountsScreen() {
             })()}
 
             {/* Sticky Bottom Bar with Edit Account Button */}
-            <View style={styles.detailBottomBar}>
-              <TouchableOpacity
-                style={styles.editAccountBtn}
-                onPress={() => {
-                  if (selectedAcc) {
-                    setDetailModalVisible(false);
-                    openEditModal(selectedAcc);
-                  }
-                }}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="pencil-outline" size={16} color="#0f172a" />
-                <Text style={styles.editAccountBtnText}>Edit account</Text>
-              </TouchableOpacity>
-            </View>
+            {isSuperAdmin && (
+              <View style={styles.detailBottomBar}>
+                <TouchableOpacity
+                  style={styles.editAccountBtn}
+                  onPress={() => {
+                    if (selectedAcc) {
+                      setDetailModalVisible(false);
+                      openEditModal(selectedAcc);
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="pencil-outline" size={16} color="#0f172a" />
+                  <Text style={styles.editAccountBtnText}>Edit account</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </EdgeSafeAreaView>
       </Modal>
