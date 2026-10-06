@@ -517,6 +517,10 @@ function authenticateAdmin(username, password) {
 
 function doGet(e) {
   if (e && e.parameter && e.parameter.action) {
+    // GET cannot carry object payloads; never allow it to mutate data (it created blank rows).
+    if (/^(add|update|delete|create|record|close|renew)/i.test(e.parameter.action)) {
+      return jsonResponse_({ success: false, error: "This action requires POST" });
+    }
     return handleApiRequest_(e.parameter.action, e.parameter);
   }
   return HtmlService.createHtmlOutputFromFile("index")
@@ -823,6 +827,9 @@ function generateId_(prefix, sheetName, idColumn) {
 
 function addUser_(userData) {
   try {
+    if (!userData || !userData.FullName) {
+      return { success: false, error: "FullName is required" };
+    }
     const userId = generateId_("U", "Users", "UserId");
     const photoUrl = processDriveFiles_(userData.files, "Customer_Photos")[0] || userData.CustomerPhoto || "";
 
@@ -945,6 +952,9 @@ function deleteUserPhoto_(userId) {
 
 function addBankAccount_(accountData) {
   try {
+    if (!accountData || !accountData.UserId || !accountData.BankName || !accountData.AccountNumber) {
+      return { success: false, error: "UserId, BankName and AccountNumber are required" };
+    }
     const accountId = generateId_("BA", "BankAccounts", "BankAccountId");
     const passbookUrl = processDriveFiles_(accountData.files, "Passbook_Images")[0] || accountData.PassbookImage || "";
 

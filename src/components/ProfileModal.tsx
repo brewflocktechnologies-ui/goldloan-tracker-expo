@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useAppStore } from '../services/store';
+import { useAppStore, getSyncError } from '../services/store';
 import { ThemeColors } from '../constants/theme';
 import { ThemeToggleBtn } from './ThemeToggleBtn';
 import { ConfirmModal } from './ConfirmModal';
@@ -190,8 +190,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) 
               {/* Sync Live Rates & Data */}
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => {
-                  store.syncFromBackend(true);
+                onPress={async () => {
+                  await store.syncFromBackend(true);
+                  const err = getSyncError();
+                  if (err) toast.danger(err);
+                  else toast.success('Portfolio data synced from Google Sheets.');
                 }}
                 disabled={store.isSyncing}
                 activeOpacity={0.7}

@@ -145,6 +145,8 @@ export async function refreshGoldRates(force: boolean = false): Promise<GoldRate
   return goldRatesState;
 }
 
+export const getSyncError = () => syncError;
+
 export async function syncFromBackend(force: boolean = false) {
   if (isSyncing && !force) return;
 
@@ -166,7 +168,9 @@ export async function syncFromBackend(force: boolean = false) {
 
   try {
     // 1. First attempt fast unified sync (1 round trip) via GET
-    const syncRes = await api.getInitialSyncData(force);
+    // Always revalidate against the sheet (cache only paints the UI instantly on boot);
+    // trusting the 30-min snapshot here hid rows added/removed outside or before a reload.
+    const syncRes = await api.getInitialSyncData(true);
     if (syncRes.success && syncRes.data) {
       const data = syncRes.data;
       if (Array.isArray(data.users)) usersState = normalizeUsers(data.users);
@@ -176,9 +180,14 @@ export async function syncFromBackend(force: boolean = false) {
       if (Array.isArray(data.payments)) paymentsState = normalizePayments(data.payments);
       if (data.goldRates) goldRatesState = data.goldRates;
 
-      lastSyncedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      lastSyncTimestamp = Date.now();
-      syncError = null;
+      if (syncRes.isFallback) {
+        // Network/backend failed and we only got the stale cache: don't pretend it's fresh.
+        syncError = 'Could not reach Google Sheets. Showing offline data.';
+      } else {
+        lastSyncedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        lastSyncTimestamp = Date.now();
+        syncError = null;
+      }
       notify();
       return;
     }

@@ -94,7 +94,10 @@ class ApiService {
       return { success: false, error: "Google Apps Script Web App URL not configured." };
     }
 
-    const methods: ('GET' | 'POST')[] = preferredMethod === 'GET' ? ['GET', 'POST'] : ['POST', 'GET'];
+    // Mutations must never fall back to GET: GET drops object payloads (accountData, userData, ...)
+    // and, if the POST already ran server-side, would create a blank/duplicate row.
+    const methods: ('GET' | 'POST')[] =
+      preferredMethod === 'GET' ? ['GET', 'POST'] : ['POST'];
 
     // Automatically attach active session token if present
     const token = this.sessionToken;
