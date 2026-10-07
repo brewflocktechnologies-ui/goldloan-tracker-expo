@@ -1,73 +1,21 @@
-import { ApiConfig } from '../config/api';
-import {
-  AdminUser,
-  ApiResponse,
-  BankAccount,
-  GoldRateData,
-  InitialSyncData,
-  Loan,
-  Ornament,
-  Payment,
-  User
-} from '../types';
-import { cache, CacheTTL } from './cache';
+import { ApiResponse } from '../types';
+import * as adminUsers from './api/adminUsers';
+import * as auth from './api/auth';
+import * as bankAccounts from './api/bankAccounts';
+import * as goldRatesApi from './api/goldRates';
+import * as loans from './api/loans';
+import * as ornaments from './api/ornaments';
+import * as payments from './api/payments';
+import * as sync from './api/sync';
+import * as users from './api/users';
+import { callGas } from './api/transport';
+import type { ApiTransport } from './api/transport';
+import { AdminUser, BankAccount, GoldRateData, InitialSyncData, Loan, Ornament, Payment, User } from '../types';
 
-/**
- * Helper to convert Google Drive sharing links to direct image thumbnail URLs
- * for rendering inside React Native Image and expo-image components.
- */
-export function getDriveDirectImageUrl(driveUrl?: string | null): string | undefined {
-  if (!driveUrl) return undefined;
-  const match = driveUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || driveUrl.match(/id=([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
-  }
-  return driveUrl;
-}
+export { getDriveDirectImageUrl, getDriveImageUrl } from './api/driveUrl';
+export { normalizeGoldRates } from './api/goldRates';
 
-export const getDriveImageUrl = getDriveDirectImageUrl;
-
-const defaultGoldRates: GoldRateData = {
-  location: "Bangalore",
-  updatedAt: new Date().toISOString(),
-  displayDate: "Live Rates",
-  gold24k: { rate1g: 8850, numericPrice: 8850, change: 0, direction: "flat" },
-  gold22k: { rate1g: 8115, numericPrice: 8115, change: 0, direction: "flat" },
-  gold18k: { rate1g: 6640, numericPrice: 6640, change: 0, direction: "flat" },
-};
-
-export function normalizeGoldRates(rawRates: any): GoldRateData {
-  if (!rawRates || typeof rawRates !== 'object') {
-    return defaultGoldRates;
-  }
-
-  const normalizeKarat = (item: any, fallbackRate: number) => {
-    if (!item || typeof item !== 'object') {
-      return { rate1g: fallbackRate, numericPrice: fallbackRate, change: 0, direction: 'flat' as const };
-    }
-    const rate1g = Number(item.rate1g || item.numericPrice || fallbackRate);
-    const change = Number(item.change || 0);
-    const dir = item.direction === 'down' ? 'down' : item.direction === 'up' ? 'up' : 'flat';
-    return {
-      ...item,
-      rate1g,
-      numericPrice: item.numericPrice ? Number(item.numericPrice) : rate1g,
-      change,
-      direction: dir as 'up' | 'down' | 'flat',
-    };
-  };
-
-  return {
-    location: rawRates.location || 'Bangalore',
-    updatedAt: rawRates.updatedAt || new Date().toISOString(),
-    displayDate: rawRates.displayDate || 'Live Rates',
-    gold24k: normalizeKarat(rawRates.gold24k, 8850),
-    gold22k: normalizeKarat(rawRates.gold22k, 8115),
-    gold18k: normalizeKarat(rawRates.gold18k, 6640),
-  };
-}
-
-class ApiService {
+class ApiService implements ApiTransport {
   private sessionToken: string | null = null;
   private onUnauthorizedCallback: (() => void) | null = null;
 
@@ -83,93 +31,16 @@ class ApiService {
     this.onUnauthorizedCallback = callback;
   }
 
-  /**
-   * Universal HTTP request to Google Apps Script Web App
-   * Always appends action query parameter to preserve action during Google redirects.
-   * Uses GET for queries and POST for mutations with automatic fallback.
-   */
   async callGas<T>(action: string, payload: any = {}, preferredMethod: 'POST' | 'GET' = 'GET'): Promise<ApiResponse<T>> {
-    const baseUrl = ApiConfig.getApiUrl();
-    if (!baseUrl) {
-      return { success: false, error: "Google Apps Script Web App URL not configured." };
-    }
-
-    // Mutations must never fall back to GET: GET drops object payloads (accountData, userData, ...)
-    // and, if the POST already ran server-side, would create a blank/duplicate row.
-    const methods: ('GET' | 'POST')[] =
-      preferredMethod === 'GET' ? ['GET', 'POST'] : ['POST'];
-
-    // Automatically attach active session token if present
-    const token = this.sessionToken;
-    const enrichedPayload = token && !payload.token ? { token, ...payload } : payload;
-
-    for (const method of methods) {
-      try {
-        let response: Response;
-        const separator = baseUrl.includes('?') ? '&' : '?';
-
-        if (method === 'POST') {
-          // Always keep action and token in URL query so Google 302 redirect preserves them
-          const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
-          const urlWithAction = `${baseUrl}${separator}action=${encodeURIComponent(action)}${tokenParam}`;
-          response = await fetch(urlWithAction, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify({ action, ...enrichedPayload }),
-          });
-        } else {
-          // For GET, append action and any scalar payload properties as query parameters
-          const queryParams: Record<string, string> = { action };
-          for (const [k, v] of Object.entries(enrichedPayload)) {
-            if (v !== undefined && v !== null && typeof v !== 'object') {
-              queryParams[k] = String(v);
-            }
-          }
-          const query = new URLSearchParams(queryParams).toString();
-          response = await fetch(`${baseUrl}${separator}${query}`);
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const text = await response.text();
-        try {
-          const parsed = JSON.parse(text);
-          if (parsed && typeof parsed === 'object') {
-            // Check for unauthorized / expired session token
-            if (token && parsed.code === 401 && action !== 'login' && action !== 'logout') {
-              console.warn(`[API] 401 Unauthorized encountered on action "${action}".`);
-              if (this.onUnauthorizedCallback) {
-                this.onUnauthorizedCallback();
-              }
-            }
-
-            // If response indicates action was dropped on redirect, try the fallback method!
-            if (parsed.success === false && parsed.error === 'No action specified in request') {
-              console.warn(`[API] ${method} returned 'No action specified in request', attempting fallback method...`);
-              continue;
-            }
-            return parsed;
-          }
-        } catch {
-          if (text.includes('Success') || text.includes('success')) {
-            return { success: true, data: text as any };
-          }
-          if (method === methods[methods.length - 1]) {
-            return { success: false, error: `Invalid server response: ${text.slice(0, 100)}` };
-          }
-        }
-      } catch (err: any) {
-        if (method === methods[methods.length - 1]) {
-          return { success: false, error: err.message || 'Network request failed.' };
-        }
-      }
-    }
-
-    return { success: false, error: 'Failed to communicate with Google Sheets backend.' };
+    return callGas<T>(
+      {
+        sessionToken: this.sessionToken,
+        getOnUnauthorized: () => this.onUnauthorizedCallback,
+      },
+      action,
+      payload,
+      preferredMethod
+    );
   }
 
   async postToGas<T>(action: string, payload: any = {}): Promise<ApiResponse<T>> {
@@ -182,349 +53,128 @@ class ApiService {
 
   // ─── UNIFIED INITIAL SYNC ───
 
-  /**
-   * Fetch all app data in a single unified round-trip from Google Sheets with intelligent caching
-   */
   async getInitialSyncData(forceRefresh: boolean = false): Promise<ApiResponse<InitialSyncData>> {
-    const CACHE_KEY = 'initial_sync_data';
-
-    if (!forceRefresh) {
-      const cached = await cache.get<InitialSyncData>(CACHE_KEY);
-      if (cached.data) {
-        return { success: true, data: cached.data, isCached: true };
-      }
-    }
-
-    const res = await this.callGas<InitialSyncData>('getInitialSyncData', {}, 'GET');
-    if (res.success && res.data) {
-      if (res.data.goldRates) {
-        res.data.goldRates = normalizeGoldRates(res.data.goldRates);
-      }
-      await cache.set(CACHE_KEY, res.data, CacheTTL.SYNC_DATA);
-      // Pre-populate individual entity caches
-      if (res.data.users) await cache.set('users_list', res.data.users, CacheTTL.LISTS);
-      if (res.data.bankAccounts) await cache.set('bank_accounts_all', res.data.bankAccounts, CacheTTL.LISTS);
-      if (res.data.ornaments) await cache.set('ornaments_all', res.data.ornaments, CacheTTL.LISTS);
-      if (res.data.loans) await cache.set('loans_all', res.data.loans, CacheTTL.LISTS);
-      if (res.data.payments) await cache.set('payments_all', res.data.payments, CacheTTL.LISTS);
-      if (res.data.goldRates) await cache.set('gold_rates_bangalore', res.data.goldRates, CacheTTL.GOLD_RATES);
-      return { success: true, data: res.data, isCached: false };
-    }
-
-    // Network request failed - fall back to stale cache
-    const stale = await cache.get<InitialSyncData>(CACHE_KEY, true);
-    if (stale.data) {
-      if (stale.data.goldRates) {
-        stale.data.goldRates = normalizeGoldRates(stale.data.goldRates);
-      }
-      return { success: true, data: stale.data, isCached: true, isFallback: true };
-    }
-
-    return res;
+    return sync.getInitialSyncData(this, forceRefresh);
   }
 
   // ─── DASHBOARD & RATES ───
 
   async getGoldRates(forceRefresh: boolean = false): Promise<{ data: GoldRateData; isCached: boolean }> {
-    const CACHE_KEY = 'gold_rates_bangalore';
-
-    if (!forceRefresh) {
-      const cached = await cache.get<GoldRateData>(CACHE_KEY);
-      if (cached.data) {
-        return { data: normalizeGoldRates(cached.data), isCached: true };
-      }
-    }
-
-    const res = await this.getFromGas<GoldRateData>('getGoldRates', { forceRefresh: forceRefresh ? 'true' : 'false' });
-    if (res.success && res.data) {
-      const normalized = normalizeGoldRates(res.data);
-      await cache.set(CACHE_KEY, normalized, CacheTTL.GOLD_RATES);
-      return { data: normalized, isCached: false };
-    }
-
-    const stale = await cache.get<GoldRateData>(CACHE_KEY, true);
-    if (stale.data) {
-      return { data: normalizeGoldRates(stale.data), isCached: true };
-    }
-
-    return { data: defaultGoldRates, isCached: false };
+    return goldRatesApi.getGoldRates(this, forceRefresh);
   }
 
   // ─── USERS / CUSTOMERS ───
 
   async getUsers(forceRefresh: boolean = false): Promise<User[]> {
-    const CACHE_KEY = 'users_list';
-
-    if (!forceRefresh) {
-      const cached = await cache.get<User[]>(CACHE_KEY);
-      if (cached.data) return cached.data;
-    }
-
-    const res = await this.getFromGas<User[]>('getUsers');
-    if (res.success && res.data) {
-      await cache.set(CACHE_KEY, res.data, CacheTTL.LISTS);
-      return res.data;
-    }
-
-    const stale = await cache.get<User[]>(CACHE_KEY, true);
-    return stale.data || [];
+    return users.getUsers(this, forceRefresh);
   }
 
   async addUser(userData: Partial<User> & { files?: any[] }): Promise<ApiResponse<User>> {
-    const res = await this.postToGas<User>('addUser', { userData });
-    if (res.success) {
-      await cache.invalidateEntity('users');
-    }
-    return res;
+    return users.addUser(this, userData);
   }
 
   async updateUser(userId: string, userData: Partial<User> & { files?: any[] }): Promise<ApiResponse<any>> {
-    const res = await this.postToGas('updateUser', { userId, userData });
-    if (res.success) {
-      await cache.invalidateEntity('users');
-    }
-    return res;
+    return users.updateUser(this, userId, userData);
   }
 
   async deleteUser(userId: string): Promise<ApiResponse<any>> {
-    const res = await this.postToGas('deleteUser', { userId });
-    if (res.success) {
-      await cache.invalidateEntity('users');
-    }
-    return res;
+    return users.deleteUser(this, userId);
   }
 
   // ─── BANK ACCOUNTS ───
 
   async getBankAccounts(userId?: string, forceRefresh: boolean = false): Promise<BankAccount[]> {
-    const CACHE_KEY = userId ? `bank_accounts_${userId}` : 'bank_accounts_all';
-
-    if (!forceRefresh) {
-      const cached = await cache.get<BankAccount[]>(CACHE_KEY);
-      if (cached.data) return cached.data;
-    }
-
-    const res = await this.getFromGas<BankAccount[]>('getBankAccounts', userId ? { userId } : {});
-    if (res.success && Array.isArray(res.data)) {
-      await cache.set(CACHE_KEY, res.data, CacheTTL.LISTS);
-      return res.data;
-    }
-
-    const stale = await cache.get<BankAccount[]>(CACHE_KEY, true);
-    return stale.data || [];
+    return bankAccounts.getBankAccounts(this, userId, forceRefresh);
   }
 
   async addBankAccount(accountData: Partial<BankAccount> & { files?: any[] }): Promise<ApiResponse<BankAccount>> {
-    const res = await this.postToGas<BankAccount>('addBankAccount', { accountData });
-    if (res.success) {
-      await cache.invalidateEntity('bank_accounts');
-    }
-    return res;
+    return bankAccounts.addBankAccount(this, accountData);
   }
 
   async updateBankAccount(accountId: string, accountData: Partial<BankAccount> & { files?: any[] }): Promise<ApiResponse<any>> {
-    const res = await this.postToGas('updateBankAccount', { accountId, accountData });
-    if (res.success) {
-      await cache.invalidateEntity('bank_accounts');
-    }
-    return res;
+    return bankAccounts.updateBankAccount(this, accountId, accountData);
   }
 
   async deleteBankAccount(accountId: string): Promise<ApiResponse<any>> {
-    const res = await this.postToGas('deleteBankAccount', { accountId });
-    if (res.success) {
-      await cache.invalidateEntity('bank_accounts');
-    }
-    return res;
+    return bankAccounts.deleteBankAccount(this, accountId);
   }
 
   // ─── ORNAMENTS ───
 
   async getOrnaments(userId?: string, forceRefresh: boolean = false): Promise<Ornament[]> {
-    const CACHE_KEY = userId ? `ornaments_${userId}` : 'ornaments_all';
-
-    if (!forceRefresh) {
-      const cached = await cache.get<Ornament[]>(CACHE_KEY);
-      if (cached.data) return cached.data;
-    }
-
-    const res = await this.getFromGas<Ornament[]>('getOrnaments', userId ? { userId } : {});
-    if (res.success && Array.isArray(res.data)) {
-      await cache.set(CACHE_KEY, res.data, CacheTTL.LISTS);
-      return res.data;
-    }
-
-    const stale = await cache.get<Ornament[]>(CACHE_KEY, true);
-    return stale.data || [];
+    return ornaments.getOrnaments(this, userId, forceRefresh);
   }
 
   async addOrnament(ornamentData: Partial<Ornament> & { files?: any[] }): Promise<ApiResponse<Ornament>> {
-    const res = await this.postToGas<Ornament>('addOrnament', { ornamentData });
-    if (res.success) {
-      await cache.invalidateEntity('ornaments');
-    }
-    return res;
+    return ornaments.addOrnament(this, ornamentData);
   }
 
   async updateOrnament(ornamentId: string, ornamentData: Partial<Ornament> & { files?: any[] }): Promise<ApiResponse<any>> {
-    const res = await this.postToGas('updateOrnament', { ornamentId, ornamentData });
-    if (res.success) {
-      await cache.invalidateEntity('ornaments');
-    }
-    return res;
+    return ornaments.updateOrnament(this, ornamentId, ornamentData);
   }
 
   async deleteOrnament(ornamentId: string): Promise<ApiResponse<any>> {
-    const res = await this.postToGas('deleteOrnament', { ornamentId });
-    if (res.success) {
-      await cache.invalidateEntity('ornaments');
-    }
-    return res;
+    return ornaments.deleteOrnament(this, ornamentId);
   }
 
   // ─── LOANS ───
 
   async getLoans(userId?: string, status?: string, forceRefresh: boolean = false): Promise<Loan[]> {
-    const CACHE_KEY = `loans_${userId || 'all'}_${status || 'all'}`;
-
-    if (!forceRefresh) {
-      const cached = await cache.get<Loan[]>(CACHE_KEY);
-      if (cached.data) return cached.data;
-    }
-
-    const params: Record<string, string> = {};
-    if (userId) params.userId = userId;
-    if (status) params.status = status;
-
-    const res = await this.getFromGas<Loan[]>('getLoans', params);
-    if (res.success && Array.isArray(res.data)) {
-      await cache.set(CACHE_KEY, res.data, CacheTTL.LISTS);
-      return res.data;
-    }
-
-    const stale = await cache.get<Loan[]>(CACHE_KEY, true);
-    return stale.data || [];
+    return loans.getLoans(this, userId, status, forceRefresh);
   }
 
   async addLoan(loanData: any): Promise<ApiResponse<Loan>> {
-    const res = await this.postToGas<Loan>('addLoan', { loanData });
-    if (res.success) {
-      await cache.invalidateEntity('loans');
-      await cache.invalidate('ornaments');
-      await cache.invalidate('bank_accounts');
-    }
-    return res;
+    return loans.addLoan(this, loanData);
   }
 
   async updateLoan(loanId: string, loanData: any): Promise<ApiResponse<any>> {
-    const res = await this.postToGas('updateLoan', { loanId, loanData });
-    if (res.success) {
-      await cache.invalidateEntity('loans');
-      await cache.invalidate('ornaments');
-      await cache.invalidate('bank_accounts');
-    }
-    return res;
+    return loans.updateLoan(this, loanId, loanData);
   }
 
   async closeAndReleaseLoan(loanId: string, closureRemarks: string = ''): Promise<ApiResponse<any>> {
-    const res = await this.postToGas('closeAndReleaseLoan', { loanId, closureRemarks });
-    if (res.success) {
-      await cache.invalidateEntity('loans');
-      await cache.invalidate('ornaments');
-      await cache.invalidate('bank_accounts');
-    }
-    return res;
+    return loans.closeAndReleaseLoan(this, loanId, closureRemarks);
   }
 
   // ─── PAYMENTS ───
 
   async getPayments(loanId?: string, forceRefresh: boolean = false): Promise<Payment[]> {
-    const CACHE_KEY = loanId ? `payments_${loanId}` : 'payments_all';
-
-    if (!forceRefresh) {
-      const cached = await cache.get<Payment[]>(CACHE_KEY);
-      if (cached.data) return cached.data;
-    }
-
-    const res = await this.getFromGas<Payment[]>('getPayments', loanId ? { loanId } : {});
-    if (res.success && Array.isArray(res.data)) {
-      await cache.set(CACHE_KEY, res.data, CacheTTL.LISTS);
-      return res.data;
-    }
-
-    const stale = await cache.get<Payment[]>(CACHE_KEY, true);
-    return stale.data || [];
+    return payments.getPayments(this, loanId, forceRefresh);
   }
 
   async addPayment(paymentData: Partial<Payment>): Promise<ApiResponse<Payment>> {
-    const res = await this.postToGas<Payment>('addPayment', { paymentData });
-    if (res.success) {
-      await cache.invalidateEntity('payments');
-      await cache.invalidateEntity('loans');
-    }
-    return res;
+    return payments.addPayment(this, paymentData);
   }
 
   // ─── AUTHENTICATION ───
 
   async login(username: string, password: string): Promise<ApiResponse<{ username: string; role: 'SuperAdmin' | 'User'; token: string }>> {
-    return this.callGas('login', { username, password }, 'POST');
+    return auth.login(this, username, password);
   }
 
   async logout(): Promise<ApiResponse<any>> {
-    const token = this.sessionToken;
-    return this.callGas('logout', { token }, 'POST');
+    return auth.logout(this);
   }
 
   // ─── ADMIN USER MANAGEMENT (From Google Sheets) ───
 
   async getAdminUsers(forceRefresh: boolean = false): Promise<ApiResponse<AdminUser[]>> {
-    const CACHE_KEY = 'admin_users_list';
-    if (!forceRefresh) {
-      const cached = await cache.get<AdminUser[]>(CACHE_KEY);
-      if (cached.data) return { success: true, data: cached.data, isCached: true };
-    }
-
-    const res = await this.callGas<AdminUser[]>('getAdminUsers', {}, 'GET');
-    if (res.success && res.data) {
-      await cache.set(CACHE_KEY, res.data, CacheTTL.LISTS);
-      return { success: true, data: res.data, isCached: false };
-    }
-
-    const stale = await cache.get<AdminUser[]>(CACHE_KEY, true);
-    if (stale.data && stale.data.length > 0) {
-      return { success: true, data: stale.data, isCached: true, isFallback: true };
-    }
-
-    return res;
+    return adminUsers.getAdminUsers(this, forceRefresh);
   }
 
   async addAdminUser(userData: { username: string; password: string; role: 'SuperAdmin' | 'User'; status?: string }): Promise<ApiResponse<AdminUser>> {
-    const res = await this.callGas<AdminUser>('addAdminUser', { userData }, 'POST');
-    if (res.success) {
-      await cache.invalidate('admin_users_list');
-    }
-    return res;
+    return adminUsers.addAdminUser(this, userData);
   }
 
   async updateAdminUser(adminId: string, updateData: { role?: string; status?: string; password?: string }): Promise<ApiResponse<string>> {
-    const res = await this.callGas<string>('updateAdminUser', { adminId, updateData, ...updateData }, 'POST');
-    if (res.success) {
-      await cache.invalidate('admin_users_list');
-    }
-    return res;
+    return adminUsers.updateAdminUser(this, adminId, updateData);
   }
 
   async changePassword(newPassword: string, oldPassword?: string): Promise<ApiResponse<string>> {
-    return this.callGas<string>('changePassword', { newPassword, oldPassword }, 'POST');
+    return adminUsers.changePassword(this, newPassword, oldPassword);
   }
 
   async deleteAdminLoginUser(adminId: string): Promise<ApiResponse<string>> {
-    const res = await this.callGas<string>('deleteAdminLoginUser', { adminId }, 'POST');
-    if (res.success) {
-      await cache.invalidate('admin_users_list');
-    }
-    return res;
+    return adminUsers.deleteAdminLoginUser(this, adminId);
   }
 }
 
