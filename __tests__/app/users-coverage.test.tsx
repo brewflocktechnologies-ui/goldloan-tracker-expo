@@ -167,7 +167,8 @@ describe('User form — edit pre-fill and status', () => {
     fireEvent.press(screen.getByText('Save Changes'));
     expect(mockStore.updateUser).toHaveBeenCalledWith(
       'USR001',
-      expect.objectContaining({ Gender: 'Female', Status: 'Inactive', CustomerPhoto: 'photo123' })
+      expect.objectContaining({ Gender: 'Female', Status: 'Inactive', CustomerPhoto: 'photo123' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
   });
 });

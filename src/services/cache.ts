@@ -10,10 +10,7 @@ const CACHE_PREFIX = '@gl_cache:';
 
 export const CacheTTL = {
   GOLD_RATES: 60 * 60 * 1000,    // 60 minutes
-  DASHBOARD: 30 * 60 * 1000,     // 30 minutes
   LISTS: 30 * 60 * 1000,         // 30 minutes (users, ornaments, loans, payments)
-  DETAILS: 30 * 60 * 1000,       // 30 minutes
-  SHORT: 2 * 60 * 1000,          // 2 minutes
   SYNC_DATA: 30 * 60 * 1000,     // 30 minutes
 };
 
@@ -127,23 +124,6 @@ class CacheService {
     } catch (e) {
       console.warn('[Cache] Error clearing all cache:', e);
     }
-  }
-
-  /**
-   * Return number of cached items
-   */
-  async getCacheStats(): Promise<{ memoryCount: number; diskCount: number }> {
-    let diskCount = 0;
-    try {
-      const allKeys = await AsyncStorage.getAllKeys();
-      diskCount = allKeys.filter(k => k.startsWith(CACHE_PREFIX)).length;
-    } catch (e) {
-      // ignore
-    }
-    return {
-      memoryCount: this.memoryCache.size,
-      diskCount,
-    };
   }
 }
 

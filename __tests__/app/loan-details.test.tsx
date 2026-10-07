@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
 
@@ -195,8 +195,39 @@ describe('LoanDetailScreen — close and release popup', () => {
     fireEvent.press(screen.getByLabelText('Close and Release Loan'));
     fireEvent.press(screen.getByText('Close & Release'));
 
-    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith('L1', 'Closed and ornaments released');
+    expect(mockStore.closeAndReleaseLoan).toHaveBeenCalledWith(
+      'L1',
+      'Closed and ornaments released',
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
     expect(screen.queryByText('Close Loan & Release')).toBeNull();
+  });
+
+  it('announces the close only after the store confirms the save', () => {
+    renderScreen();
+    fireEvent.press(screen.getByLabelText('Close and Release Loan'));
+    fireEvent.press(screen.getByText('Close & Release'));
+
+    expect(mockToast.success).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalledWith('Loan Closed Successfully', expect.anything());
+
+    const callbacks = mockStore.closeAndReleaseLoan.mock.calls[0][2];
+    act(() => callbacks.onSuccess());
+
+    expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('LN-1'));
+    expect(Alert.alert).toHaveBeenCalledWith('Loan Closed Successfully', expect.stringContaining('LN-1'));
+  });
+
+  it('shows no success message when the close save fails (onSuccess never called)', () => {
+    renderScreen();
+    fireEvent.press(screen.getByLabelText('Close and Release Loan'));
+    fireEvent.press(screen.getByText('Close & Release'));
+
+    const callbacks = mockStore.closeAndReleaseLoan.mock.calls[0][2];
+    act(() => callbacks.onError?.('Network down'));
+
+    expect(mockToast.success).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalledWith('Loan Closed Successfully', expect.anything());
   });
 
   it('dismisses the popup from Cancel without closing the loan', () => {
@@ -295,10 +326,27 @@ describe('LoanDetailScreen — record payment', () => {
         TotalPaidAmount: 2100,
         PaymentMethod: 'UPI',
         TransactionReference: 'UTR777',
-      })
+      }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('2,100'));
+    // modal closes immediately, but the success toast waits for the store
+    expect(mockToast.success).not.toHaveBeenCalled();
     expect(screen.queryByText('Record Repayment (LN-1)')).toBeNull();
+
+    const callbacks = mockStore.addPayment.mock.calls[0][1];
+    act(() => callbacks.onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('2,100'));
+  });
+
+  it('shows no success toast when the payment save fails (onSuccess never called)', () => {
+    renderScreen();
+    openPayModal();
+    fireEvent.changeText(screen.getByPlaceholderText('e.g. 2100'), '2100');
+    fireEvent.press(screen.getByText('Save Payment'));
+
+    const callbacks = mockStore.addPayment.mock.calls[0][1];
+    act(() => callbacks.onError?.('Network down'));
+    expect(mockToast.success).not.toHaveBeenCalled();
   });
 
   it('attributes the amount to principal when Principal is chosen', () => {
@@ -309,7 +357,8 @@ describe('LoanDetailScreen — record payment', () => {
     fireEvent.press(screen.getByText('Save Payment'));
 
     expect(mockStore.addPayment).toHaveBeenCalledWith(
-      expect.objectContaining({ PaymentType: 'Principal', PrincipalAmount: 5000, InterestAmount: 0 })
+      expect.objectContaining({ PaymentType: 'Principal', PrincipalAmount: 5000, InterestAmount: 0 }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
   });
 

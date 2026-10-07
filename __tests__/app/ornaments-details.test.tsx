@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Ornament } from '../../src/types';
 import { LightColors } from '../../src/constants/theme';
 
@@ -224,9 +224,25 @@ describe('OrnamentsScreen (details view)', () => {
     // so this presses the modal's confirm action unambiguously.
     fireEvent.press(screen.getByText('trash'));
 
-    expect(mockStore.deleteOrnament).toHaveBeenCalledWith('ORN010');
-    expect(mockToast.danger).toHaveBeenCalledWith('Ornament "Heritage Necklace" deleted');
+    expect(mockStore.deleteOrnament).toHaveBeenCalledWith('ORN010', expect.objectContaining({ onSuccess: expect.any(Function) }));
     expect(screen.getByText('Ornaments')).toBeTruthy();
+    // The toast only appears once the backend confirms the delete.
+    expect(mockToast.danger).not.toHaveBeenCalled();
+    const callbacks = mockStore.deleteOrnament.mock.calls[0][1];
+    act(() => callbacks.onSuccess());
+    expect(mockToast.danger).toHaveBeenCalledWith('Ornament "Heritage Necklace" deleted');
+  });
+
+  it('does not show the deleted toast when the delete fails', async () => {
+    openDetails('Heritage Necklace');
+    fireEvent.press(screen.getByLabelText('Menu options'));
+    await waitFor(() => expect(screen.getByText('Delete Ornament')).toBeTruthy());
+    fireEvent.press(screen.getByText('Delete Ornament'));
+    fireEvent.press(screen.getByText('trash'));
+
+    expect(mockStore.deleteOrnament).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Ornaments')).toBeTruthy(); // UI still moves on immediately
+    expect(mockToast.danger).not.toHaveBeenCalled(); // onSuccess never invoked
   });
 
   it('cancels the delete confirmation without deleting', async () => {

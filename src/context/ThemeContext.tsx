@@ -26,7 +26,7 @@ const ThemeContext = createContext<ThemeContextType>({
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [, setIsLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -71,12 +71,4 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() {
   return useContext(ThemeContext);
-}
-
-/**
- * Hook to generate dynamic themed styles that re-compute when isDark changes
- */
-export function useThemedStyles<T>(factory: (colors: ThemeColors, isDark: boolean) => T): T {
-  const { colors, isDark } = useTheme();
-  return useMemo(() => factory(colors, isDark), [colors, isDark]);
 }

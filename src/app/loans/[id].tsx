@@ -120,9 +120,10 @@ export default function LoanDetailScreen() {
         PaymentMethod: payMethod,
         TransactionReference: payReference,
         Remarks: payRemarks || `Payment recorded via Mobile App`,
+      }, {
+        onSuccess: () => toast.success(`Repayment of ₹${amt.toLocaleString()} recorded.`),
       });
 
-      toast.success(`Repayment of ₹${amt.toLocaleString()} recorded.`);
       setShowPayModal(false);
       setPayAmount('');
       setPayReference('');

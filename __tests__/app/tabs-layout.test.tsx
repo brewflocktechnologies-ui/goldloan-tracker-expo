@@ -31,7 +31,6 @@ jest.mock('../../src/services/store', () => ({
 }));
 
 // Heavy children that are irrelevant to the layout's own behaviour.
-jest.mock('../../src/components/MobileMenuModal', () => ({ MobileMenuModal: () => null }));
 jest.mock('../../src/components/ProfileModal', () => ({ ProfileModal: () => null }));
 jest.mock('../../src/components/SidebarTrigger', () => ({ SidebarTrigger: () => null }));
 jest.mock('../../src/components/ThemeToggleBtn', () => ({ ThemeToggleBtn: () => null }));

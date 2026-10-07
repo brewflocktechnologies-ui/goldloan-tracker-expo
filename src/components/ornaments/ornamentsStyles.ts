@@ -729,7 +729,6 @@ export const getOrnamentsStyles = (colors: ThemeColors, isDark: boolean, isCompa
     fontWeight: '600',
     color: isDark ? '#34d399' : '#00b575',
   },
-  autoCalcText: { fontSize: 10, fontWeight: '700', color: '#16a34a', marginTop: 3 },
 
   liveRateBadge: {
     backgroundColor: isDark ? '#1e293b' : '#f8fafc',

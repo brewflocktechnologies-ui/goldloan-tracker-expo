@@ -368,9 +368,26 @@ describe('UsersScreen — details view', () => {
     expect(await screen.findByText(/Are you sure you want to delete "Ravi Kumar"/)).toBeTruthy();
     fireEvent.press(screen.getAllByText('Delete Customer').slice(-1)[0]);
 
-    expect(mockStore.deleteUser).toHaveBeenCalledWith('USR001');
-    expect(mockToast.danger).toHaveBeenCalledWith('Customer "Ravi Kumar" deleted');
+    expect(mockStore.deleteUser).toHaveBeenCalledWith('USR001', expect.objectContaining({ onSuccess: expect.any(Function) }));
     await waitFor(() => expect(screen.getByText('Total Customers')).toBeTruthy());
+    // Toast only after the backend confirms the delete.
+    expect(mockToast.danger).not.toHaveBeenCalled();
+    const callbacks = mockStore.deleteUser.mock.calls[0][1];
+    act(() => callbacks.onSuccess());
+    expect(mockToast.danger).toHaveBeenCalledWith('Customer "Ravi Kumar" deleted');
+  });
+
+  it('does not show the deleted toast when the delete fails', async () => {
+    renderScreen();
+    openDetails('Ravi Kumar');
+    fireEvent.press(screen.getByLabelText('Menu options'));
+    fireEvent.press(await screen.findByText('Delete Customer'));
+    expect(await screen.findByText(/Are you sure you want to delete "Ravi Kumar"/)).toBeTruthy();
+    fireEvent.press(screen.getAllByText('Delete Customer').slice(-1)[0]);
+
+    expect(mockStore.deleteUser).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByText('Total Customers')).toBeTruthy());
+    expect(mockToast.danger).not.toHaveBeenCalled(); // onSuccess never invoked
   });
 
   it('cancelling the delete confirmation keeps the customer', async () => {
@@ -505,8 +522,21 @@ describe('UsersScreen — add form', () => {
       Gender: 'Male',
     });
     expect(payload.CustomerCode).toBe('CUST-104');
-    expect(mockToast.success).toHaveBeenCalledWith('Customer "  New Person " registered successfully');
+    expect(mockStore.addUser.mock.calls[0][1]).toEqual(expect.objectContaining({ onSuccess: expect.any(Function) }));
     expect(screen.getByText('Customer Details')).toBeTruthy();
+    // Toast only after the backend confirms the save.
+    expect(mockToast.success).not.toHaveBeenCalled();
+    act(() => mockStore.addUser.mock.calls[0][1].onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith('Customer "  New Person " registered successfully');
+  });
+
+  it('does not show the registered toast when the save fails', () => {
+    openAdd();
+    fireEvent.changeText(screen.getByPlaceholderText('Enter full name'), 'New Person');
+    fireEvent.changeText(screen.getByPlaceholderText('Enter mobile number'), '9111122223');
+    fireEvent.press(screen.getByText('Save User'));
+    expect(mockStore.addUser).toHaveBeenCalledTimes(1);
+    expect(mockToast.success).not.toHaveBeenCalled(); // onSuccess never invoked
   });
 
   it('shows an alert when saving throws', () => {
@@ -565,11 +595,23 @@ describe('UsersScreen — edit form', () => {
 
     expect(mockStore.updateUser).toHaveBeenCalledWith(
       'USR001',
-      expect.objectContaining({ FullName: 'Ravi K', MobileNumber: '9876543210', files: [] })
+      expect.objectContaining({ FullName: 'Ravi K', MobileNumber: '9876543210', files: [] }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    expect(mockToast.success).toHaveBeenCalledWith('Customer "Ravi K" updated successfully');
     expect(screen.getByText('Customer Details')).toBeTruthy();
     expect(screen.getAllByText('Ravi K').length).toBeGreaterThan(0);
+    expect(mockToast.success).not.toHaveBeenCalled();
+    act(() => mockStore.updateUser.mock.calls[0][2].onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith('Customer "Ravi K" updated successfully');
+  });
+
+  it('does not show the updated toast when the save fails', async () => {
+    await openEdit();
+    fireEvent.changeText(await screen.findByDisplayValue('Ravi Kumar'), 'Ravi K');
+    fireEvent.press(screen.getByText('Save Changes'));
+    expect(mockStore.updateUser).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Customer Details')).toBeTruthy();
+    expect(mockToast.success).not.toHaveBeenCalled(); // onSuccess never invoked
   });
 
   it('remembers the selected details tab after editing', async () => {

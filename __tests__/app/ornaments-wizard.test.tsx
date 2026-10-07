@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert, View } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Ornament } from '../../src/types';
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), setParams: jest.fn() };
@@ -276,10 +276,15 @@ describe('OrnamentsScreen (add wizard)', () => {
         Description: 'A lovely bangle',
         Remarks: 'Handle with care',
         Status: 'Pledged',
-      })
+      }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    expect(mockToast.success).toHaveBeenCalledWith('Ornament "Test Bangle" added to vault');
     expect(screen.getByText('Ornaments')).toBeTruthy(); // back on the list screen
+    // Toast is deferred until the backend confirms the save.
+    expect(mockToast.success).not.toHaveBeenCalled();
+    const callbacks = mockStore.addOrnament.mock.calls[0][1];
+    act(() => callbacks.onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith('Ornament "Test Bangle" added to vault');
   });
 });
 
@@ -315,9 +320,25 @@ describe('OrnamentsScreen (edit wizard)', () => {
 
     expect(mockStore.updateOrnament).toHaveBeenCalledWith(
       'ORN020',
-      expect.objectContaining({ OrnamentName: 'Classic Chain Updated' })
+      expect.objectContaining({ OrnamentName: 'Classic Chain Updated' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    expect(mockToast.success).toHaveBeenCalledWith('Ornament "Classic Chain Updated" updated');
     expect(screen.getByText('Ornaments Details')).toBeTruthy(); // back on the details screen
+    expect(mockToast.success).not.toHaveBeenCalled();
+    const callbacks = mockStore.updateOrnament.mock.calls[0][2];
+    act(() => callbacks.onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith('Ornament "Classic Chain Updated" updated');
+  });
+
+  it('does not show the updated toast when the save fails', async () => {
+    await openEditWizard();
+    fireEvent.changeText(screen.getByDisplayValue('Classic Chain'), 'Classic Chain Updated');
+    fireEvent.press(screen.getByText('Next →'));
+    fireEvent.press(screen.getByText('Next →'));
+    fireEvent.press(screen.getByText('Save Ornaments'));
+
+    expect(mockStore.updateOrnament).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Ornaments Details')).toBeTruthy();
+    expect(mockToast.success).not.toHaveBeenCalled(); // onSuccess never invoked
   });
 });

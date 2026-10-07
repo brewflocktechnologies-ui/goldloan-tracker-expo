@@ -18,7 +18,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatAmountLakh, formatLoanDate, formatLoanPhone } from '../../components/loans/loanUtils';
 import { ThemeColors } from '../../constants/theme';
-import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { useAppStore } from '../../services/store';
@@ -41,16 +40,6 @@ function dmyToYmd(dmy: string): string {
   return dmy;
 }
 
-// Helper to convert "YYYY-MM-DD" to "DD-MM-YYYY"
-function ymdToDmy(ymd: string): string {
-  if (!ymd) return formatDateDMY(new Date());
-  const parts = ymd.split('-');
-  if (parts.length === 3 && parts[0].length === 4) {
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  }
-  return ymd;
-}
-
 // Add months to a Date
 function addMonths(baseDate: Date, months: number): Date {
   const d = new Date(baseDate);
@@ -64,7 +53,6 @@ export default function NewLoanScreen() {
   const router = useRouter();
   const store = useAppStore();
   const toast = useToast();
-  const { isSuperAdmin } = useAuth();
 
   // When opened from a customer's page, the customer is already known: skip the customer step.
   const { userId: presetUserId } = useLocalSearchParams<{ userId?: string }>();
@@ -393,14 +381,15 @@ export default function NewLoanScreen() {
       };
 
       store.addLoan(loanPayload, {
+        // "Created" is announced only once the sheet confirms it
         onSuccess: (saved) => {
           if (saved.LoanNumber !== loanPayload.LoanNumber) {
             toast.info(`Loan number ${loanPayload.LoanNumber} was taken; saved as ${saved.LoanNumber}`);
           }
+          toast.success(`Loan contract ${saved.LoanNumber || loanPayload.LoanNumber} created successfully!`);
         },
         onError: (message) => toast.danger(`Loan ${loanPayload.LoanNumber} was not saved: ${message}`),
       });
-      toast.success(`Loan contract ${loanPayload.LoanNumber} created successfully!`);
 
       // Return to loans list
       if (router.canGoBack()) {
@@ -426,12 +415,13 @@ export default function NewLoanScreen() {
       FullName: newCustomerName.trim(),
       MobileNumber: cleanPhone,
       Status: 'Active',
+    }, {
+      onSuccess: () => toast.success(`Customer ${newCustomerName.trim()} created.`),
     });
     setSelectedCustomerId(user.UserId);
     setNewCustomerName('');
     setNewCustomerPhone('');
     setShowAddCustomerModal(false);
-    toast.success(`Customer ${user.FullName} created.`);
   };
 
   const handleQuickAddBank = () => {
@@ -450,12 +440,13 @@ export default function NewLoanScreen() {
       AccountNumber: newAccountNumber.trim(),
       IFSCCode: newIFSCCode.trim(),
       MaxLoanAmount: parseFloat(newMaxLimit) || 500000,
+    }, {
+      onSuccess: () => toast.success('Bank account added.'),
     });
     setSelectedBankAccountId(acc.BankAccountId);
     setNewAccountNumber('');
     setNewIFSCCode('');
     setShowAddBankModal(false);
-    toast.success('Bank account added.');
   };
 
   const handleQuickAddOrnament = () => {
@@ -476,13 +467,14 @@ export default function NewLoanScreen() {
       StoneWeight: Math.max(0, gw - nw),
       MarketValue: mkt,
       Status: 'Available',
+    }, {
+      onSuccess: () => toast.success('Ornament added and selected.'),
     });
     setSelectedOrnamentIds((prev) => [...prev, orn.OrnamentId]);
     setNewOrnamentName('');
     setNewGrossWeight('');
     setNewNetWeight('');
     setShowAddOrnamentModal(false);
-    toast.success('Ornament added and selected.');
   };
 
   // Subtitle per step

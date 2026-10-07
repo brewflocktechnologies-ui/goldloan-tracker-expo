@@ -314,8 +314,9 @@ describe('LoansScreen - edit loan modal', () => {
     fireEvent.press(screen.getByText('Save Changes'));
 
     expect(mockStore.updateLoan).toHaveBeenCalledTimes(1);
-    const [id, patch] = mockStore.updateLoan.mock.calls[0];
+    const [id, patch, callbacks] = mockStore.updateLoan.mock.calls[0];
     expect(id).toBe('L1');
+    expect(callbacks).toEqual(expect.objectContaining({ onSuccess: expect.any(Function) }));
     expect(patch).toEqual(
       expect.objectContaining({
         LoanNumber: 'LN-ACTIVE',
@@ -335,10 +336,26 @@ describe('LoansScreen - edit loan modal', () => {
         TotalCharges: 4550,
       })
     );
-    expect(mockToast.success).toHaveBeenCalledWith('Loan LN-ACTIVE updated successfully!');
     expect(mockStore.addLoan).not.toHaveBeenCalled();
-    // modal closed
+    // modal closed immediately, success toast waits for the store to confirm
     expect(screen.queryByText('Edit Loan (LN-ACTIVE)')).toBeNull();
+    expect(mockToast.success).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalledWith('Success', expect.anything());
+
+    act(() => callbacks.onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith('Loan LN-ACTIVE updated successfully!');
+    expect(alertSpy).toHaveBeenCalledWith('Success', 'Loan contract updated successfully!');
+  });
+
+  it('shows no success message when the loan update fails (onSuccess never called)', () => {
+    openEdit();
+    fireEvent.changeText(screen.getByDisplayValue('50000'), '40000');
+    fireEvent.press(screen.getByText('Save Changes'));
+
+    const callbacks = mockStore.updateLoan.mock.calls[0][2];
+    act(() => callbacks.onError?.('Network down'));
+    expect(mockToast.success).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalledWith('Success', expect.anything());
   });
 
   it('uses manually entered weights over the ornament totals', () => {
@@ -456,10 +473,29 @@ describe('LoansScreen - repayment modal', () => {
         PaymentMethod: 'UPI',
         TransactionReference: 'UTR123',
         Remarks: 'monthly',
-      })
+      }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    expect(mockToast.success).toHaveBeenCalledWith('Repayment of ₹1,500 recorded.');
+    // modal closes immediately; success message waits for the store
     expect(screen.queryByText('Record Repayment (LN-ACTIVE)')).toBeNull();
+    expect(mockToast.success).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalledWith('Success', expect.anything());
+
+    const callbacks = mockStore.addPayment.mock.calls[0][1];
+    act(() => callbacks.onSuccess());
+    expect(mockToast.success).toHaveBeenCalledWith('Repayment of ₹1,500 recorded.');
+    expect(alertSpy).toHaveBeenCalledWith('Success', 'Repayment of ₹1,500 recorded.');
+  });
+
+  it('shows no success message when the payment save fails (onSuccess never called)', () => {
+    openPay();
+    fireEvent.changeText(screen.getByPlaceholderText('e.g. 1500'), '1500');
+    fireEvent.press(screen.getByText('Save Repayment'));
+
+    const callbacks = mockStore.addPayment.mock.calls[0][1];
+    act(() => callbacks.onError?.('Network down'));
+    expect(mockToast.success).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalledWith('Success', expect.anything());
   });
 
   it('records a principal payment with a different method', () => {
@@ -476,7 +512,8 @@ describe('LoansScreen - repayment modal', () => {
         InterestAmount: 0,
         TotalPaidAmount: 10000,
         PaymentMethod: 'Cash',
-      })
+      }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
   });
 
@@ -494,7 +531,8 @@ describe('LoansScreen - repayment modal', () => {
         InterestAmount: 0,
         TotalPaidAmount: 700,
         PaymentMethod: 'Net Banking',
-      })
+      }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
   });
 

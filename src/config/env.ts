@@ -21,7 +21,5 @@ export const Env = {
   FALLBACK_18K_RATE: Number(process.env.EXPO_PUBLIC_FALLBACK_18K_RATE) || 6640,
 
   // Loan Financial Defaults
-  DEFAULT_INTEREST_RATE: Number(process.env.EXPO_PUBLIC_DEFAULT_INTEREST_RATE) || 1.5,
-  DEFAULT_LOAN_PERIOD: process.env.EXPO_PUBLIC_DEFAULT_LOAN_PERIOD || "12 Months",
   MAX_LTV_PERCENT: Number(process.env.EXPO_PUBLIC_MAX_LTV_PERCENT) || 75,
 } as const;
